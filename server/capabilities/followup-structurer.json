@@ -1,0 +1,41 @@
+{
+  "id": "followup-structurer",
+  "pluginKey": "@official-plugins/ai-text-to-json",
+  "pluginVersion": "1.0.26",
+  "name": "销售跟进结构化",
+  "description": "从销售沟通原文中提取事实、风险、下一步和任务建议",
+  "paramsSchema": {
+    "type": "object",
+    "properties": {
+      "followup_text": {
+        "type": "string",
+        "description": "销售与客户沟通的完整原文"
+      }
+    },
+    "required": ["followup_text"]
+  },
+  "formValue": {
+    "modelID": "2015",
+    "modelParams": {
+      "temperature": 0.2,
+      "maxTokens": 2500
+    },
+    "prompt": "你是一名严谨的 B2B 销售运营分析师。请只依据以下沟通原文提取业务事实，不要补造客户态度、日期、金额或承诺。\n\n沟通原文：\n{{input.followup_text}}\n\n提取要求：\n1. summary 用 80 字以内概括本次进展。\n2. customerNeeds、objections、decisions、nextPlan 分别记录需求、异议、已确认事项和下一步。缺失时写未提及。\n3. qualityScore 为 0-100 的信息完整度评分，重点检查时间、责任人、客户需求、异议、决策和下一步。\n4. riskLevel 只能是 low、medium、high。\n5. taskTitle 与 taskDueHint 必须来自原文明确或可合理落地的下一步；没有日期时 taskDueHint 写待确认。\n6. insightTitle、insightContent、recommendedAction 必须将证据与判断分开表达。",
+    "jsonStructure": [
+      {"name": "summary", "paramType": "String", "paramDescription": "本次销售沟通的事实摘要，80字以内"},
+      {"name": "customerNeeds", "paramType": "String", "paramDescription": "客户明确表达的需求与目标"},
+      {"name": "objections", "paramType": "String", "paramDescription": "客户异议、顾虑与阻塞"},
+      {"name": "decisions", "paramType": "String", "paramDescription": "双方已经确认的事项"},
+      {"name": "nextPlan", "paramType": "String", "paramDescription": "明确的下一步行动"},
+      {"name": "qualityScore", "paramType": "Number", "paramDescription": "跟进信息完整度评分，0到100"},
+      {"name": "riskLevel", "paramType": "String", "paramDescription": "风险等级，只能是low、medium或high"},
+      {"name": "taskTitle", "paramType": "String", "paramDescription": "建议创建的销售任务标题"},
+      {"name": "taskDueHint", "paramType": "String", "paramDescription": "原文中的任务时间，缺失时写待确认"},
+      {"name": "insightTitle", "paramType": "String", "paramDescription": "最重要的业务判断标题"},
+      {"name": "insightContent", "paramType": "String", "paramDescription": "基于原文证据的业务判断"},
+      {"name": "recommendedAction", "paramType": "String", "paramDescription": "针对当前判断的可执行建议"}
+    ]
+  },
+  "createdAt": 1789631467556,
+  "updatedAt": 1789631467556
+}

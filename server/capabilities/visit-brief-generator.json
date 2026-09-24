@@ -1,0 +1,27 @@
+{
+  "id": "visit-brief-generator",
+  "pluginKey": "@official-plugins/ai-text-generate",
+  "pluginVersion": "1.0.21",
+  "name": "客户拜访准备",
+  "description": "生成客户沟通目标、问题清单与风险提醒",
+  "paramsSchema": {
+    "type": "object",
+    "properties": {
+      "customer_context": {
+        "type": "string",
+        "description": "客户资料、商机阶段、历史跟进与本次拜访目标"
+      }
+    },
+    "required": ["customer_context"]
+  },
+  "formValue": {
+    "modelID": "2015",
+    "modelParams": {
+      "temperature": 0.35,
+      "maxTokens": 1400
+    },
+    "prompt": "你是一名经验丰富的 B2B 客户拜访策划顾问。请基于以下材料准备本次拜访攻略。\n\n客户上下文：\n{{input.customer_context}}\n\n输出要求：\n1. 本次拜访要拿到的三个可验证结果。\n2. 六个由浅入深的问题，覆盖业务价值、决策流程、预算、竞争和时间表。\n3. 两个可能出现的异议及应对要点。\n4. 会后必须确认的下一步与证据。\n仅使用已有事实，未知信息要标记为待验证。使用 Markdown，总长度不超过 700 字。"
+  },
+  "createdAt": 1789631467556,
+  "updatedAt": 1789631467556
+}

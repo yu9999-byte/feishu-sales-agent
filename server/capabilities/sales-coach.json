@@ -1,0 +1,27 @@
+{
+  "id": "sales-coach",
+  "pluginKey": "@official-plugins/ai-text-generate",
+  "pluginVersion": "1.0.21",
+  "name": "商机推进教练",
+  "description": "基于商机证据生成下一步推进建议",
+  "paramsSchema": {
+    "type": "object",
+    "properties": {
+      "deal_context": {
+        "type": "string",
+        "description": "客户、商机、最近跟进、任务与风险的完整上下文"
+      }
+    },
+    "required": ["deal_context"]
+  },
+  "formValue": {
+    "modelID": "2015",
+    "modelParams": {
+      "temperature": 0.3,
+      "maxTokens": 1200
+    },
+    "prompt": "你是一名服务 B2B 复杂销售团队的销售教练。请根据以下上下文，给出可以直接执行的推进建议。\n\n业务上下文：\n{{input.deal_context}}\n\n输出要求：\n- 先用一句话写出当前最关键判断。\n- 列出三项按优先级排序的行动，每项包含责任对象、动作、预期证据。\n- 明确一个最需要验证的风险假设。\n- 不要编造未提供的人名、金额、日期或客户承诺。\n- 使用简洁中文和 Markdown，总长度不超过 500 字。"
+  },
+  "createdAt": 1789631467556,
+  "updatedAt": 1789631467556
+}

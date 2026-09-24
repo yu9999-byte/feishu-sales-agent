@@ -1,0 +1,27 @@
+{
+  "id": "management-report-generator",
+  "pluginKey": "@official-plugins/ai-text-generate",
+  "pluginVersion": "1.0.21",
+  "name": "销售经营周报",
+  "description": "把团队商机、任务和风险数据整理为管理决策周报",
+  "paramsSchema": {
+    "type": "object",
+    "properties": {
+      "business_context": {
+        "type": "string",
+        "description": "本周期目标、商机变化、跟进、任务与风险汇总"
+      }
+    },
+    "required": ["business_context"]
+  },
+  "formValue": {
+    "modelID": "2015",
+    "modelParams": {
+      "temperature": 0.2,
+      "maxTokens": 1800
+    },
+    "prompt": "你是一名 B2B 销售经营分析负责人。请把以下业务数据整理成供销售管理者决策的周报。\n\n本周业务数据：\n{{input.business_context}}\n\n输出要求：\n- 业绩判断：目标、已赢单、Commit、风险 Gap。\n- 关键变化：只写对达成有影响的进展或倒退。\n- 风险下钻：把风险定位到具体商机和证据。\n- 管理动作：给出未来七天三项检查重点。\n数据缺失时明确写数据不足，不做虚假预测。使用 Markdown，总长度不超过 900 字。"
+  },
+  "createdAt": 1789631467556,
+  "updatedAt": 1789631467556
+}

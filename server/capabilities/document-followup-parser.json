@@ -1,0 +1,27 @@
+{
+  "id": "document-followup-parser",
+  "pluginKey": "@official-plugins/ai-doc-parser",
+  "pluginVersion": "1.0.16",
+  "name": "销售文档解析",
+  "description": "把客户邮件、方案和会议文档提取为可分析文本",
+  "paramsSchema": {
+    "type": "object",
+    "properties": {
+      "files": {
+        "type": "array",
+        "format": "plugin-file-url",
+        "description": "需要解析的一份销售文档",
+        "items": {
+          "type": "string",
+          "description": "文档文件"
+        }
+      }
+    },
+    "required": ["files"]
+  },
+  "formValue": {
+    "fileUrl": "{{input.files}}"
+  },
+  "createdAt": 1789631467556,
+  "updatedAt": 1789631467556
+}

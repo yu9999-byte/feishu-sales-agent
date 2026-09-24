@@ -1,0 +1,17 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '../tailwind-theme.css';
+
+@config '../../../tailwind.config.ts';
+
+html {
+  color-scheme: light;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
