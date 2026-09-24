@@ -1,5 +1,17 @@
 # 当前工程说明
 
+## 2026-09-24 意图路由与飞书接入修复
+
+本轮定位到两个相互独立的问题：明确的“帮我写/记录跟进”指令被模型当成歧义问题，
+以及飞书后台仍指向已退出的 Tunnelmole 地址，导致消息根本没有进入 Agent。现已完成：
+
+- 明确跟进命令由确定性路由优先处理；带正文直接生成跟进草案，不带正文打开录入表单，疑问句和真正含糊的表达才交给意图模型。
+- 日期解析统一使用 `Asia/Shanghai`，确认前仍不写入 Base 或创建飞书任务。
+- 本地接收模式切换为飞书 WebSocket 长连接，后台事件订阅和卡片回调均已切换为长连接，应用版本 `1.0.2` 已发布。
+- Agent PID `41356` 日志记录 `Feishu long connection connected`，并已收到两条真实私聊消息，均出现 `message mapped`、`workflow started`、`workflow completed`。这证明事件已送达并完成工作流；具体卡片视觉内容和确认动作仍需在飞书聊天中继续做 UI 对账。
+
+本轮自动化证据为 22 个测试文件、168/168 通过，服务端/客户端 TypeScript、ESLint 和发布门禁均通过。
+
 ## 2026-09-24 全量复查整改
 
 已按 [项目复查整改 SDD](specs/13-project-hardening-sdd.md) 完成自动化 Green：OAuth 回调强制
@@ -9,7 +21,7 @@ LangChain/LangGraph；checkpoint 默认 24 小时过期并调用 `deleteThread` 
 
 新增 `npm run migrate:agent`，只按顺序执行 `003/005/006/007/008`，以文件名和 SHA-256 记录
 迁移账本，明确排除本地租户种子。本机 Postgres 首次登记后再次运行全部 `skip`。当前质量门为
-22 个单测文件 `158/158`、Postgres 集成 `8/8`、三套 TypeScript、ESLint、Agent/Web 构建通过。
+22 个单测文件 `168/168`、Postgres 集成 `8/8`、三套 TypeScript、ESLint、Agent/Web 构建通过。
 最新构建的运行态和真实飞书 UI 仍需复验。
 
 飞书机器人入口的成员/角色权限校验继续按用户决定只记录，不在本轮修复。Mem0 真实后端仍未
@@ -51,7 +63,7 @@ LangChain.js + LangGraph.js 运行时；使用 LangGraph Postgres Checkpointer �
 
 ### 当前阶段
 
-`Automated Green / latest runtime and UI retest pending`。当前 Agent 单元测试 `158/158`、
+`Automated Green / latest runtime and UI retest pending`。当前 Agent 单元测试 `168/168`、
 Postgres 集成 `8/8`，三套类型检查、ESLint、Agent/Web 构建均通过。Mem0 包已安装但生产写入保持关闭：当前 Postgres 没有
 `vector` 扩展，且 embedding、中文召回、删除与 ACL 评测尚未完成，因此不把内存向量库冒充长期
 持久化能力。

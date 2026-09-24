@@ -29,12 +29,12 @@ Web 确认后的待办候选跨版本幂等；Mem0 接入 `memory_save` 和 ACL 
 
 2026-09-24 代码复查将 OAuth 缺 Cookie、Web 失败动作跨版本重试、补充态 LLM 主路由和
 LangGraph thread TTL 重新打开为整改项。现已按 [项目复查整改 SDD](13-project-hardening-sdd.md)
-完成 Red/Green：22 个单测文件 158/158、Postgres 集成 8/8、三套类型检查、ESLint 和两端构建
+完成 Red/Green：22 个单测文件 168/168、Postgres 集成 8/8、三套类型检查、ESLint 和两端构建
 通过；数据库迁移命令连续执行两次为 apply/skip。真实飞书 UI 仍须使用最新运行态复验。
 
 | 需求范围 | 阶段 | 规格状态 | 自动化证据 | UI 证据 |
 | --- | --- | --- | --- | --- |
-| `SIA-000..000D` 对话入口、意图与安全路由 | B0 | Implemented / UI partial, clean-state retest pending | LangGraph 主分类覆盖普通态、澄清态和补充态；关键词换话题门已移除，24 小时 checkpoint TTL 具备保留/删除回归；进入 158 项全量回归 | 修复后已真实出卡并正确禁用过期待办；最新补充态问答与相关补充仍待干净状态重放 |
+| `SIA-000..000D` 对话入口、意图与安全路由 | B0 | Implemented / UI partial, clean-state retest pending | LangGraph 主分类覆盖普通态、澄清态和补充态；明确跟进命令确定性直达，24 小时 checkpoint TTL 具备保留/删除回归；进入 168 项全量回归 | WebSocket 已收到并完成两条真实私聊工作流；卡片内容与补充态仍待干净状态重放 |
 | `PLT-001..006` 多租户、身份、授权、审计 | A | Implemented | 51 项单测 + 5 项真实 Postgres 集成测试；包含租户范围 OAuth、RBAC、拒绝/允许审计追加 | 真实飞书 OAuth、管理员允许、销售直达管理页拒绝已通过；四真实账号/两真实租户待验收 |
 | `WEB-001..003` 页面授权、状态和飞书深链 | A | Implementing | OAuth 缺 state Cookie、不一致和重放均拒绝；Session/导航/页面 API 边界通过；深链签名尚未实现 | 桌面、390px 窄屏、角色导航及 forbidden 已通过；最新 OAuth 回归和卡片详情深链待验收 |
 | `ING-001..002` 表单与文本输入 | B1 | Implementing | Web 创建 API、同键并发与租户归属通过；“写跟进”原聊天表单、异步生成/失败恢复、非本人/空原文/重复提交、回调解析和旧 P0 兼容测试通过 | Web 与真实飞书原聊天文本/卡片录入、字段补充、生成和确认已通过；其他输入来源待验收 |

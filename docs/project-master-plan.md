@@ -56,7 +56,7 @@
 | 能力 | 当前状态 | 证据与缺口 |
 | --- | --- | --- |
 | P0 文本跟进闭环 | `UI Verified`（历史基线） | 已有真实 Base/Task 写入和两租户自动化隔离；需持续回归 |
-| LangGraph 对话编排 | `Automated Green / UI pending` | 158 项 Agent 单测、8 项 Postgres 集成、类型检查、Lint、构建通过；最新运行态尚待复验 |
+| LangGraph 对话编排 | `Automated Green / UI pending` | 168 项 Agent 单测、8 项 Postgres 集成、类型检查、Lint、构建通过；最新运行态已连接，UI 内容仍待对账 |
 | 跟进草稿、质检、确认 | `Partial` | 结构化抽取、卡内编辑、版本和确认门已有；最新确认按钮与终态需真实 UI 对账 |
 | 执行中、成功/失败、结果修订 | `Automated Green / UI pending` | 同卡状态机、超时恢复、结果修订已测；真实飞书需观察唯一终态和原记录更新 |
 | 短期上下文 | `Automated Green / UI pending` | LangGraph Checkpointer 已成为生产主路径；需干净双轮和自然路由复测 |
