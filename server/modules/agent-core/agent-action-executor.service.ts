@@ -94,7 +94,7 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
   schedule(
     integration: TenantIntegration,
     action: PendingAction,
-    callbackToken: string,
+    callbackToken: string | null,
     traceId: string,
   ): void {
     setImmediate((): void => {

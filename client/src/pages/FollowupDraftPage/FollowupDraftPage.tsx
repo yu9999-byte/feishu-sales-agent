@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle2, ShieldAlert } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  LoaderCircle,
+  ShieldAlert,
+} from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 
 import type {
@@ -73,6 +78,23 @@ const FollowupDraftPage: React.FC = () => {
       }
     }).catch(setLoadError);
   }, [id]);
+
+  useEffect((): (() => void) | undefined => {
+    if (!id || execution?.status !== 'executing') return undefined;
+    let active = true;
+    const timer = window.setInterval((): void => {
+      void getFollowupExecution(id).then((result): void => {
+        if (!active || result === null) return;
+        setExecution(result);
+      }).catch((failure: ProductApiError): void => {
+        if (active) setActionError(failure);
+      });
+    }, 1_500);
+    return (): void => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [execution?.status, id]);
 
   const save = (): void => {
     if (!id || !draft) return;
@@ -261,7 +283,16 @@ const FollowupDraftPage: React.FC = () => {
           <section className="rounded-xl border border-border bg-card p-6"><h2 className="font-semibold">待改进</h2>{quality.suggestions.length ? <ul className="mt-3 space-y-2 text-sm text-muted-foreground">{quality.suggestions.map((item) => <li key={item}>· {item}</li>)}</ul> : <p className="mt-3 text-sm text-muted-foreground">暂无强制改进项。</p>}</section>
           {draft.status === 'confirmed' && <section className="rounded-xl border border-border bg-card p-6" aria-live="polite">
             <h2 className="font-semibold">写入结果</h2>
-            <p className="mt-3 text-sm">{execution ? `状态：${execution.status}` : '执行记录尚未生成，请刷新页面。'}</p>
+            {execution?.status === 'executing' ? (
+              <div className="mt-3 flex items-center gap-2 text-sm" role="status">
+                <LoaderCircle className="size-4 animate-spin text-primary" />
+                <span>执行中，请等待。完成后会自动更新结果。</span>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm">
+                {execution ? `状态：${execution.status}` : '执行记录尚未生成，请刷新页面。'}
+              </p>
+            )}
             {execution?.followupRecordId && <p className="mt-2 break-all text-sm">Base 跟进记录：{execution.followupRecordId}</p>}
             {execution?.taskGuid && <p className="mt-2 break-all text-sm">飞书任务：{execution.taskGuid}</p>}
             {execution?.taskUrl && <a className="mt-2 block break-all text-sm text-primary underline" href={execution.taskUrl} target="_blank" rel="noreferrer">打开飞书任务</a>}

@@ -13,11 +13,12 @@
 项目推进质检卡。新版**文本跟进**聊天闭环已在真实飞书 UI 验收；语音、妙记/会议、文档、
 跨角色策略推送、任务状态回收、提醒和日报仍按后续切片实施。
 
-截至 2026-09-18，P0 已通过真实飞书企业闭环验收：用户私聊机器人提交跟进，智谱 GLM
+P0 已通过真实飞书企业闭环验收：用户私聊机器人提交跟进，智谱 GLM
 完成结构化提取，用户确认消息卡片后，Agent 写入客户、商机和跟进三张 Demo Base 表，并
 创建分配给发送者的飞书任务。版本 `1.0.1` 已审核发布，应用身份可读取和写入 Demo Base。
-当前 21 个测试文件、150 项测试、服务端/客户端/测试类型检查、ESLint、Agent 与 Web 构建
-均通过。Vitest 已固定使用 `threads` pool，避免 Windows/Node 25 默认 fork worker 的原生
+2026-09-24 整改基线为 22 个测试文件、158 项测试和 8 项真实 Postgres 集成测试；服务端、
+客户端和测试类型检查、ESLint、Agent 与 Web 构建均通过。Vitest 已固定使用 `threads` pool，
+避免 Windows/Node 25 默认 fork worker 的原生
 CSPRNG 初始化崩溃。
 
 - 已确认 Agent 核心能力由项目代码实现，不依赖妙搭 AI 插件或妙搭运行时。
@@ -31,8 +32,8 @@ CSPRNG 初始化崩溃。
 - 已创建真实 Demo Base 及客户、商机、跟进三表，字段和关联关系已回读验证。
 - 当前浏览器账号已能管理目标应用 `cli_aa211d0457381bdf`；版本 `1.0.1` 已审核发布。
 - 重置后的 Secret 已在 Git 忽略的本地文件中设置，且目标应用换取 Token 成功。
-- 临时 HTTPS 隧道已重新建立，消息事件和卡片回调已更新到当前地址；两条公网 URL
-  challenge 均已通过。真实 Agent 正在 3100 端口运行。
+- 临时 HTTPS 隧道只用于真实飞书联调，不是稳定部署资源；每次启动后都必须重新核对飞书
+  回调地址、challenge 和实际消息投递，README 不记录瞬时在线状态。
 - 目标机器人已作为编辑协作者加入 Demo Base；应用身份已回读三表 24 个字段及本次记录。
 - `base:record:retrieve` 已按真实 API 缺权响应补充；Base 查询、创建和更新权限均已生效。
 - `task:task:write` 已生效，真实任务已创建并通过 Task v2 回读。
@@ -45,8 +46,9 @@ CSPRNG 初始化崩溃。
 
 ## P0 本地运行
 
-1. 准备独立 Postgres 并执行 `migrations/003_agent_control.sql`。当前 P0 机器已在
-   `127.0.0.1:55432` 初始化本地控制库；该实例不对公网开放，也不替代生产数据库。
+1. 准备独立 Postgres，在 `.env.local` 配置 `DATABASE_URL` 后运行
+   `npm run migrate:agent`。该命令固定执行 `003`、`005`、`006`、`007`、`008`，记录文件
+   校验和并可重复运行；不会执行 Demo 租户种子。
 2. 创建客户、商机、跟进三张 Base 表，并按
    `migrations/004_agent_p0_demo_tenant.example.sql` 写入租户配置。
 3. 将 `.env.example` 复制为 Git 已忽略的 `.env.local`，通过本地安全环境配置提供：
@@ -65,9 +67,13 @@ CSPRNG 初始化崩溃。
 
 ```text
 npm run type:check:server
+npm run type:check:client
 npm run type:check:test
 npm run test:agent
+npx vitest run --config vitest.integration.config.ts
+npm run eslint
 npm run build:agent
+npm run build:web
 ```
 
 ## P0 闭环
@@ -97,6 +103,7 @@ npm run build:agent
 | [当前工程说明](docs/current-state.md) | 现有文件、遗留资产和真实完成度 |
 | [竞品能力映射](docs/reference-capability-map.md) | APTSell 公开能力与本项目阶段映射 |
 | [跟进卡片决策问答](docs/decisions/2026-09-20-followup-chat-cards.md) | 三种条件卡、一次确认、质检/推送边界和被覆盖旧口径 |
+| [GitHub 自动检查点](docs/github-publish-automation.md) | 阶段发布、每日补漏、安全门与命令说明 |
 
 ## 工程原则
 

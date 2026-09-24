@@ -443,19 +443,69 @@ export class AgentWorkflowService {
       });
       return;
     }
-    if (this.isExplicitConversationSwitch(message.text)) {
+    const activeContext: ConversationContext = {
+      ...context,
+      activeWorkflow: 'followup_collecting',
+      activeSourceText: session.rawText,
+    };
+    const waitingMessageId: string | null =
+      await this.sendConversationWaiting(integration, message);
+    let decision: ConversationDecision;
+    try {
+      decision = await this.conversation.respond({
+        text: message.text,
+        timezone: 'Asia/Shanghai',
+        now: message.receivedAt,
+        context: activeContext,
+      });
+    } catch (error: unknown) {
+      await this.handleMessageFailure(
+        integration,
+        message,
+        error,
+        waitingMessageId,
+      );
+      return;
+    }
+    if (
+      decision.intent === 'followup_capture' ||
+      decision.intent === 'ambiguous' ||
+      decision.confidence < 0.55
+    ) {
+      await this.finishConversationWaiting(
+        integration,
+        message,
+        waitingMessageId,
+        '已识别为当前跟进的补充，正在更新草案。',
+      );
+      await this.processFollowupText(
+        integration,
+        message,
+        message.text,
+        session,
+      );
+      return;
+    }
+    if (decision.intent === 'memory_save') {
       await this.store.closeSession(
         integration.tenantId,
         message.senderOpenId,
       );
-      await this.replyToConversation(integration, message, { context });
+      await this.saveApprovedMemory(
+        integration,
+        message,
+        waitingMessageId,
+      );
       return;
     }
-    await this.processFollowupText(
+    await this.store.closeSession(
+      integration.tenantId,
+      message.senderOpenId,
+    );
+    await this.replyToConversation(
       integration,
       message,
-      message.text,
-      session,
+      { context: activeContext, decision, waitingMessageId },
     );
   }
 
@@ -1590,12 +1640,6 @@ export class AgentWorkflowService {
     const normalized: string = text.trim().replace(/[。！!]+$/gu, '');
     return normalized === '取消跟进' || normalized === '不记录了' ||
       normalized === '取消本次跟进';
-  }
-
-  private isExplicitConversationSwitch(text: string): boolean {
-    const normalized: string = text.trim();
-    return /^(你好|嗨|你是谁|你能做什么|帮我写|请写|怎么|如何|为什么|查一下|查询|这单有什么风险)/u
-      .test(normalized) || /[？?]$/u.test(normalized);
   }
 
   private readInputForm(values: JsonObject): FollowupCardFormInput {

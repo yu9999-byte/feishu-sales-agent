@@ -739,6 +739,76 @@ describe('AgentWorkflowService', (): void => {
       .toBe(true);
   });
 
+  it('routes a normal question through the model while a followup draft is collecting', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    const receivedAt = new Date('2026-09-24T10:00:00+08:00');
+    await harness.store.saveCollectingSession({
+      tenantId: harness.integrationA.tenantId,
+      actorOpenId: 'ou_sales',
+      chatId: 'oc_tenant-a',
+      sourceMessageId: 'om-draft-source',
+      rawText: '北辰制造要求重新核对报价，下一步周五电话沟通。',
+      draft: completeDraft,
+      expiresAt: new Date(receivedAt.getTime() + 24 * 60 * 60 * 1_000),
+    });
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'sales_qa',
+      confidence: 0.97,
+      reply: '先确认客户压价依据，再按价值与交换条件确定让步空间。',
+    };
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-question-in-collecting'),
+      text: '这次报价应该保留多少余地',
+      receivedAt,
+    });
+
+    expect(harness.conversation.calls).toBe(1);
+    expect(harness.conversation.inputs[0]?.context?.activeWorkflow)
+      .toBe('followup_collecting');
+    expect(harness.extractor.calls).toBe(0);
+    expect(harness.messenger.texts.at(-1)).toContain('让步空间');
+    await expect(harness.store.getOpenSession(
+      harness.integrationA.tenantId,
+      'ou_sales',
+    )).resolves.toBeNull();
+  });
+
+  it('keeps a related supplement in the active followup flow after model routing', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    const receivedAt = new Date('2026-09-24T10:00:00+08:00');
+    const sourceText = '北辰制造要求重新核对报价。';
+    await harness.store.saveCollectingSession({
+      tenantId: harness.integrationA.tenantId,
+      actorOpenId: 'ou_sales',
+      chatId: 'oc_tenant-a',
+      sourceMessageId: 'om-supplement-source',
+      rawText: sourceText,
+      draft: completeDraft,
+      expiresAt: new Date(receivedAt.getTime() + 24 * 60 * 60 * 1_000),
+    });
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'followup_capture',
+      confidence: 0.96,
+      reply: '这是对当前跟进的补充。',
+    };
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-related-supplement'),
+      text: '客户还说预算最晚下周一确认',
+      receivedAt,
+    });
+
+    expect(harness.conversation.calls).toBe(1);
+    expect(harness.extractor.calls).toBe(1);
+    expect(harness.extractor.lastInput?.combinedText).toContain(sourceText);
+    expect(harness.extractor.lastInput?.combinedText)
+      .toContain('预算最晚下周一确认');
+    expect(harness.messenger.actions).toHaveLength(1);
+  });
+
   it('uses the previous raw message when 写跟进呀 resolves clarification', async (): Promise<void> => {
     const harness: TestHarness = createHarness();
     const receivedAt: Date = new Date();

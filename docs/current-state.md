@@ -1,5 +1,20 @@
 # 当前工程说明
 
+## 2026-09-24 全量复查整改
+
+已按 [项目复查整改 SDD](specs/13-project-hardening-sdd.md) 完成自动化 Green：OAuth 回调强制
+校验浏览器 state Cookie；Web 确认先返回 `executing` 并后台执行，页面自动轮询；失败动作复用
+原任务候选，确认 N+1 后未创建动作的崩溃窗口按逻辑任务 ID 映射；跟进补充态全部先经过
+LangChain/LangGraph；checkpoint 默认 24 小时过期并调用 `deleteThread` 清理。
+
+新增 `npm run migrate:agent`，只按顺序执行 `003/005/006/007/008`，以文件名和 SHA-256 记录
+迁移账本，明确排除本地租户种子。本机 Postgres 首次登记后再次运行全部 `skip`。当前质量门为
+22 个单测文件 `158/158`、Postgres 集成 `8/8`、三套 TypeScript、ESLint、Agent/Web 构建通过。
+最新构建的运行态和真实飞书 UI 仍需复验。
+
+飞书机器人入口的成员/角色权限校验继续按用户决定只记录，不在本轮修复。Mem0 真实后端仍未
+启用，不能将当前状态描述为长期语义记忆已上线。
+
 ## 2026-09-23 LangChain/LangGraph 迁移目标与进展
 
 当前增量目标已切换为：按 D-027、D-028 将自研对话中枢和自研短期记忆替换为
@@ -26,18 +41,18 @@ LangChain.js + LangGraph.js 运行时；使用 LangGraph Postgres Checkpointer �
 ### 当前 TODO
 
 - [ ] P1：飞书机器人入口的成员/角色权限校验（本轮按用户要求只记录，不修复）。
-- [x] Web OAuth state 已绑定短时 HttpOnly cookie，并在回调后清理。
+- [x] Web OAuth state 缺 Cookie、不一致或重放均在换取身份前拒绝。
 - [x] 接入 Mem0 ACL 召回和 `memory_save` 明确批准写入；默认外部后端仍关闭。
 - [ ] 对 Mem0 做中文召回、误记忆、删除、ACL 和容量评测；评测未通过前保持关闭写入。
-- [x] 增加执行动作超时恢复、Web 候选版本修复和自然语言路由修复。
+- [x] 执行动作超时恢复、Web 候选版本重试和补充态 LLM 主路由均完成自动化回归。
 - [ ] 在真实飞书 UI 复验执行超时恢复、候选版本重试和自然语言路由。
 - [ ] 在真实飞书同一聊天完成普通问答、客户事实澄清和“帮我写跟进”预填表单 UI 验收。
 - [ ] 完成确认卡执行中、唯一终态和结果修订的真实 UI 对账。
 
 ### 当前阶段
 
-`Implemented / runtime verified / UI retest pending`。当前 Agent 单元测试 `150/150`，服务端与测试
-类型检查、ESLint、Agent 构建均通过。Mem0 包已安装但生产写入保持关闭：当前 Postgres 没有
+`Automated Green / latest runtime and UI retest pending`。当前 Agent 单元测试 `158/158`、
+Postgres 集成 `8/8`，三套类型检查、ESLint、Agent/Web 构建均通过。Mem0 包已安装但生产写入保持关闭：当前 Postgres 没有
 `vector` 扩展，且 embedding、中文召回、删除与 ACL 评测尚未完成，因此不把内存向量库冒充长期
 持久化能力。
 

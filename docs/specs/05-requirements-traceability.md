@@ -1,6 +1,6 @@
 # 需求追踪矩阵
 
-状态：`Approved / implementing / regression evidence update 2026-09-21`
+状态：`Approved / automated Green / UI regression pending 2026-09-24`
 
 2026-09-20 已确认原聊天卡内编辑、保存前内容质检、本人待办预览与一次确认，以及条件性
 项目推进质检。以下既有自动化/Web 证据不覆盖这些新增场景；详见
@@ -19,15 +19,16 @@
 Web 确认后的待办候选跨版本幂等；Mem0 接入 `memory_save` 和 ACL 召回。飞书机器人角色权限
 校验按用户要求保留为 P1 TODO，不在本轮改动；Web OAuth state 会话绑定已补齐。
 
-2026-09-23 当前回归基线为 21 个测试文件、150/150；Postgres 集成为 8/8（历史阶段基线保留在
-下方对应记录中）；
-“确认保存”一次执行和“跟进登记成功＋查看跟进记录”已具备自动化证据，但尚未用新版本卡片完成真实飞书 UI 复测。
+2026-09-24 代码复查将 OAuth 缺 Cookie、Web 失败动作跨版本重试、补充态 LLM 主路由和
+LangGraph thread TTL 重新打开为整改项。现已按 [项目复查整改 SDD](13-project-hardening-sdd.md)
+完成 Red/Green：22 个单测文件 158/158、Postgres 集成 8/8、三套类型检查、ESLint 和两端构建
+通过；数据库迁移命令连续执行两次为 apply/skip。真实飞书 UI 仍须使用最新运行态复验。
 
 | 需求范围 | 阶段 | 规格状态 | 自动化证据 | UI 证据 |
 | --- | --- | --- | --- | --- |
-| `SIA-000..000D` 对话入口、意图与安全路由 | B0 | Implemented / UI partial, clean-state retest pending | 新增“记录/分析”会话承接、隔离、超时、换话题和去重；补齐 `pastDueAt` 持久化回读契约后全量 134/134、Postgres 集成 8/8 | 修复后已真实出卡并正确禁用过期待办；因上次失败遗留澄清会话，首条新原文直接出卡，不是干净双轮证据。当前无 Base/Task 执行，需取消草案后重放两轮 |
+| `SIA-000..000D` 对话入口、意图与安全路由 | B0 | Implemented / UI partial, clean-state retest pending | LangGraph 主分类覆盖普通态、澄清态和补充态；关键词换话题门已移除，24 小时 checkpoint TTL 具备保留/删除回归；进入 158 项全量回归 | 修复后已真实出卡并正确禁用过期待办；最新补充态问答与相关补充仍待干净状态重放 |
 | `PLT-001..006` 多租户、身份、授权、审计 | A | Implemented | 51 项单测 + 5 项真实 Postgres 集成测试；包含租户范围 OAuth、RBAC、拒绝/允许审计追加 | 真实飞书 OAuth、管理员允许、销售直达管理页拒绝已通过；四真实账号/两真实租户待验收 |
-| `WEB-001..003` 页面授权、状态和飞书深链 | A | Implementing | Session/导航/页面 API 与 OAuth HTTP 边界测试已通过；深链签名尚未实现 | 桌面、390px 窄屏、角色导航及 forbidden 已通过；卡片详情深链待实现 |
+| `WEB-001..003` 页面授权、状态和飞书深链 | A | Implementing | OAuth 缺 state Cookie、不一致和重放均拒绝；Session/导航/页面 API 边界通过；深链签名尚未实现 | 桌面、390px 窄屏、角色导航及 forbidden 已通过；最新 OAuth 回归和卡片详情深链待验收 |
 | `ING-001..002` 表单与文本输入 | B1 | Implementing | Web 创建 API、同键并发与租户归属通过；“写跟进”原聊天表单、异步生成/失败恢复、非本人/空原文/重复提交、回调解析和旧 P0 兼容测试通过 | Web 与真实飞书原聊天文本/卡片录入、字段补充、生成和确认已通过；其他输入来源待验收 |
 | `FUP-001..003` 提取、生成和证据 | B1 | Implemented / UI verified | 来源 quote、生成正文与版本通过；本次沟通方式/时间/主题、`nowLocal` 与显式 offset 契约已进入 126 项回归 | 真实飞书卡片已正确区分本次“飞书”与下一步“飞书会议”，时间为 `2026-09-21T10:15:00+08:00`，主题为“试点方案” |
 | `FUP-004..006` 保存前可用性、卡内编辑和检查修改 | B2 | Implementing / regression fix | 阻断/建议分离、无数字等级、中文化去重，以及“检查修改只更新、确认保存携编辑值一次执行” Red/Green 均已进入 137 项回归 | 无评分主视觉和取消终态已验收；本次确认按钮修复待真实复测 |
@@ -35,7 +36,7 @@ Web 确认后的待办候选跨版本幂等；Mem0 接入 `memory_save` 和 ACL 
 | `ING-004` 妙记/会议输入 | B4 | Draft | 待 Minutes/Note 契约测试 | 待真实妙记验收 |
 | `ING-005..007` 文档输入和失败恢复 | B5 | Draft | 待 Docs 权限/异常测试 | 待真实文档验收 |
 | `FUP-007..009` 写入、结果/项目质检卡、策略推送和幂等 | B6 | Implementing / regression fix | 三项 Base 后建任务、原卡唯一成功终态、原卡 patch 失败时补发、幂等、`followupRecordUrl` 持久化、成功卡记录链接，以及 `card.source_finalized`/补发 `card.result_sent` 审计均进入 137 项回归 | 历史双成功卡仅保留为 D-022 前的缺陷证据；本次唯一“跟进登记成功＋查看跟进记录”待真实复测 |
-| `FUP-010..011` 即时执行反馈、失败恢复和成功结果修订 | B6 | SDD approved / implementing | Red 待执行；目标覆盖回调先返回执行中、同卡唯一终态、返回编辑、原 Base/Task 更新及跨租户负向场景 | 待真实飞书观察执行中、成功/失败及编辑原结果 |
+| `FUP-010..011` 即时执行反馈、失败恢复和成功结果修订 | B6 | Automated Green / UI pending | 飞书卡与 Web 均先返回 `executing`；Web 自动轮询；超时回收、失败重试、N/N+1 候选映射、返回编辑和原 Base/Task 更新进入 158 项回归 | 待真实飞书观察执行中、成功/失败及编辑原结果；Web 执行中自动刷新待 UI 复验 |
 | `TSK-001..006` 任务预览、一次确认、状态建议/回收和提醒 | B6 | Implementing | 精确版本候选选择、空选择不建任务、所选候选精确执行；`pastDueAt` 已自动禁用且不默认勾选 | 新版任务预览和一次确认已通过；过期待办 UI 提示待真实核对，状态建议和提醒待实现 |
 | `REV-001` 个人日报 | B7 | Draft | 待报告快照测试 | 待个人日报验收 |
 | `COP-001..007` 客户商机决策 | C | Draft | 待查询/评分/权限/评测 | 待销售/主管页面验收 |

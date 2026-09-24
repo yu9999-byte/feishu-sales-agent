@@ -1,9 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { AgentExecutionResult } from '@shared/api.interface';
 import { MemoryControlStore } from '@server/modules/agent-core/memory-control.store';
 import type { AgentActionExecutorService } from '@server/modules/agent-core/agent-action-executor.service';
-import type { PendingAction, TenantIntegration } from '@server/modules/agent-core/agent.types';
+import type { TenantIntegration } from '@server/modules/agent-core/agent.types';
 import {
   FollowupConfirmationService,
 } from '@server/modules/sales-behavior/followup-confirmation.service';
@@ -66,7 +65,7 @@ const draftRecord = (confirmable = true): FollowupDraftRecord => ({
 });
 
 describe('FollowupConfirmationService', (): void => {
-  it('executes an exact confirmable version once and returns the existing result on retry', async (): Promise<void> => {
+  it('schedules an exact confirmable version once and immediately returns executing', async (): Promise<void> => {
     const control = new MemoryControlStore([integration]);
     let record = draftRecord();
     const repository = {
@@ -77,19 +76,7 @@ describe('FollowupConfirmationService', (): void => {
       }),
     } as unknown as FollowupDraftRepository;
     const executor = {
-      executeImmediately: vi.fn().mockImplementation(async (
-        _integration: TenantIntegration,
-        action: PendingAction,
-      ): Promise<AgentExecutionResult> => {
-        const result: AgentExecutionResult = {
-          pendingActionId: action.id,
-          status: 'succeeded',
-          followupRecordId: 'rec_followup',
-          taskGuid: 'task-guid',
-        };
-        await control.saveExecutionResult(TENANT_ID, action.id, 'succeeded', result);
-        return result;
-      }),
+      schedule: vi.fn(),
     } as unknown as AgentActionExecutorService;
     const service = new FollowupConfirmationService(control, repository, executor);
     const command = {
@@ -104,11 +91,11 @@ describe('FollowupConfirmationService', (): void => {
     };
     const first = await service.confirm(command);
     const retried = await service.confirm(command);
-    expect(first).toMatchObject({ status: 'succeeded', taskGuid: 'task-guid' });
+    expect(first).toMatchObject({ status: 'executing' });
     expect(retried).toEqual(first);
-    expect(executor.executeImmediately).toHaveBeenCalledTimes(1);
+    expect(executor.schedule).toHaveBeenCalledTimes(1);
     expect(repository.markConfirmed).toHaveBeenCalledTimes(1);
-    expect(executor.executeImmediately).toHaveBeenCalledWith(
+    expect(executor.schedule).toHaveBeenCalledWith(
       integration,
       expect.objectContaining({
         payload: expect.objectContaining({
@@ -122,6 +109,7 @@ describe('FollowupConfirmationService', (): void => {
           ],
         }),
       }),
+      null,
       'trace-confirm',
     );
   });
@@ -132,7 +120,7 @@ describe('FollowupConfirmationService', (): void => {
       getDraft: vi.fn().mockResolvedValue(draftRecord(false)),
       markConfirmed: vi.fn(),
     } as unknown as FollowupDraftRepository;
-    const executor = { executeImmediately: vi.fn() } as unknown as AgentActionExecutorService;
+    const executor = { schedule: vi.fn() } as unknown as AgentActionExecutorService;
     const service = new FollowupConfirmationService(control, repository, executor);
     await expect(service.confirm({
       tenantId: TENANT_ID,
@@ -145,7 +133,7 @@ describe('FollowupConfirmationService', (): void => {
       now: new Date(),
     })).rejects.toMatchObject({ code: 'DRAFT_NOT_CONFIRMABLE' });
     await expect(control.getPendingAction(TENANT_ID, DRAFT_ID)).resolves.toBeNull();
-    expect(executor.executeImmediately).not.toHaveBeenCalled();
+    expect(executor.schedule).not.toHaveBeenCalled();
   });
 
   it('rejects a stale version and a different owner before writing anything', async (): Promise<void> => {
@@ -154,7 +142,7 @@ describe('FollowupConfirmationService', (): void => {
       getDraft: vi.fn().mockResolvedValue(draftRecord()),
       markConfirmed: vi.fn(),
     } as unknown as FollowupDraftRepository;
-    const executor = { executeImmediately: vi.fn() } as unknown as AgentActionExecutorService;
+    const executor = { schedule: vi.fn() } as unknown as AgentActionExecutorService;
     const service = new FollowupConfirmationService(control, repository, executor);
     const command = {
       tenantId: TENANT_ID, ownerMemberId: MEMBER_ID,
@@ -168,7 +156,7 @@ describe('FollowupConfirmationService', (): void => {
       expectedVersion: 1,
     })).rejects.toMatchObject({ code: 'DRAFT_CONFLICT' });
     expect(repository.markConfirmed).not.toHaveBeenCalled();
-    expect(executor.executeImmediately).not.toHaveBeenCalled();
+    expect(executor.schedule).not.toHaveBeenCalled();
   });
 
   it('grants only one execution lease across concurrent confirmations', async (): Promise<void> => {
@@ -183,14 +171,7 @@ describe('FollowupConfirmationService', (): void => {
       }),
     } as unknown as FollowupDraftRepository;
     const executor = {
-      executeImmediately: vi.fn().mockImplementation(async (
-        _integration: TenantIntegration, action: PendingAction,
-      ): Promise<AgentExecutionResult> => {
-        await control.saveExecutionResult(TENANT_ID, action.id, 'succeeded', {
-          pendingActionId: action.id, status: 'succeeded', taskGuid: 'one-task',
-        });
-        return { pendingActionId: action.id, status: 'succeeded', taskGuid: 'one-task' };
-      }),
+      schedule: vi.fn(),
     } as unknown as AgentActionExecutorService;
     const service = new FollowupConfirmationService(control, repository, executor);
     const command = { tenantId: TENANT_ID, ownerMemberId: MEMBER_ID,
@@ -199,7 +180,7 @@ describe('FollowupConfirmationService', (): void => {
       traceId: 'trace-concurrent',
       now: new Date('2026-09-19T10:00:00+08:00') };
     await Promise.all([service.confirm(command), service.confirm(command)]);
-    expect(executor.executeImmediately).toHaveBeenCalledTimes(1);
+    expect(executor.schedule).toHaveBeenCalledTimes(1);
   });
 
   it('recovers when another request wins the version compare-and-swap', async (): Promise<void> => {
@@ -214,9 +195,7 @@ describe('FollowupConfirmationService', (): void => {
       }),
     } as unknown as FollowupDraftRepository;
     const executor = {
-      executeImmediately: vi.fn().mockResolvedValue({
-        pendingActionId: DRAFT_ID, status: 'succeeded', taskGuid: 'one-task',
-      }),
+      schedule: vi.fn(),
     } as unknown as AgentActionExecutorService;
     const service = new FollowupConfirmationService(control, repository, executor);
     await expect(service.confirm({
@@ -224,8 +203,8 @@ describe('FollowupConfirmationService', (): void => {
       draftId: DRAFT_ID, expectedVersion: 1, traceId: 'trace-race',
       now: new Date('2026-09-19T10:00:00+08:00'),
       selectedTaskCandidateIds: [TASK_CANDIDATE_ID],
-    })).resolves.toMatchObject({ status: 'succeeded' });
-    expect(executor.executeImmediately).toHaveBeenCalledTimes(1);
+    })).resolves.toMatchObject({ status: 'executing' });
+    expect(executor.schedule).toHaveBeenCalledTimes(1);
   });
 
   it('rejects a task candidate that was not derived from the confirmed version', async (): Promise<void> => {
@@ -235,7 +214,7 @@ describe('FollowupConfirmationService', (): void => {
       markConfirmed: vi.fn(),
     } as unknown as FollowupDraftRepository;
     const executor = {
-      executeImmediately: vi.fn(),
+      schedule: vi.fn(),
     } as unknown as AgentActionExecutorService;
     const service = new FollowupConfirmationService(
       control,
@@ -254,7 +233,7 @@ describe('FollowupConfirmationService', (): void => {
       now: new Date(),
     })).rejects.toMatchObject({ code: 'TASK_SELECTION_INVALID' });
     expect(repository.markConfirmed).not.toHaveBeenCalled();
-    expect(executor.executeImmediately).not.toHaveBeenCalled();
+    expect(executor.schedule).not.toHaveBeenCalled();
   });
 
   it('rejects changing the task selection after the version was confirmed', async (): Promise<void> => {
@@ -281,23 +260,7 @@ describe('FollowupConfirmationService', (): void => {
       ),
     } as unknown as FollowupDraftRepository;
     const executor = {
-      executeImmediately: vi.fn().mockImplementation(async (
-        _integration: TenantIntegration,
-        action: PendingAction,
-      ): Promise<AgentExecutionResult> => {
-        const result: AgentExecutionResult = {
-          pendingActionId: action.id,
-          status: 'succeeded',
-          taskGuid: 'task-guid',
-        };
-        await control.saveExecutionResult(
-          TENANT_ID,
-          action.id,
-          'succeeded',
-          result,
-        );
-        return result;
-      }),
+      schedule: vi.fn(),
     } as unknown as AgentActionExecutorService;
     const service = new FollowupConfirmationService(
       control,
@@ -320,6 +283,113 @@ describe('FollowupConfirmationService', (): void => {
       ...command,
       selectedTaskCandidateIds: [],
     })).rejects.toMatchObject({ code: 'TASK_SELECTION_INVALID' });
-    expect(executor.executeImmediately).toHaveBeenCalledTimes(1);
+    expect(executor.schedule).toHaveBeenCalledTimes(1);
+  });
+
+  it('reuses the original task candidates when retrying a failed confirmed action', async (): Promise<void> => {
+    const control = new MemoryControlStore([integration]);
+    let record = draftRecord();
+    const repository = {
+      getDraft: vi.fn().mockImplementation(
+        async (): Promise<FollowupDraftRecord> => structuredClone(record),
+      ),
+      markConfirmed: vi.fn().mockImplementation(
+        async (): Promise<FollowupDraftRecord> => {
+          record = {
+            ...record,
+            status: 'confirmed',
+            currentVersion: 2,
+            version: {
+              ...record.version,
+              version: 2,
+              creationKind: 'confirmed',
+              taskCandidates: undefined,
+            },
+          };
+          return structuredClone(record);
+        },
+      ),
+    } as unknown as FollowupDraftRepository;
+    const executor = { schedule: vi.fn() } as unknown as AgentActionExecutorService;
+    const service = new FollowupConfirmationService(
+      control,
+      repository,
+      executor,
+    );
+    const command = {
+      tenantId: TENANT_ID,
+      ownerMemberId: MEMBER_ID,
+      ownerOpenId: 'ou_owner',
+      draftId: DRAFT_ID,
+      expectedVersion: 1,
+      selectedTaskCandidateIds: [TASK_CANDIDATE_ID],
+      traceId: 'trace-cross-version-retry',
+      now: new Date('2026-09-19T10:00:00+08:00'),
+    };
+
+    const first = await service.confirm(command);
+    await control.saveExecutionResult(TENANT_ID, DRAFT_ID, 'failed', {
+      ...first,
+      status: 'failed',
+      errorCode: 'TASK_CREATE_FAILED',
+    });
+    const retried = await service.confirm({
+      ...command,
+      now: new Date('2026-09-19T10:01:00+08:00'),
+    });
+
+    expect(retried.status).toBe('executing');
+    expect(executor.schedule).toHaveBeenCalledTimes(2);
+    const retriedAction = vi.mocked(executor.schedule).mock.calls[1]?.[1];
+    expect(retriedAction?.payload.taskCandidates?.[0]).toMatchObject({
+      id: TASK_CANDIDATE_ID,
+      draftVersion: 1,
+    });
+    expect(retriedAction?.payload.selectedTaskCandidateIds)
+      .toEqual([TASK_CANDIDATE_ID]);
+  });
+
+  it('maps predecessor task IDs after confirmation when action creation was interrupted', async (): Promise<void> => {
+    const control = new MemoryControlStore([integration]);
+    const record = draftRecord();
+    const confirmed: FollowupDraftRecord = {
+      ...record,
+      status: 'confirmed',
+      currentVersion: 2,
+      version: {
+        ...record.version,
+        version: 2,
+        creationKind: 'confirmed',
+        taskCandidates: undefined,
+      },
+    };
+    const repository = {
+      getDraft: vi.fn().mockResolvedValue(confirmed),
+      markConfirmed: vi.fn(),
+    } as unknown as FollowupDraftRepository;
+    const executor = { schedule: vi.fn() } as unknown as AgentActionExecutorService;
+    const service = new FollowupConfirmationService(
+      control,
+      repository,
+      executor,
+    );
+
+    const result = await service.confirm({
+      tenantId: TENANT_ID,
+      ownerMemberId: MEMBER_ID,
+      ownerOpenId: 'ou_owner',
+      draftId: DRAFT_ID,
+      expectedVersion: 1,
+      selectedTaskCandidateIds: [TASK_CANDIDATE_ID],
+      traceId: 'trace-confirmed-without-action',
+      now: new Date('2026-09-19T10:01:00+08:00'),
+    });
+
+    expect(result.status).toBe('executing');
+    const action = await control.getPendingAction(TENANT_ID, DRAFT_ID);
+    expect(action?.payload.selectedTaskCandidateIds).toEqual([
+      `${DRAFT_ID}:v2:task:0`,
+    ]);
+    expect(executor.schedule).toHaveBeenCalledTimes(1);
   });
 });

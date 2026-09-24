@@ -6,8 +6,22 @@ const fs = require('node:fs');
 
 const cwd = process.cwd();
 
-function getBinName(name) {
-  return process.platform === 'win32' ? `${name}.cmd` : name;
+function npmInvocation(args) {
+  if (process.platform !== 'win32') {
+    return { command: 'npm', args };
+  }
+  const candidates = [
+    process.env.npm_execpath,
+    path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+  ].filter(Boolean);
+  const npmCli = candidates.find(candidate => fs.existsSync(candidate));
+  if (!npmCli) {
+    throw new Error('Could not locate npm-cli.js');
+  }
+  return {
+    command: process.execPath,
+    args: [npmCli, ...args],
+  };
 }
 
 function runCommand(command, args) {
@@ -21,6 +35,11 @@ function runCommand(command, args) {
     child.on('close', (code) => resolve(code || 0));
     child.on('error', () => resolve(1));
   });
+}
+
+function runNpm(args) {
+  const invocation = npmInvocation(args);
+  return runCommand(invocation.command, invocation.args);
 }
 
 function normalizeProjectFile(filePath) {
@@ -95,16 +114,16 @@ function canRunStylelint() {
 }
 
 async function runDefaultLint() {
-  const commands = ['npm run eslint', 'npm run type:check'];
+  const commands = [['run', 'eslint'], ['run', 'type:check']];
 
   if (canRunStylelint()) {
-    commands.push('npm run stylelint');
+    commands.push(['run', 'stylelint']);
   } else {
     console.warn('[lint] Skip stylelint: missing scripts.stylelint or stylelint config');
   }
 
-  const code = await runCommand(getBinName('npx'), ['concurrently', ...commands]);
-  process.exit(code);
+  const results = await Promise.all(commands.map(command => runNpm(command)));
+  process.exit(results.some(code => code !== 0) ? 1 : 0);
 }
 
 async function runSelectiveLint(inputFiles) {
@@ -138,21 +157,21 @@ async function runSelectiveLint(inputFiles) {
   const tasks = [];
 
   if (eslintFiles.length > 0) {
-    tasks.push(runCommand(getBinName('npx'), ['eslint', '--quiet', ...eslintFiles]));
+    tasks.push(runNpm(['exec', '--', 'eslint', '--quiet', ...eslintFiles]));
   }
 
   if (stylelintFiles.length > 0 && !canRunStylelint()) {
     console.warn('[lint] Skip stylelint: missing scripts.stylelint or stylelint config');
   } else if (stylelintFiles.length > 0) {
-    tasks.push(runCommand(getBinName('npx'), ['stylelint', '--quiet', ...stylelintFiles]));
+    tasks.push(runNpm(['exec', '--', 'stylelint', '--quiet', ...stylelintFiles]));
   }
 
   if (clientTypeFiles.length > 0) {
-    tasks.push(runCommand(getBinName('npm'), ['run', 'type:check:client']));
+    tasks.push(runNpm(['run', 'type:check:client']));
   }
 
   if (serverTypeFiles.length > 0) {
-    tasks.push(runCommand(getBinName('npm'), ['run', 'type:check:server']));
+    tasks.push(runNpm(['run', 'type:check:server']));
   }
 
   if (tasks.length === 0) {

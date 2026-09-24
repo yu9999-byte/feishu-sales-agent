@@ -172,7 +172,10 @@ class FeishuWebAuthService {
     now: Date = new Date(),
     expectedStateToken?: string,
   ): Promise<CompletedWebLogin> {
-    if (expectedStateToken !== undefined && expectedStateToken !== stateToken) {
+    if (
+      expectedStateToken === undefined ||
+      expectedStateToken !== stateToken
+    ) {
       throw new FeishuWebAuthError(
         'INVALID_STATE',
         '登录请求已失效，请重新登录',

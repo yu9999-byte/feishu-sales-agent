@@ -1,5 +1,5 @@
 import { MemorySaver } from '@langchain/langgraph';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type {
   ConversationDecision,
@@ -174,5 +174,55 @@ describe('LangGraphConversationAssistant', (): void => {
     expect(model.prompts[1]).toContain('客户预算下周批');
     expect(model.prompts[1]).toContain('你好，我可以帮你整理销售跟进。');
     expect(model.prompts[2]).not.toContain('客户预算下周批');
+  });
+
+  it('keeps recent turns inside the configured 24-hour thread window', async (): Promise<void> => {
+    const model = new StubIntentModel();
+    const checkpointer = new TestCheckpointer();
+    const assistant = new LangGraphConversationAssistant(model, checkpointer);
+    const context: ConversationInput['context'] = {
+      tenantId: 'tenant-a',
+      actorOpenId: 'ou-sales-a',
+      chatId: 'oc-chat-a',
+    };
+    const startedAt = new Date('2026-09-23T10:00:00+08:00');
+
+    await assistant.respond({
+      ...createInput(context, '第一轮独有上下文'),
+      now: startedAt,
+    });
+    await assistant.respond({
+      ...createInput(context, '第二轮问题'),
+      now: new Date(startedAt.getTime() + 23 * 60 * 60 * 1_000),
+    });
+
+    expect(model.prompts[1]).toContain('第一轮独有上下文');
+  });
+
+  it('deletes an expired thread before routing the next message', async (): Promise<void> => {
+    const model = new StubIntentModel();
+    const checkpointer = new TestCheckpointer();
+    const deleteThread = vi.spyOn(checkpointer.saver, 'deleteThread');
+    const assistant = new LangGraphConversationAssistant(model, checkpointer);
+    const context: ConversationInput['context'] = {
+      tenantId: 'tenant-a',
+      actorOpenId: 'ou-sales-a',
+      chatId: 'oc-chat-a',
+    };
+    const startedAt = new Date('2026-09-23T10:00:00+08:00');
+
+    await assistant.respond({
+      ...createInput(context, '不应跨天保留的上下文'),
+      now: startedAt,
+    });
+    await assistant.respond({
+      ...createInput(context, '过期后的新问题'),
+      now: new Date(startedAt.getTime() + 25 * 60 * 60 * 1_000),
+    });
+
+    expect(deleteThread).toHaveBeenCalledWith(
+      'tenant-a:ou-sales-a:oc-chat-a',
+    );
+    expect(model.prompts[1]).not.toContain('不应跨天保留的上下文');
   });
 });

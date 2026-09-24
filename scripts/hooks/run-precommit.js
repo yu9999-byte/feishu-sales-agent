@@ -3,6 +3,8 @@
 'use strict';
 
 const { spawnSync } = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const SEP = '  ' + '─'.repeat(36);
 
@@ -19,10 +21,23 @@ function failAndExit(step, body) {
 
 function runLint() {
   const cwd = process.cwd();
-  const res = spawnSync('npm', ['run', 'lint'], {
+  const candidates = [
+    process.env.npm_execpath,
+    path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+  ].filter(Boolean);
+  const npmCli = candidates.find(candidate => fs.existsSync(candidate));
+  const command = process.platform === 'win32' ? process.execPath : 'npm';
+  const args = process.platform === 'win32'
+    ? [npmCli, 'run', 'lint']
+    : ['run', 'lint'];
+  if (process.platform === 'win32' && !npmCli) {
+    failAndExit('lint', 'Could not locate npm-cli.js');
+  }
+  const res = spawnSync(command, args, {
     cwd,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: process.env,
+    shell: false,
   });
   if (res.error) {
     failAndExit('lint', String(res.error.message || res.error));

@@ -313,6 +313,8 @@ class FakeWebAuthStore implements WebAuthStore {
 }
 
 class FakeOAuthGateway implements FeishuOAuthGateway {
+  exchangeCalls: number = 0;
+
   identity: FeishuOAuthIdentity = {
     tenantKey: TENANT_KEY,
     openId: 'ou_current',
@@ -320,6 +322,7 @@ class FakeOAuthGateway implements FeishuOAuthGateway {
   };
 
   async exchangeCode(): Promise<FeishuOAuthIdentity> {
+    this.exchangeCalls += 1;
     return structuredClone(this.identity);
   }
 }
@@ -415,10 +418,32 @@ describe('FeishuWebAuthService', (): void => {
     ).rejects.toMatchObject({ code: 'INVALID_STATE' });
     expect(harness.store.state).not.toBeNull();
 
-    await harness.service.completeLogin('code-1', STATE_TOKEN, NOW);
+    await harness.service.completeLogin(
+      'code-1',
+      STATE_TOKEN,
+      NOW,
+      STATE_TOKEN,
+    );
     await expect(
-      harness.service.completeLogin('code-2', STATE_TOKEN, NOW),
+      harness.service.completeLogin(
+        'code-2',
+        STATE_TOKEN,
+        NOW,
+        STATE_TOKEN,
+      ),
     ).rejects.toMatchObject({ code: 'INVALID_STATE' });
+  });
+
+  it('rejects a callback without the browser state cookie before consuming state', async (): Promise<void> => {
+    const harness: Harness = createHarness();
+    await harness.service.startLogin(TENANT_KEY, '/', NOW);
+
+    await expect(
+      harness.service.completeLogin('code-no-cookie', STATE_TOKEN, NOW),
+    ).rejects.toMatchObject({ code: 'INVALID_STATE' });
+
+    expect(harness.store.state).not.toBeNull();
+    expect(harness.oauth.exchangeCalls).toBe(0);
   });
 
   it('rejects a tenant mismatch returned by Feishu', async (): Promise<void> => {
@@ -427,7 +452,12 @@ describe('FeishuWebAuthService', (): void => {
     await harness.service.startLogin(TENANT_KEY, '/', NOW);
 
     await expect(
-      harness.service.completeLogin('code-1', STATE_TOKEN, NOW),
+      harness.service.completeLogin(
+        'code-1',
+        STATE_TOKEN,
+        NOW,
+        STATE_TOKEN,
+      ),
     ).rejects.toMatchObject({ code: 'TENANT_MISMATCH' });
   });
 
@@ -437,7 +467,12 @@ describe('FeishuWebAuthService', (): void => {
     await harness.service.startLogin(TENANT_KEY, '/', NOW);
 
     await expect(
-      harness.service.completeLogin('code-1', STATE_TOKEN, NOW),
+      harness.service.completeLogin(
+        'code-1',
+        STATE_TOKEN,
+        NOW,
+        STATE_TOKEN,
+      ),
     ).rejects.toMatchObject({ code: 'ACCESS_DENIED' });
   });
 
@@ -451,6 +486,7 @@ describe('FeishuWebAuthService', (): void => {
       'code-1',
       STATE_TOKEN,
       NOW,
+      STATE_TOKEN,
     );
 
     expect(completed).toEqual({

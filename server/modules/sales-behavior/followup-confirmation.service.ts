@@ -102,7 +102,7 @@ class FollowupConfirmationService {
     const candidateVersion: number = alreadyConfirmed
       ? current.currentVersion
       : command.expectedVersion;
-    const taskCandidates: FollowupTaskCandidate[] =
+    let taskCandidates: FollowupTaskCandidate[] =
       current.version.taskCandidates ?? buildFollowupTaskCandidates({
         draftId: current.id,
         version: candidateVersion,
@@ -110,6 +110,8 @@ class FollowupConfirmationService {
         draft,
         now: command.now,
       });
+    let selectedTaskCandidateIds: string[] =
+      command.selectedTaskCandidateIds;
     if (alreadyConfirmed) {
       const existing: PendingAction | null = await this.store.getPendingAction(
         command.tenantId,
@@ -125,11 +127,20 @@ class FollowupConfirmationService {
         if (!['failed', 'partialFailure'].includes(existing.status)) {
           return existing.result;
         }
+        taskCandidates = existing.payload.taskCandidates ?? taskCandidates;
+        selectedTaskCandidateIds =
+          existing.payload.selectedTaskCandidateIds ??
+          command.selectedTaskCandidateIds;
+      } else {
+        selectedTaskCandidateIds = this.mapLogicalTaskSelection(
+          taskCandidates,
+          command.selectedTaskCandidateIds,
+        );
       }
     }
     this.assertTaskSelection(
       taskCandidates,
-      command.selectedTaskCandidateIds,
+      selectedTaskCandidateIds,
     );
 
     const integration: TenantIntegration | null =
@@ -173,7 +184,7 @@ class FollowupConfirmationService {
         draft: confirmed.version.draft,
         generatedBody: confirmed.version.generatedBody,
         taskCandidates,
-        selectedTaskCandidateIds: command.selectedTaskCandidateIds,
+        selectedTaskCandidateIds,
       },
       expiresAt: new Date(command.now.getTime() + 24 * 60 * 60 * 1000),
     });
@@ -188,7 +199,7 @@ class FollowupConfirmationService {
       action.payload.selectedTaskCandidateIds !== undefined;
     if (!existingConfirmedAction && !this.sameTaskSelection(
       action.payload.selectedTaskCandidateIds,
-      command.selectedTaskCandidateIds,
+      selectedTaskCandidateIds,
     )) {
       throw new FollowupConfirmationError('TASK_SELECTION_INVALID');
     }
@@ -218,7 +229,13 @@ class FollowupConfirmationService {
       outcome: 'accepted',
       details: { version: command.expectedVersion },
     });
-    return this.executor.executeImmediately(integration, acquired, command.traceId);
+    this.executor.schedule(
+      integration,
+      acquired,
+      null,
+      command.traceId,
+    );
+    return acquired.result;
   }
 
   private assertTaskSelection(
@@ -278,16 +295,45 @@ class FollowupConfirmationService {
     left: string[],
     right: string[],
   ): boolean {
-    const logical = (id: string): string => {
-      const marker: string = ':task:';
-      const index: number = id.lastIndexOf(marker);
-      return index >= 0 ? id.slice(index) : id;
-    };
-    const leftSet: Set<string> = new Set(left.map(logical));
-    const rightSet: Set<string> = new Set(right.map(logical));
+    const leftSet: Set<string> = new Set(left.map(this.logicalTaskId));
+    const rightSet: Set<string> = new Set(right.map(this.logicalTaskId));
     return leftSet.size === rightSet.size &&
       Array.from(leftSet).every((id: string): boolean => rightSet.has(id));
   }
+
+  private mapLogicalTaskSelection(
+    candidates: FollowupTaskCandidate[],
+    selectedIds: string[],
+  ): string[] {
+    if (new Set(selectedIds).size !== selectedIds.length) {
+      throw new FollowupConfirmationError('TASK_SELECTION_INVALID');
+    }
+    const byLogicalId: Map<string, string> = new Map(
+      candidates
+        .filter((candidate: FollowupTaskCandidate): boolean =>
+          candidate.status === 'ready',
+        )
+        .map((candidate: FollowupTaskCandidate): [string, string] => [
+          this.logicalTaskId(candidate.id),
+          candidate.id,
+        ]),
+    );
+    const mapped: Array<string | undefined> = selectedIds.map(
+      (id: string): string | undefined => byLogicalId.get(
+        this.logicalTaskId(id),
+      ),
+    );
+    if (mapped.some((id: string | undefined): boolean => id === undefined)) {
+      throw new FollowupConfirmationError('TASK_SELECTION_INVALID');
+    }
+    return mapped as string[];
+  }
+
+  private readonly logicalTaskId = (id: string): string => {
+    const marker: string = ':task:';
+    const index: number = id.lastIndexOf(marker);
+    return index >= 0 ? id.slice(index) : id;
+  };
 }
 
 export { FollowupConfirmationError, FollowupConfirmationService };

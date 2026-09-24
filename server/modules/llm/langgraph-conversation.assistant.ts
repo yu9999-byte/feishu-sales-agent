@@ -14,6 +14,10 @@ import type {
   ConversationInput,
 } from '@server/modules/agent-core/agent.types';
 import {
+  AGENT_CONFIG,
+  type AgentRuntimeConfig,
+} from '@server/config/agent.config';
+import {
   LANGCHAIN_INTENT_MODEL,
   type ConversationIntentModel,
 } from './langchain-intent.model';
@@ -53,6 +57,10 @@ const ConversationGraphState = Annotation.Root({
     ): LongTermMemoryItem[] => next,
     default: (): LongTermMemoryItem[] => [],
   }),
+  lastActiveAt: Annotation<string, string>({
+    reducer: (_previous: string, next: string): string => next,
+    default: (): string => new Date(0).toISOString(),
+  }),
 });
 
 type ConversationGraphStateValue = typeof ConversationGraphState.State;
@@ -63,6 +71,8 @@ export class LangGraphConversationAssistant
 {
   private readonly graph: ReturnType<typeof createConversationGraph>;
 
+  private readonly threadTtlMs: number;
+
   constructor(
     @Inject(LANGCHAIN_INTENT_MODEL)
     private readonly model: ConversationIntentModel,
@@ -71,12 +81,19 @@ export class LangGraphConversationAssistant
     @Optional()
     @Inject(LONG_TERM_MEMORY)
     private readonly memory?: LongTermMemoryPort,
+    @Optional()
+    @Inject(AGENT_CONFIG)
+    config?: AgentRuntimeConfig,
   ) {
     this.graph = createConversationGraph(this.model, this.checkpointer);
+    this.threadTtlMs = config?.conversationThreadTtlMs ??
+      24 * 60 * 60 * 1000;
   }
 
   async respond(input: ConversationInput): Promise<ConversationDecision> {
     await this.checkpointer.ensureReady();
+    const threadId: string = this.threadId(input);
+    await this.deleteExpiredThread(threadId, input.now);
     const longTermMemories: LongTermMemoryItem[] =
       await this.loadLongTermMemories(input);
     const result: ConversationGraphStateValue = await this.graph.invoke(
@@ -88,10 +105,11 @@ export class LangGraphConversationAssistant
           messageId: input.context?.sourceMessageId,
         }],
         longTermMemories,
+        lastActiveAt: input.now.toISOString(),
       },
       {
         configurable: {
-          thread_id: this.threadId(input),
+          thread_id: threadId,
         },
       },
     );
@@ -99,6 +117,27 @@ export class LangGraphConversationAssistant
       throw new Error('LangGraph intent node returned no decision');
     }
     return result.decision;
+  }
+
+  private async deleteExpiredThread(
+    threadId: string,
+    now: Date,
+  ): Promise<void> {
+    const saver = this.checkpointer.getSaver();
+    const tuple = await saver.getTuple({
+      configurable: { thread_id: threadId },
+    });
+    if (tuple === undefined) return;
+    const lastActiveAt: unknown = tuple.checkpoint.channel_values.lastActiveAt;
+    const timestamp: number = typeof lastActiveAt === 'string'
+      ? Date.parse(lastActiveAt)
+      : Number.NaN;
+    if (
+      Number.isNaN(timestamp) ||
+      now.getTime() - timestamp > this.threadTtlMs
+    ) {
+      await saver.deleteThread(threadId);
+    }
   }
 
   private async loadLongTermMemories(

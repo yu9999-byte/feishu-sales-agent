@@ -22,6 +22,7 @@ export interface AgentRuntimeConfig {
   host: string;
   port: number;
   executionTimeoutMs?: number;
+  conversationThreadTtlMs?: number;
   databaseUrl: string;
   llm: {
     baseUrl: string;
@@ -80,6 +81,9 @@ const loadAgentConfig = (): AgentRuntimeConfig => ({
   executionTimeoutMs: parsePositiveInteger(
     process.env.AGENT_EXECUTION_TIMEOUT_MS,
   ) ?? 5 * 60 * 1000,
+  conversationThreadTtlMs: parsePositiveInteger(
+    process.env.LANGGRAPH_THREAD_TTL_MS,
+  ) ?? 24 * 60 * 60 * 1000,
   databaseUrl: requireEnvironment('DATABASE_URL'),
   llm: {
     baseUrl: requireEnvironment('LLM_BASE_URL').replace(/\/$/u, ''),
