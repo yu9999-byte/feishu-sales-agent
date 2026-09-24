@@ -52,7 +52,7 @@ describe('followup task preview', (): void => {
     ]);
   });
 
-  it('does not mark a task executable when the next-step three elements are incomplete', (): void => {
+  it('only requires the next-step time to create the seller task', (): void => {
     const candidates: FollowupTaskCandidate[] = buildFollowupTaskCandidates({
       draftId: 'draft-2',
       version: 1,
@@ -67,7 +67,27 @@ describe('followup task preview', (): void => {
 
     expect(candidates[0]).toMatchObject({
       status: 'needs_input',
-      missingFields: ['dueAt', 'channel', 'participants'],
+      missingFields: ['dueAt'],
+    });
+  });
+
+  it('allows a task without an execution channel or participants', (): void => {
+    const candidates: FollowupTaskCandidate[] = buildFollowupTaskCandidates({
+      draftId: 'draft-optional-details',
+      version: 1,
+      ownerMemberId: 'member-1',
+      draft: draft({
+        nextActionChannel: null,
+        nextActionParticipants: [],
+      }),
+      now: new Date('2026-09-20T10:00:00+08:00'),
+    });
+
+    expect(candidates[0]).toMatchObject({
+      status: 'ready',
+      channel: null,
+      participants: [],
+      missingFields: [],
     });
   });
 

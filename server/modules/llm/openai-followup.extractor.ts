@@ -86,6 +86,40 @@ const localIsoTime = (date: Date, timezone: string): string => {
   return `${year}-${month}-${day}T${hour}:${minute}:${second}${offset}`;
 };
 
+const NEXT_WEEKDAY = /下(?:周|星期)([一二三四五六日天])/gu;
+const WEEKDAY_INDEX: Record<string, number> = {
+  一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 日: 7, 天: 7,
+};
+
+const correctNextWeekDueAt = (
+  draft: FollowupDraft,
+  input: FollowupExtractionInput,
+): FollowupDraft => {
+  if (!draft.dueAt || Number.isNaN(Date.parse(draft.dueAt))) return draft;
+  const mentions: RegExpMatchArray[] = [...input.combinedText.matchAll(
+    NEXT_WEEKDAY,
+  )];
+  if (mentions.length !== 1) return draft;
+  const weekday: number | undefined = WEEKDAY_INDEX[mentions[0][1]];
+  if (weekday === undefined) return draft;
+
+  const nowLocal: string = localIsoTime(input.now, input.timezone);
+  const today: Date = new Date(`${nowLocal.slice(0, 10)}T00:00:00Z`);
+  const dayOfWeek: number = today.getUTCDay() || 7;
+  const daysUntilTarget: number = 7 - dayOfWeek + weekday;
+  const target: Date = new Date(today);
+  target.setUTCDate(today.getUTCDate() + daysUntilTarget);
+  const targetDate: string = target.toISOString().slice(0, 10);
+  const modelLocal: string = localIsoTime(
+    new Date(draft.dueAt),
+    input.timezone,
+  );
+  const localClock: string = modelLocal.slice(11, 19);
+  const targetMidday: Date = new Date(`${targetDate}T12:00:00Z`);
+  const offset: string = localIsoTime(targetMidday, input.timezone).slice(-6);
+  return { ...draft, dueAt: `${targetDate}T${localClock}${offset}` };
+};
+
 @Injectable()
 export class OpenAiFollowupExtractor implements FollowupExtractor {
   private readonly logger: Logger = new Logger(
@@ -118,7 +152,10 @@ export class OpenAiFollowupExtractor implements FollowupExtractor {
             },
           ),
         );
-        const draft: FollowupDraft = this.parseResponse(response.data);
+        const draft: FollowupDraft = correctNextWeekDueAt(
+          this.parseResponse(response.data),
+          input,
+        );
         this.validateEvidence(input.combinedText, draft.evidenceQuotes);
         return draft;
       } catch (error: unknown) {

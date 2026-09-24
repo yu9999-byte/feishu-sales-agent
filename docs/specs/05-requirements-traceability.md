@@ -2,6 +2,14 @@
 
 状态：`Approved / automated Green / UI regression pending 2026-09-24`
 
+项目规划总入口见[销售 Agent 项目主计划](../project-master-plan.md)，后续 Codex 执行模板见
+[项目执行提示词](../project-operating-prompts.md)。本表是完成度唯一入口；主计划负责路线，
+本表负责证据。
+
+统一状态口径：`UI Verified`、`Automated Green / UI pending`、`Partial`、`Draft`。只有
+自动化和 UI 两列都有当前版本的直接证据，才能标记为 `UI Verified`；历史版本证据必须注明
+日期和场景，不能替代最新运行态复验。
+
 2026-09-20 已确认原聊天卡内编辑、保存前内容质检、本人待办预览与一次确认，以及条件性
 项目推进质检。以下既有自动化/Web 证据不覆盖这些新增场景；详见
 [决策问答](../decisions/2026-09-20-followup-chat-cards.md)。

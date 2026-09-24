@@ -827,6 +827,7 @@ describe('AgentWorkflowService', (): void => {
     });
 
     expect(harness.extractor.calls).toBe(1);
+    expect(harness.conversation.calls).toBe(1);
     expect(harness.extractor.lastInput?.currentText).toBe(originalText);
     expect(harness.extractor.lastInput?.combinedText).toBe(originalText);
     expect(harness.extractor.lastInput?.combinedText).not.toContain('写跟进呀');
@@ -867,6 +868,7 @@ describe('AgentWorkflowService', (): void => {
     });
 
     expect(harness.extractor.calls).toBe(1);
+    expect(harness.conversation.calls).toBe(1);
     expect(harness.extractor.lastInput?.currentText).toBe(originalText);
     expect(harness.extractor.lastInput?.combinedText).toBe(originalText);
     expect(harness.extractor.lastInput?.combinedText)
@@ -874,7 +876,7 @@ describe('AgentWorkflowService', (): void => {
     expect(harness.messenger.actions).toHaveLength(1);
   });
 
-  it('passes trusted thread boundaries to the conversation runtime', async (): Promise<void> => {
+  it('routes clarification analysis with trusted thread boundaries', async (): Promise<void> => {
     const harness: TestHarness = createHarness();
     const receivedAt: Date = new Date();
     const originalText: string = '客户担心数据权限隔离，暂未确认采购。';
@@ -886,7 +888,7 @@ describe('AgentWorkflowService', (): void => {
     });
     await harness.workflow.handleMessage({
       ...createMessage('tenant-a', 'om-memory-record'),
-      text: '帮我写跟进',
+      text: '只分析一下，不记录',
       receivedAt: new Date(receivedAt.getTime() + 1_000),
     });
 
@@ -898,6 +900,117 @@ describe('AgentWorkflowService', (): void => {
       chatId: 'oc_tenant-a',
       sourceMessageId: 'om-memory-record',
     });
+  });
+
+  it('routes an explicit followup with inline facts without asking the model', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    const source: string = '今天和华南科技张总沟通，下一步下周二上午10点发送报价。';
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'ambiguous',
+      confidence: 1,
+      reply: '是记录还是分析？',
+    };
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-explicit-inline'),
+      text: `帮我写跟进：${source}`,
+    });
+
+    expect(harness.conversation.calls).toBe(0);
+    expect(harness.extractor.calls).toBe(1);
+    expect(harness.extractor.lastInput?.combinedText).toBe(source);
+    expect(harness.messenger.actions).toHaveLength(1);
+    expect(harness.messenger.actions[0].payload.interactionStage).toBe('draft');
+    expect(harness.store.getAudits(harness.integrationA.tenantId))
+      .toContainEqual(expect.objectContaining({
+        eventType: 'message.intent_routed.v1',
+        details: expect.objectContaining({ intent: 'followup_capture' }),
+      }));
+  });
+
+  it('opens a followup input form for an explicit command without facts', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-explicit-empty'),
+      text: '帮我写跟进',
+    });
+
+    expect(harness.conversation.calls).toBe(0);
+    expect(harness.extractor.calls).toBe(0);
+    expect(harness.messenger.actions).toHaveLength(1);
+    expect(harness.messenger.actions[0].payload.interactionStage).toBe('input');
+  });
+
+  it('treats a command with sentence punctuation as an empty command', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-explicit-period'),
+      text: '帮我写跟进。',
+    });
+
+    expect(harness.conversation.calls).toBe(0);
+    expect(harness.extractor.calls).toBe(0);
+    expect(harness.messenger.actions[0].payload.interactionStage).toBe('input');
+  });
+
+  it('honors an explicit followup command during draft collection', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    const receivedAt: Date = new Date('2026-09-24T10:00:00+08:00');
+    await harness.store.saveCollectingSession({
+      tenantId: harness.integrationA.tenantId,
+      actorOpenId: 'ou_sales',
+      chatId: 'oc_tenant-a',
+      sourceMessageId: 'om-existing-draft',
+      rawText: '北辰制造认可方案，下一步发送报价。',
+      draft: completeDraft,
+      expiresAt: new Date(receivedAt.getTime() + 24 * 60 * 60 * 1_000),
+    });
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'ambiguous',
+      confidence: 1,
+      reply: '是记录还是分析？',
+    };
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-explicit-during-draft'),
+      text: '帮我写跟进',
+      receivedAt,
+    });
+
+    expect(harness.conversation.calls).toBe(0);
+    expect(harness.extractor.calls).toBe(1);
+    expect(harness.extractor.lastInput?.combinedText)
+      .toBe('北辰制造认可方案，下一步发送报价。');
+    expect(harness.messenger.actions[0].payload.sourceMessageId)
+      .toBe('om-existing-draft');
+  });
+
+  it('selects a task when optional execution details are absent', async (): Promise<void> => {
+    const harness: TestHarness = createHarness({
+      ...completeDraft,
+      dueAt: '2026-10-01T10:00:00+08:00',
+      nextActionChannel: null,
+      nextActionParticipants: [],
+    });
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-task-optional'),
+      text: '帮我写跟进：客户需要报价，下一步发送报价。',
+      receivedAt: new Date('2026-09-24T10:00:00+08:00'),
+    });
+
+    const pending: PendingAction = harness.messenger.actions[0];
+    expect(pending.payload.taskCandidates?.[0]).toMatchObject({
+      status: 'ready',
+      missingFields: [],
+    });
+    expect(pending.payload.selectedTaskCandidateIds)
+      .toEqual([`${pending.id}:v1:task:0`]);
+    expect(JSON.stringify(createConfirmationCard(pending)))
+      .toContain('执行方式未提供');
   });
 
   it('analyzes the previous raw message and closes clarification without writes', async (): Promise<void> => {
@@ -1086,7 +1199,7 @@ describe('AgentWorkflowService', (): void => {
     expect(harness.messenger.actions).toHaveLength(1);
   });
 
-  it('opens an owned Card 2.0 intake form after AI classifies 写跟进', async (): Promise<void> => {
+  it('opens an owned Card 2.0 intake form for 写跟进 without model routing', async (): Promise<void> => {
     const harness: TestHarness = createHarness();
     const command: IncomingMessage = {
       ...createMessage(),
@@ -1097,7 +1210,7 @@ describe('AgentWorkflowService', (): void => {
     await harness.workflow.handleMessage(command);
 
     expect(harness.extractor.lastInput).toBeNull();
-    expect(harness.conversation.calls).toBe(1);
+    expect(harness.conversation.calls).toBe(0);
     expect(harness.messenger.actions).toHaveLength(1);
     const intake: PendingAction = harness.messenger.actions[0];
     expect(intake.payload.interactionStage).toBe('input');
@@ -1110,7 +1223,7 @@ describe('AgentWorkflowService', (): void => {
     expect(harness.tasks.calls).toBe(0);
   });
 
-  it('does not let a keyword bypass an AI non-followup decision', async (): Promise<void> => {
+  it('does not route a question about writing followups as a command', async (): Promise<void> => {
     const harness: TestHarness = createHarness();
     harness.conversation.nextDecision = {
       schemaVersion: 'conversation-intent-v1',
@@ -1121,7 +1234,7 @@ describe('AgentWorkflowService', (): void => {
 
     await harness.workflow.handleMessage({
       ...createMessage(),
-      text: '写跟进',
+      text: '你能写跟进吗？',
     });
 
     expect(harness.conversation.calls).toBe(1);

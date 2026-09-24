@@ -288,8 +288,11 @@ const createTaskFormElements = (action: PendingAction): JsonValue[] => {
       'pastDueAt',
     );
     const detail: string = ready
-      ? `${candidate.dueAt ?? ''} · ${candidate.channel ?? ''} · ` +
-        candidate.participants.join('、')
+      ? `${candidate.dueAt ?? ''} · ` +
+        `${candidate.channel ?? '执行方式未提供'} · ` +
+        (candidate.participants.length > 0
+          ? candidate.participants.join('、')
+          : '参与人未提供')
       : hasPastDueAt
         ? missingTaskLabels(candidate.missingFields)
         : `待补充：${missingTaskLabels(candidate.missingFields)}`;

@@ -32,6 +32,9 @@ export interface AgentRuntimeConfig {
   feishu: {
     verificationToken: string;
     encryptKey: string | undefined;
+    receiveMode?: 'webhook' | 'websocket';
+    appId?: string;
+    appSecret?: string;
   };
   longTermMemory?: LongTermMemoryRuntimeConfig;
 }
@@ -64,6 +67,14 @@ const parseBoolean = (value: string | undefined, fallback: boolean): boolean => 
   return value.trim().toLowerCase() === 'true';
 };
 
+const parseFeishuReceiveMode = (): 'webhook' | 'websocket' => {
+  const mode: string = optionalEnvironment('FEISHU_RECEIVE_MODE') ?? 'webhook';
+  if (mode !== 'webhook' && mode !== 'websocket') {
+    throw new Error('FEISHU_RECEIVE_MODE must be webhook or websocket');
+  }
+  return mode;
+};
+
 const parsePositiveInteger = (value: string | undefined): number | undefined => {
   if (value === undefined || value.trim().length === 0) {
     return undefined;
@@ -93,6 +104,9 @@ const loadAgentConfig = (): AgentRuntimeConfig => ({
   feishu: {
     verificationToken: requireEnvironment('FEISHU_VERIFICATION_TOKEN'),
     encryptKey: optionalEnvironment('FEISHU_ENCRYPT_KEY'),
+    receiveMode: parseFeishuReceiveMode(),
+    appId: optionalEnvironment('FEISHU_APP_ID'),
+    appSecret: optionalEnvironment('FEISHU_APP_SECRET'),
   },
   longTermMemory: {
     enabled: parseBoolean(process.env.MEM0_ENABLED, false),

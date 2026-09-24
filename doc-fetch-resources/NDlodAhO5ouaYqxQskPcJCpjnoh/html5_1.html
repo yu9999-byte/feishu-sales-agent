@@ -1,0 +1,232 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="use-iframe" content="true">
+  <meta name="html-box-height-mode" content="auto">
+  <meta name="description" content="系统架构图：接入层→决策执行层→认知记忆层→内核驱动层→数据层→AI CSO智能闭环">
+  <title>系统架构图：接入层→决策执行层→认知记忆层→内核驱动层→数据层→AI CSO智能闭环</title>
+</head>
+<body style="margin:0;padding:0;">
+<html style="margin:0;padding:0;">
+<title>销售Agent系统架构图</title>
+<div style="width:100%;box-sizing:border-box;font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);padding:32px;color:#e2e8f0;">
+
+<div style="text-align:center;margin-bottom:32px;">
+<h1 style="font-size:28px;font-weight:700;color:#f8fafc;margin:0 0 8px 0;">销售 Agent 系统架构图</h1>
+<p style="font-size:14px;color:#94a3b8;margin:0;">AI CSO 三层架构 × 飞书原生集成 × 微服务技术栈</p>
+</div>
+
+<!-- 接入层 -->
+<div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:12px;padding:20px;margin-bottom:16px;">
+<div style="display:flex;align-items:center;margin-bottom:14px;">
+<div style="width:4px;height:20px;background:#3b82f6;border-radius:2px;margin-right:10px;"></div>
+<span style="font-size:16px;font-weight:600;color:#60a5fa;">接入层 · Access Layer</span>
+<span style="margin-left:auto;font-size:12px;color:#64748b;">飞书原生交互入口</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+<div style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:20px;margin-bottom:4px;">🤖</div>
+<div style="font-size:13px;font-weight:600;color:#93c5fd;">飞书机器人</div>
+<div style="font-size:11px;color:#64748b;margin-top:2px;">Sia问答/消息推送</div>
+</div>
+<div style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:20px;margin-bottom:4px;">📱</div>
+<div style="font-size:13px;font-weight:600;color:#93c5fd;">飞书应用</div>
+<div style="font-size:11px;color:#64748b;margin-top:2px;">H5/小程序主入口</div>
+</div>
+<div style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:20px;margin-bottom:4px;">🃏</div>
+<div style="font-size:13px;font-weight:600;color:#93c5fd;">消息卡片</div>
+<div style="font-size:11px;color:#64748b;margin-top:2px;">交互式卡片展示</div>
+</div>
+<div style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:20px;margin-bottom:4px;">📊</div>
+<div style="font-size:13px;font-weight:600;color:#93c5fd;">多维表格</div>
+<div style="font-size:11px;color:#64748b;margin-top:2px;">轻量CRM数据源</div>
+</div>
+<div style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.4);border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:20px;margin-bottom:4px;">💻</div>
+<div style="font-size:13px;font-weight:600;color:#93c5fd;">Web管理后台</div>
+<div style="font-size:11px;color:#64748b;margin-top:2px;">管理员配置中心</div>
+</div>
+</div>
+</div>
+
+<!-- 箭头 -->
+<div style="text-align:center;color:#475569;font-size:18px;margin:4px 0;">▼</div>
+
+<!-- 决策与执行层 -->
+<div style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.3);border-radius:12px;padding:20px;margin-bottom:16px;">
+<div style="display:flex;align-items:center;margin-bottom:14px;">
+<div style="width:4px;height:20px;background:#a855f7;border-radius:2px;margin-right:10px;"></div>
+<span style="font-size:16px;font-weight:600;color:#c084fc;">决策与执行层 · CSO Agent</span>
+<span style="margin-left:auto;font-size:12px;color:#64748b;">四类协同 Agent 驱动销售全链路</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+<div style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);border-radius:8px;padding:14px;">
+<div style="font-size:14px;font-weight:700;color:#d8b4fe;margin-bottom:8px;">🎯 行为 Agent</div>
+<div style="font-size:11px;color:#94a3b8;line-height:1.6;">
+• 多模态数据采集<br>
+• 录入质量自动质检<br>
+• 任务自动抽取跟踪<br>
+• 日报周报自动生成
+</div>
+</div>
+<div style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);border-radius:8px;padding:14px;">
+<div style="font-size:14px;font-weight:700;color:#d8b4fe;margin-bottom:8px;">👥 项目 Agent</div>
+<div style="font-size:11px;color:#94a3b8;line-height:1.6;">
+• 客户拜访攻略生成<br>
+• 商机持续分析预警<br>
+• 决策链关系图谱<br>
+• 下一步行动建议
+</div>
+</div>
+<div style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);border-radius:8px;padding:14px;">
+<div style="font-size:14px;font-weight:700;color:#d8b4fe;margin-bottom:8px;">📈 Review Agent</div>
+<div style="font-size:11px;color:#94a3b8;line-height:1.6;">
+• 业绩达成决策看板<br>
+• Weekly Review 报告<br>
+• 人员效能双维评估<br>
+• AI Commit 业绩预测
+</div>
+</div>
+<div style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);border-radius:8px;padding:14px;">
+<div style="font-size:14px;font-weight:700;color:#d8b4fe;margin-bottom:8px;">🧬 Best Practice</div>
+<div style="font-size:11px;color:#94a3b8;line-height:1.6;">
+• 高绩效模式自动识别<br>
+• Sales Playbook 管理<br>
+• 打法持续验证优化<br>
+• 组织能力沉淀复制
+</div>
+</div>
+</div>
+</div>
+
+<!-- 箭头 -->
+<div style="text-align:center;color:#475569;font-size:18px;margin:4px 0;">▼</div>
+
+<!-- 认知与记忆层 -->
+<div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:20px;margin-bottom:16px;">
+<div style="display:flex;align-items:center;margin-bottom:14px;">
+<div style="width:4px;height:20px;background:#f59e0b;border-radius:2px;margin-right:10px;"></div>
+<span style="font-size:16px;font-weight:600;color:#fbbf24;">认知与记忆层 · Sales WorldModel</span>
+<span style="margin-left:auto;font-size:12px;color:#64748b;">企业级记忆系统，理解销售现实</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+<div style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:13px;font-weight:600;color:#fcd34d;margin-bottom:4px;">状态监控</div>
+<div style="font-size:11px;color:#94a3b8;">监控状态偏离<br>实时风险预警</div>
+</div>
+<div style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:13px;font-weight:600;color:#fcd34d;margin-bottom:4px;">现实理解</div>
+<div style="font-size:11px;color:#94a3b8;">理解销售现实<br>构建客户全景</div>
+</div>
+<div style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:13px;font-weight:600;color:#fcd34d;margin-bottom:4px;">证据管理</div>
+<div style="font-size:11px;color:#94a3b8;">感觉-证据-训练信号<br>全链路可追溯</div>
+</div>
+<div style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:13px;font-weight:600;color:#fcd34d;margin-bottom:4px;">技能包</div>
+<div style="font-size:11px;color:#94a3b8;">状态机与技能包<br>Playbook 产品化</div>
+</div>
+</div>
+</div>
+
+<!-- 箭头 -->
+<div style="text-align:center;color:#475569;font-size:18px;margin:4px 0;">▼</div>
+
+<!-- 内核与驱动层 -->
+<div style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:20px;margin-bottom:16px;">
+<div style="display:flex;align-items:center;margin-bottom:14px;">
+<div style="width:4px;height:20px;background:#22c55e;border-radius:2px;margin-right:10px;"></div>
+<span style="font-size:16px;font-weight:600;color:#4ade80;">内核与驱动层 · CSO 大脑</span>
+<span style="margin-left:auto;font-size:12px;color:#64748b;">销售管理推理模型，持续自学习升级</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+<div style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:13px;font-weight:600;color:#86efac;margin-bottom:4px;">LLM 推理</div>
+<div style="font-size:11px;color:#94a3b8;">多模型网关<br>复杂推理生成</div>
+</div>
+<div style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:13px;font-weight:600;color:#86efac;margin-bottom:4px;">RAG 检索</div>
+<div style="font-size:11px;color:#94a3b8;">向量+关键词混合<br>企业知识增强</div>
+</div>
+<div style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:13px;font-weight:600;color:#86efac;margin-bottom:4px;">Agent 框架</div>
+<div style="font-size:11px;color:#94a3b8;">任务编排规划<br>工具调用执行</div>
+</div>
+<div style="background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.4);border-radius:8px;padding:12px;text-align:center;">
+<div style="font-size:13px;font-weight:600;color:#86efac;margin-bottom:4px;">强化学习</div>
+<div style="font-size:11px;color:#94a3b8;">RL 持续自学习<br>摒弃静态规则</div>
+</div>
+</div>
+</div>
+
+<!-- 箭头 -->
+<div style="text-align:center;color:#475569;font-size:18px;margin:4px 0;">▼</div>
+
+<!-- 数据层 -->
+<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:20px;margin-bottom:16px;">
+<div style="display:flex;align-items:center;margin-bottom:14px;">
+<div style="width:4px;height:20px;background:#ef4444;border-radius:2px;margin-right:10px;"></div>
+<span style="font-size:16px;font-weight:600;color:#f87171;">数据层 · Data Layer</span>
+<span style="margin-left:auto;font-size:12px;color:#64748b;">多模存储引擎，支撑全链路数据需求</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;">
+<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:8px;padding:10px;text-align:center;">
+<div style="font-size:12px;font-weight:600;color:#fca5a5;">MySQL</div>
+<div style="font-size:10px;color:#94a3b8;margin-top:2px;">业务数据</div>
+</div>
+<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:8px;padding:10px;text-align:center;">
+<div style="font-size:12px;font-weight:600;color:#fca5a5;">Redis</div>
+<div style="font-size:10px;color:#94a3b8;margin-top:2px;">缓存会话</div>
+</div>
+<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:8px;padding:10px;text-align:center;">
+<div style="font-size:12px;font-weight:600;color:#fca5a5;">向量库</div>
+<div style="font-size:10px;color:#94a3b8;margin-top:2px;">知识检索</div>
+</div>
+<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:8px;padding:10px;text-align:center;">
+<div style="font-size:12px;font-weight:600;color:#fca5a5;">ES</div>
+<div style="font-size:10px;color:#94a3b8;margin-top:2px;">全文检索</div>
+</div>
+<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:8px;padding:10px;text-align:center;">
+<div style="font-size:12px;font-weight:600;color:#fca5a5;">Kafka</div>
+<div style="font-size:10px;color:#94a3b8;margin-top:2px;">事件总线</div>
+</div>
+<div style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.4);border-radius:8px;padding:10px;text-align:center;">
+<div style="font-size:12px;font-weight:600;color:#fca5a5;">ClickHouse</div>
+<div style="font-size:10px;color:#94a3b8;margin-top:2px;">分析数据</div>
+</div>
+</div>
+</div>
+
+<!-- 底部智能闭环 -->
+<div style="background:linear-gradient(90deg,rgba(59,130,246,0.1),rgba(168,85,247,0.1),rgba(34,197,94,0.1));border:1px solid rgba(148,163,184,0.2);border-radius:12px;padding:18px;margin-top:20px;">
+<div style="text-align:center;margin-bottom:12px;">
+<span style="font-size:15px;font-weight:600;color:#e2e8f0;">🔄 AI CSO 智能闭环</span>
+</div>
+<div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
+<div style="background:rgba(59,130,246,0.2);border:1px solid #3b82f6;border-radius:20px;padding:6px 16px;font-size:12px;color:#93c5fd;font-weight:600;">洞察 Insight</div>
+<span style="color:#475569;">→</span>
+<div style="background:rgba(168,85,247,0.2);border:1px solid #a855f7;border-radius:20px;padding:6px 16px;font-size:12px;color:#d8b4fe;font-weight:600;">判断 Decision</div>
+<span style="color:#475569;">→</span>
+<div style="background:rgba(245,158,11,0.2);border:1px solid #f59e0b;border-radius:20px;padding:6px 16px;font-size:12px;color:#fcd34d;font-weight:600;">动作 Action</div>
+<span style="color:#475569;">→</span>
+<div style="background:rgba(34,197,94,0.2);border:1px solid #22c55e;border-radius:20px;padding:6px 16px;font-size:12px;color:#86efac;font-weight:600;">执行 Execution</div>
+<span style="color:#475569;">→</span>
+<div style="background:rgba(236,72,153,0.2);border:1px solid #ec4899;border-radius:20px;padding:6px 16px;font-size:12px;color:#f9a8d4;font-weight:600;">反馈 Feedback</div>
+<span style="color:#475569;">→</span>
+<div style="background:rgba(14,165,233,0.2);border:1px solid #0ea5e9;border-radius:20px;padding:6px 16px;font-size:12px;color:#7dd3fc;font-weight:600;">进化 Evolution</div>
+</div>
+</div>
+
+<div style="text-align:center;margin-top:20px;font-size:11px;color:#475569;">
+基于竞品 APTSell 架构拆解 · 飞书原生 AI 销售增长决策引擎 · 技术方案 v1.0
+</div>
+
+</div>
+</html>
+</body>
+</html>

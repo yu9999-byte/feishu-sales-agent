@@ -1,6 +1,12 @@
 import { createHash } from 'node:crypto';
 
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from '@nestjs/common';
 import * as lark from '@larksuiteoapi/node-sdk';
 import { z } from 'zod';
 
@@ -73,9 +79,11 @@ const decodeCardCallbackObject = (value: unknown): JsonObject => {
 };
 
 @Injectable()
-class FeishuWebhookBridge {
+class FeishuWebhookBridge implements OnModuleInit, OnModuleDestroy {
   private readonly logger: Logger = new Logger(FeishuWebhookBridge.name);
   private readonly sdkLogger: SafeSdkLogger;
+  private readonly eventDispatcher: lark.EventDispatcher;
+  private wsClient: lark.WSClient | null = null;
   private readonly eventHandler: (
     request: Request,
     response: Response,
@@ -88,10 +96,10 @@ class FeishuWebhookBridge {
   constructor(
     private readonly workflow: AgentWorkflowService,
     @Inject(AGENT_CONFIG)
-    config: AgentRuntimeConfig,
+    private readonly config: AgentRuntimeConfig,
   ) {
     this.sdkLogger = this.createSdkLogger();
-    const eventDispatcher: lark.EventDispatcher =
+    this.eventDispatcher =
       new lark.EventDispatcher({
         verificationToken: config.feishu.verificationToken,
         encryptKey: config.feishu.encryptKey,
@@ -150,6 +158,11 @@ class FeishuWebhookBridge {
               );
           });
         },
+      }).register({
+        'card.action.trigger': async (data: unknown): Promise<unknown> => {
+          const incoming: IncomingCardAction = this.mapCardAction(data);
+          return this.workflow.handleCardAction(incoming);
+        },
       });
     const cardActionHandler: lark.CardActionHandler =
       new lark.CardActionHandler(
@@ -165,7 +178,7 @@ class FeishuWebhookBridge {
         },
       );
 
-    this.eventHandler = lark.adaptExpress(eventDispatcher, {
+    this.eventHandler = lark.adaptExpress(this.eventDispatcher, {
       autoChallenge: true,
       logger: this.sdkLogger,
     });
@@ -173,6 +186,45 @@ class FeishuWebhookBridge {
       autoChallenge: true,
       logger: this.sdkLogger,
     });
+  }
+
+  async onModuleInit(): Promise<void> {
+    if (this.config.feishu.receiveMode !== 'websocket') {
+      return;
+    }
+    const appId: string | undefined = this.config.feishu.appId;
+    const appSecret: string | undefined = this.config.feishu.appSecret;
+    if (!appId || !appSecret) {
+      throw new Error(
+        'FEISHU_APP_ID and FEISHU_APP_SECRET are required for websocket mode',
+      );
+    }
+
+    this.wsClient = new lark.WSClient({
+      appId,
+      appSecret,
+      domain: lark.Domain.Feishu,
+      autoReconnect: true,
+      handshakeTimeoutMs: 15_000,
+      logger: this.sdkLogger,
+      loggerLevel: lark.LoggerLevel.error,
+      onReady: (): void => this.logger.log('Feishu long connection connected'),
+      onReconnecting: (): void => this.logger.warn(
+        'Feishu long connection reconnecting',
+      ),
+      onReconnected: (): void => this.logger.log(
+        'Feishu long connection reconnected',
+      ),
+      onError: (error: Error): void => this.logger.error(
+        `Feishu long connection failed: ${redactErrorMessage(error)}`,
+      ),
+    });
+    await this.wsClient.start({ eventDispatcher: this.eventDispatcher });
+  }
+
+  onModuleDestroy(): void {
+    this.wsClient?.close({ force: true });
+    this.wsClient = null;
   }
 
   async handleEvent(

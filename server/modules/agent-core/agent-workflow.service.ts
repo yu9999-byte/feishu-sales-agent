@@ -287,6 +287,38 @@ export class AgentWorkflowService {
       return;
     }
     if (session?.draft === null) {
+      const explicitSource: string | null = this.explicitFollowupSource(
+        message.text,
+      );
+      if (explicitSource !== null) {
+        await this.store.closeSession(
+          integration.tenantId,
+          message.senderOpenId,
+        );
+        await this.auditIntentClarificationResolved(
+          integration,
+          message,
+          session,
+          'record',
+        );
+        if (explicitSource.length > 0) {
+          await this.processFollowupText(
+            integration,
+            message,
+            explicitSource,
+            session,
+          );
+        } else {
+          await this.processFollowupText(
+            integration,
+            message,
+            session.rawText,
+            null,
+            session.sourceMessageId,
+          );
+        }
+        return;
+      }
       const activeContext: ConversationContext = {
         ...context,
         activeWorkflow: 'record_or_analyze',
@@ -381,6 +413,32 @@ export class AgentWorkflowService {
       );
       const waitingMessageId: string | null =
         await this.sendConversationWaiting(integration, message);
+      if (explicitSource !== null) {
+        await this.auditExplicitFollowupRoute(integration, message);
+        if (explicitSource.length > 0) {
+          await this.finishConversationWaiting(
+            integration,
+            message,
+            waitingMessageId,
+            '已识别为跟进记录，正在生成草案。',
+          );
+          await this.processFollowupText(
+            integration,
+            message,
+            explicitSource,
+            null,
+          );
+          return;
+        }
+        await this.finishConversationWaiting(
+          integration,
+          message,
+          waitingMessageId,
+          '已识别为跟进记录，请填写下面的表单。',
+        );
+        await this.openFollowupInputForm(integration, message);
+        return;
+      }
       let decision: ConversationDecision;
       try {
         decision = await this.conversation.respond({
@@ -402,24 +460,6 @@ export class AgentWorkflowService {
         decision.intent === 'followup_capture' &&
         decision.confidence >= 0.55
       ) {
-        if (explicitSource !== null && explicitSource.length > 0) {
-          await this.finishConversationWaiting(
-            integration,
-            message,
-            waitingMessageId,
-            '已识别为跟进记录，正在生成草案。',
-          );
-          await this.processFollowupText(
-            integration,
-            message,
-            explicitSource,
-            session,
-          );
-          return;
-        }
-        // The model is the intent source of truth. A command-only message
-        // opens the same form as any other high-confidence capture intent;
-        // keywords are only used to extract inline content after routing.
         await this.finishConversationWaiting(
           integration,
           message,
@@ -441,6 +481,28 @@ export class AgentWorkflowService {
           decision.intent === 'ambiguous' &&
           this.isRecordOrAnalyzeClarification(decision.reply),
       });
+      return;
+    }
+    const explicitSource: string | null = this.explicitFollowupSource(
+      message.text,
+    );
+    if (explicitSource !== null) {
+      const waitingMessageId: string | null =
+        await this.sendConversationWaiting(integration, message);
+      await this.auditExplicitFollowupRoute(integration, message);
+      await this.finishConversationWaiting(
+        integration,
+        message,
+        waitingMessageId,
+        '已识别为跟进记录，正在生成草案。',
+      );
+      await this.processFollowupText(
+        integration,
+        message,
+        explicitSource.length > 0 ? explicitSource : session.rawText,
+        null,
+        explicitSource.length > 0 ? undefined : session.sourceMessageId,
+      );
       return;
     }
     const activeContext: ConversationContext = {
@@ -1623,17 +1685,36 @@ export class AgentWorkflowService {
     });
   }
 
+  private async auditExplicitFollowupRoute(
+    integration: TenantIntegration,
+    message: IncomingMessage,
+  ): Promise<void> {
+    await this.store.appendAudit({
+      tenantId: integration.tenantId,
+      traceId: message.messageId,
+      eventType: 'message.intent_routed.v1',
+      actorOpenId: message.senderOpenId,
+      outcome: 'succeeded',
+      details: {
+        intent: 'followup_capture',
+        confidence: 1,
+        schemaVersion: 'deterministic-command-v1',
+      },
+    });
+  }
+
   private explicitFollowupSource(text: string): string | null {
     const normalized: string = text.trim();
     const patterns: RegExp[] = [
-      /^(?:请)?(?:帮我)?(?:记录|录入|记)(?:一条|一下|本次)?跟进\s*[：:，,]?\s*/u,
-      /^把(?:以下|这段|这条|刚才)?(?:内容|信息)?记(?:录)?(?:为|成)?跟进\s*[：:，,]?\s*/u,
+      /^(?:请)?(?:帮我)?(?:写|记录|录入|记)(?:一条|一下|本次)?跟进(?:[呀啊呢])?(?=$|[\s：:，,。！!])\s*[：:，,]?\s*/u,
+      /^把(?:以下|这段|这条|刚才)?(?:内容|信息)?记(?:录)?(?:为|成)?跟进(?=$|[\s：:，,。！!])\s*[：:，,]?\s*/u,
     ];
     const pattern: RegExp | undefined = patterns.find(
       (candidate: RegExp): boolean => candidate.test(normalized),
     );
     if (!pattern) return null;
-    return normalized.replace(pattern, '').trim();
+    const source: string = normalized.replace(pattern, '').trim();
+    return /^[。！!]*$/u.test(source) ? '' : source;
   }
 
   private isFollowupCancelCommand(text: string): boolean {

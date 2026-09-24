@@ -327,6 +327,46 @@ describe('follow-up validation', (): void => {
     );
   });
 
+  it('corrects next Tuesday in the business timezone without changing the clock', async (): Promise<void> => {
+    const http: HttpService = new HttpService();
+    const post = vi.spyOn(http, 'post').mockReturnValue(of(createResponse({
+      ...validDraft,
+      dueAt: '2026-09-25T10:00:00+08:00',
+    })));
+    const extractor: OpenAiFollowupExtractor = new OpenAiFollowupExtractor(
+      http,
+      runtimeConfig,
+    );
+
+    const result: FollowupDraft = await extractor.extract({
+      ...extractionInput,
+      currentText: '下一步下周二上午10点发送报价。',
+      combinedText: '客户认可方案，下一步下周二上午10点发送报价。',
+      now: new Date('2026-09-23T13:40:15+08:00'),
+    });
+
+    expect(result.dueAt).toBe('2026-09-29T10:00:00+08:00');
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not infer a due date from a weekday when the model found none', async (): Promise<void> => {
+    const http: HttpService = new HttpService();
+    vi.spyOn(http, 'post').mockReturnValue(of(createResponse({
+      ...validDraft,
+      dueAt: null,
+    })));
+    const extractor: OpenAiFollowupExtractor = new OpenAiFollowupExtractor(
+      http,
+      runtimeConfig,
+    );
+
+    const result: FollowupDraft = await extractor.extract({
+      ...extractionInput,
+      combinedText: '客户认可方案，客户下周二确认预算。',
+    });
+    expect(result.dueAt).toBeNull();
+  });
+
   it('does not retry hallucinated evidence', async (): Promise<void> => {
     const http: HttpService = new HttpService();
     const hallucinated: FollowupDraft = {

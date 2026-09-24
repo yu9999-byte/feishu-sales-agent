@@ -43,9 +43,6 @@ const buildFollowupTaskCandidates = (
   } else if (dueAt !== null && Date.parse(dueAt) < input.now.getTime()) {
     missingFields.push('pastDueAt');
   }
-  if (channel === null) missingFields.push('channel');
-  if (participants.length === 0) missingFields.push('participants');
-
   return [{
     id: `${input.draftId}:v${input.version}:task:0`,
     draftId: input.draftId,
