@@ -1,13 +1,26 @@
-import { Inject, Injectable } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Optional,
+} from '@nestjs/common';
 
 import type {
   FollowupDraft,
   FollowupTaskCandidate,
+  SalesContext,
 } from '@shared/api.interface';
 import {
+  CONTROL_STORE,
   FOLLOWUP_EXTRACTOR,
+  SALES_CONTEXT_READER,
+  type ControlStore,
   type FollowupExtractor,
+  type SalesContextReader,
 } from '@server/modules/agent-core/agent.ports';
+import type {
+  SalesContextHints,
+  TenantIntegration,
+} from '@server/modules/agent-core/agent.types';
 import {
   FOLLOWUP_DRAFT_REPOSITORY,
   type FollowupDraftRecord,
@@ -27,6 +40,7 @@ import {
 interface CreateFollowupDraftCommand {
   tenantId: string;
   ownerMemberId: string;
+  ownerOpenId?: string;
   sourceType: FollowupSourceType;
   text: string;
   idempotencyKey: string;
@@ -61,6 +75,12 @@ class FollowupDraftWorkflowService {
     @Inject(FOLLOWUP_DRAFT_REPOSITORY)
     private readonly repository: FollowupDraftRepository,
     private readonly quality: FollowupQualityService,
+    @Optional()
+    @Inject(CONTROL_STORE)
+    private readonly controlStore?: ControlStore,
+    @Optional()
+    @Inject(SALES_CONTEXT_READER)
+    private readonly salesContextReader?: SalesContextReader,
   ) {}
 
   async create(
@@ -70,13 +90,25 @@ class FollowupDraftWorkflowService {
     if (sourceText.length === 0) {
       throw new Error('EMPTY_SOURCE');
     }
-    const draft: FollowupDraft = await this.extractor.extract({
+    const extractionInput = {
       currentText: sourceText,
       combinedText: sourceText,
       previousDraft: null,
       timezone: command.timezone,
       now: command.now,
-    });
+    };
+    const entityHints: FollowupDraft = await this.extractor.extract(
+      extractionInput,
+    );
+    const salesContext: SalesContext | undefined =
+      await this.readSalesContext(command, entityHints);
+    const draft: FollowupDraft = salesContext === undefined
+      ? entityHints
+      : await this.extractor.extract({
+        ...extractionInput,
+        previousDraft: entityHints,
+        salesContext,
+      });
     const generatedBody: string = this.generateBody(draft);
     const quality: FollowupQualityResult = this.quality.review(
       this.qualityInput(
@@ -94,6 +126,7 @@ class FollowupDraftWorkflowService {
       generatedBody,
       draft,
       quality,
+      salesContext,
       createdAt: command.now,
     });
     if (
@@ -166,6 +199,54 @@ class FollowupDraftWorkflowService {
     const nextAction: string = draft.nextAction ?? '待补充';
     const dueAt: string = draft.dueAt ?? '待补充';
     return `${customer}：${draft.summary}\n本次进展：${progress}\n下一步：${nextAction}；截止时间：${dueAt}`;
+  }
+
+  private async readSalesContext(
+    command: CreateFollowupDraftCommand,
+    entityHints: FollowupDraft,
+  ): Promise<SalesContext | undefined> {
+    if (
+      !this.controlStore ||
+      !this.salesContextReader ||
+      !command.ownerOpenId ||
+      !entityHints.customerName
+    ) {
+      return undefined;
+    }
+    try {
+      const integration: TenantIntegration | null =
+        await this.controlStore.resolveTenantById(command.tenantId);
+      if (integration === null) {
+        return this.unavailableContext(command.now);
+      }
+      const hints: SalesContextHints = {
+        customerName: entityHints.customerName,
+        opportunityName: entityHints.opportunityName ?? undefined,
+        contactName: entityHints.contactName ?? undefined,
+      };
+      return await this.salesContextReader.read(
+        integration,
+        command.ownerOpenId,
+        hints,
+        command.now,
+      );
+    } catch {
+      return this.unavailableContext(command.now);
+    }
+  }
+
+  private unavailableContext(now: Date): SalesContext {
+    return {
+      status: 'unavailable',
+      customer: null,
+      customerCandidates: [],
+      opportunities: [],
+      recentFollowups: [],
+      conflicts: [],
+      tasks: [],
+      warnings: ['business_context_unavailable'],
+      readAt: now.toISOString(),
+    };
   }
 
   private withTaskCandidates(

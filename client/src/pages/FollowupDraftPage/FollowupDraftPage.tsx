@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
+  ExternalLink,
   LoaderCircle,
   ShieldAlert,
 } from 'lucide-react';
@@ -11,6 +13,8 @@ import type {
   AgentExecutionResult,
   FollowupDraftResponse,
   FollowupTaskCandidate,
+  SalesContext,
+  SalesContextConflict,
 } from '@shared/api.interface';
 import {
   confirmFollowupDraft,
@@ -29,6 +33,189 @@ import {
   missingTaskFieldLabels,
   taskConfirmationLabel,
 } from './followup-task-selection';
+
+const contextStatusLabel = (context: SalesContext): string => {
+  if (context.status === 'ready') return '已读取';
+  if (context.status === 'needs_clarification') return '需要核对';
+  if (context.status === 'partial') return '部分可用';
+  return '暂不可用';
+};
+
+const conflictSourceLabel = (
+  source: SalesContextConflict['newerSource'],
+): string => {
+  if (source === 'opportunity') return '商机记录较新';
+  if (source === 'followup') return '跟进记录较新';
+  if (source === 'same') return '两条记录时间相同';
+  return '无法比较记录时间';
+};
+
+interface ContextSourceProps {
+  recordId: string;
+  recordUrl: string | null;
+  label: string;
+}
+
+const ContextSource: React.FC<ContextSourceProps> = ({
+  recordId,
+  recordUrl,
+  label,
+}) => recordUrl ? (
+  <a
+    href={recordUrl}
+    target="_blank"
+    rel="noreferrer"
+    className="inline-flex max-w-full items-center gap-1 break-all text-primary underline"
+  >
+    {label}
+    <ExternalLink aria-hidden="true" className="size-3 shrink-0" />
+  </a>
+) : (
+  <span className="break-all text-muted-foreground">{label} · {recordId}</span>
+);
+
+interface SalesContextPanelProps {
+  context: SalesContext;
+}
+
+const SalesContextPanel: React.FC<SalesContextPanelProps> = ({ context }) => (
+  <section className="rounded-xl border border-border bg-card p-6">
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <h2 className="font-semibold">业务上下文</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          生成时间：{new Date(context.readAt).toLocaleString('zh-CN')}
+        </p>
+      </div>
+      <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
+        {contextStatusLabel(context)}
+      </span>
+    </div>
+    {context.customer && (
+      <div className="mt-5 border-t border-border pt-4 text-sm">
+        <p className="font-medium">客户：{context.customer.name}</p>
+        {context.customer.contactName && (
+          <p className="mt-1 text-muted-foreground">
+            联系人：{context.customer.contactName}
+          </p>
+        )}
+        <div className="mt-2 text-xs">
+          <ContextSource
+            label="查看客户记录"
+            recordId={context.customer.source.recordId}
+            recordUrl={context.customer.source.recordUrl}
+          />
+        </div>
+      </div>
+    )}
+    {context.customerCandidates.length > 0 && (
+      <div className="mt-5 border-t border-border pt-4 text-sm">
+        <p className="font-medium text-amber-700">客户匹配不唯一</p>
+        <ul className="mt-2 space-y-2 text-muted-foreground">
+          {context.customerCandidates.map((candidate) => (
+            <li key={candidate.source.recordId}>
+              <ContextSource
+                label={candidate.name}
+                recordId={candidate.source.recordId}
+                recordUrl={candidate.source.recordUrl}
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    {context.opportunities.length > 0 && (
+      <div className="mt-5 border-t border-border pt-4 text-sm">
+        <p className="font-medium">商机</p>
+        <ul className="mt-2 space-y-3">
+          {context.opportunities.map((opportunity) => (
+            <li key={opportunity.source.recordId}>
+              <ContextSource
+                label={opportunity.name}
+                recordId={opportunity.source.recordId}
+                recordUrl={opportunity.source.recordUrl}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                {opportunity.progress ?? '进展未提供'}
+                {opportunity.nextAction
+                  ? ` · 下一步：${opportunity.nextAction}` : ''}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    {context.recentFollowups.length > 0 && (
+      <div className="mt-5 border-t border-border pt-4 text-sm">
+        <p className="font-medium">近期跟进</p>
+        <ul className="mt-2 space-y-2">
+          {context.recentFollowups.slice(0, 5).map((followup) => (
+            <li key={followup.source.recordId}>
+              <ContextSource
+                label={followup.summary}
+                recordId={followup.source.recordId}
+                recordUrl={followup.source.recordUrl}
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    {context.tasks.length > 0 && (
+      <div className="mt-5 border-t border-border pt-4 text-sm">
+        <p className="font-medium">本人待办</p>
+        <ul className="mt-2 space-y-2">
+          {context.tasks.slice(0, 5).map((task) => (
+            <li key={task.guid}>
+              <ContextSource
+                label={`${task.title} · ${task.status}`}
+                recordId={task.guid}
+                recordUrl={task.url}
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+    {context.conflicts.length > 0 && (
+      <div className="mt-5 space-y-3 border-t border-border pt-4">
+        <p className="flex items-center gap-2 text-sm font-medium text-amber-700">
+          <AlertTriangle aria-hidden="true" className="size-4" />
+          来源存在冲突，请在确认前核对
+        </p>
+        {context.conflicts.slice(0, 5).map((conflict) => (
+          <div
+            key={`${conflict.field}-${conflict.opportunitySource.recordId}-${conflict.followupSource.recordId}`}
+            className="rounded-lg bg-amber-50 p-3 text-xs text-amber-900"
+          >
+            <p>
+              {conflict.field === 'nextAction' ? '下一步' : '截止时间'}：
+              {conflict.opportunityValue} / {conflict.followupValue}
+            </p>
+            <p className="mt-1">{conflictSourceLabel(conflict.newerSource)}</p>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+              <ContextSource
+                label="查看商机"
+                recordId={conflict.opportunitySource.recordId}
+                recordUrl={conflict.opportunitySource.recordUrl}
+              />
+              <ContextSource
+                label="查看跟进"
+                recordId={conflict.followupSource.recordId}
+                recordUrl={conflict.followupSource.recordUrl}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+    {context.warnings.length > 0 && (
+      <p className="mt-5 border-t border-border pt-4 text-xs text-muted-foreground">
+        上下文存在未决状态：{context.warnings.join('、')}
+      </p>
+    )}
+  </section>
+);
 
 const FollowupDraftPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -272,6 +459,9 @@ const FollowupDraftPage: React.FC = () => {
           </div>
         </section>
         <aside className="space-y-5">
+          {draft.version.salesContext && (
+            <SalesContextPanel context={draft.version.salesContext} />
+          )}
           <section className="rounded-xl border border-border bg-card p-6">
             <div className="flex items-center justify-between"><h2 className="font-semibold">质量检查</h2><span className="text-3xl font-semibold text-primary">{quality.score}</span></div>
             <p className="mt-2 text-sm text-muted-foreground">等级 {quality.grade} · 评分仅用于改进建议</p>

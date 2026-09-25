@@ -19,6 +19,7 @@ describe('Agent migration runner', (): void => {
       '006_web_auth.sql',
       '007_sales_behavior_drafts.sql',
       '008_conversation_memory.sql',
+      '009_followup_context_snapshot.sql',
     ]);
     expect(result.stdout).not.toContain('004_agent_p0_demo_tenant');
   });

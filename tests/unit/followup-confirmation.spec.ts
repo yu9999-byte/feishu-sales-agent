@@ -100,6 +100,7 @@ describe('FollowupConfirmationService', (): void => {
       expect.objectContaining({
         payload: expect.objectContaining({
           selectedTaskCandidateIds: [TASK_CANDIDATE_ID],
+          salesContext: undefined,
           taskCandidates: [
             expect.objectContaining({
               id: TASK_CANDIDATE_ID,

@@ -106,6 +106,7 @@ describe('FollowupDraftController boundary', (): void => {
       tenantId: TENANT_ID,
       ownerMemberId: MEMBER_ID,
       sourceType: 'text',
+      ownerOpenId: 'ou_current',
     }));
   });
 

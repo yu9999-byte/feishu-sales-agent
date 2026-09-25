@@ -33,7 +33,8 @@ docs/specs/05-requirements-traceability.md、docs/current-state.md 和当前切�
 
 先检查现有端口、shared/api.interface.ts、server/database/schema.ts、相关 SDD/TDD 和测试。
 不要把 Base 的列名泄漏到 Agent 推理层，不把 Mem0 当客户或商机事实源。
-文本输入可以先做不持久化的实体预识别，再读取本人范围的上下文并生成最终草稿；多客户/多商机匹配必须暂停自动选择，卡片展示可核验的来源引用。
+文本输入可以先做不持久化的实体预识别，再读取本人范围的上下文并生成最终草稿；机器人和 Web
+草案都必须复用同一只读端口，多客户/多商机匹配必须暂停自动选择，卡片和 Web 草案展示可核验的来源引用。
 
 实现边界：
 - 先写 Red，再做最小 Green；

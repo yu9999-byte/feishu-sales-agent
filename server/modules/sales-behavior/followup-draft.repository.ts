@@ -1,5 +1,8 @@
-import type { FollowupDraft } from '@shared/api.interface';
-import type { FollowupTaskCandidate } from '@shared/api.interface';
+import type {
+  FollowupDraft,
+  FollowupTaskCandidate,
+  SalesContext,
+} from '@shared/api.interface';
 import type {
   FollowupQualityResult,
 } from './sales-behavior.types';
@@ -31,6 +34,7 @@ interface FollowupDraftVersionRecord {
   generatedBody: string;
   draft: FollowupDraft;
   quality: FollowupQualityResult;
+  salesContext?: SalesContext;
   taskCandidates?: FollowupTaskCandidate[];
   createdAt: Date;
 }
@@ -54,6 +58,7 @@ interface CreateDraftRecordInput {
   generatedBody: string;
   draft: FollowupDraft;
   quality: FollowupQualityResult;
+  salesContext?: SalesContext;
   taskCandidates?: FollowupTaskCandidate[];
   createdAt: Date;
 }
@@ -66,6 +71,7 @@ interface AppendDraftEditInput {
   generatedBody: string;
   draft: FollowupDraft;
   quality: FollowupQualityResult;
+  salesContext?: SalesContext;
   createdAt: Date;
 }
 

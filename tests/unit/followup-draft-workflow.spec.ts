@@ -1,11 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import type { FollowupDraft } from '@shared/api.interface';
 import type {
+  FollowupDraft,
+  SalesContext,
+} from '@shared/api.interface';
+import type {
+  ControlStore,
   FollowupExtractor,
+  SalesContextReader,
 } from '@server/modules/agent-core/agent.ports';
 import type {
   FollowupExtractionInput,
+  TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
 import {
   FollowupDraftWorkflowService,
@@ -46,6 +52,17 @@ class FixedExtractor implements FollowupExtractor {
   }
 }
 
+class RecordingExtractor extends FixedExtractor {
+  readonly inputs: FollowupExtractionInput[] = [];
+
+  override async extract(
+    input: FollowupExtractionInput,
+  ): Promise<FollowupDraft> {
+    this.inputs.push(input);
+    return extractedDraft();
+  }
+}
+
 class MemoryDraftRepository implements FollowupDraftRepository {
   records = new Map<string, FollowupDraftRecord>();
   byIdempotency = new Map<string, string>();
@@ -66,6 +83,7 @@ class MemoryDraftRepository implements FollowupDraftRepository {
       generatedBody: input.generatedBody,
       draft: structuredClone(input.draft),
       quality: structuredClone(input.quality),
+      salesContext: structuredClone(input.salesContext),
       createdAt: input.createdAt,
     };
     const record: FollowupDraftRecord = {
@@ -151,6 +169,103 @@ const service = (repository: MemoryDraftRepository): FollowupDraftWorkflowServic
   );
 
 describe('FollowupDraftWorkflowService', (): void => {
+  it('reads owner-scoped context before the visible Web draft and persists it', async (): Promise<void> => {
+    const repository = new MemoryDraftRepository();
+    const extractor = new RecordingExtractor();
+    const integration: TenantIntegration = {
+      tenantId: TENANT_ID,
+      feishuTenantKey: 'tenant-a',
+      name: '企业 A',
+      status: 'active',
+      appId: 'cli_test',
+      appSecretEnv: 'TEST_SECRET',
+      appType: 'selfBuild',
+      base: {
+        appToken: 'base-a',
+        customers: {
+          tableId: 'customers',
+          primaryField: '客户',
+          fields: { customerName: '客户', ownerOpenId: '负责人' },
+        },
+        opportunities: {
+          tableId: 'opportunities',
+          primaryField: '商机',
+          fields: {
+            opportunityName: '商机',
+            customerLink: '客户',
+            ownerOpenId: '负责人',
+          },
+        },
+        followups: {
+          tableId: 'followups',
+          primaryField: '跟进',
+          fields: {
+            sourceMessageId: '消息',
+            customerLink: '客户',
+            opportunityLink: '商机',
+            rawText: '原文',
+            summary: '摘要',
+            ownerOpenId: '负责人',
+          },
+        },
+      },
+    };
+    const context: SalesContext = {
+      status: 'ready',
+      customer: {
+        name: '北辰制造',
+        contactName: '张总',
+        latestSummary: '认可方案',
+        lastFollowupAt: null,
+        source: {
+          recordId: 'customer-1',
+          recordUrl: 'https://feishu.cn/customer-1',
+          sourceVersion: '2026-09-25T01:00:00.000Z',
+        },
+      },
+      customerCandidates: [],
+      opportunities: [],
+      recentFollowups: [],
+      conflicts: [],
+      tasks: [],
+      warnings: [],
+      readAt: '2026-09-25T02:00:00.000Z',
+    };
+    const controlStore = {
+      resolveTenantById: vi.fn(
+        async (): Promise<TenantIntegration> => integration,
+      ),
+    } as unknown as ControlStore;
+    const reader = {
+      read: async (): Promise<SalesContext> => context,
+    } as unknown as SalesContextReader;
+    const workflow = new FollowupDraftWorkflowService(
+      extractor,
+      repository,
+      new FollowupQualityService(),
+      controlStore,
+      reader,
+    );
+
+    const created = await workflow.create({
+      tenantId: TENANT_ID,
+      ownerMemberId: MEMBER_ID,
+      ownerOpenId: 'ou_owner',
+      sourceType: 'text',
+      text: '北辰制造客户认可方案，下一步发送实施计划。',
+      idempotencyKey: 'input-context-web',
+      timezone: 'Asia/Shanghai',
+      now: new Date('2026-09-25T10:00:00+08:00'),
+    });
+
+    expect(extractor.inputs).toHaveLength(2);
+    expect(extractor.inputs[1]?.salesContext).toEqual(context);
+    expect(controlStore.resolveTenantById).toHaveBeenCalledWith(TENANT_ID);
+    expect(created.version.salesContext).toEqual(context);
+    expect(repository.records.get(created.id)?.version.salesContext)
+      .toEqual(context);
+  });
+
   it('creates one persisted preview for an idempotent text input without business writes', async (): Promise<void> => {
     const repository = new MemoryDraftRepository();
     const workflow = service(repository);

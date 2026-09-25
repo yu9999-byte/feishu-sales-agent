@@ -12,6 +12,7 @@ const MIGRATION_FILES = [
   '006_web_auth.sql',
   '007_sales_behavior_drafts.sql',
   '008_conversation_memory.sql',
+  '009_followup_context_snapshot.sql',
 ];
 
 const checksum = (content) => createHash('sha256')

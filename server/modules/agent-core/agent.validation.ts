@@ -72,6 +72,85 @@ const pendingActionStatusSchema = z.enum([
   'expired',
 ]);
 
+const salesContextSchema = z.object({
+  status: z.enum([
+    'ready', 'partial', 'needs_clarification', 'unavailable',
+  ]),
+  customer: z.object({
+    name: z.string(),
+    contactName: z.string().nullable(),
+    latestSummary: z.string().nullable(),
+    lastFollowupAt: z.string().nullable(),
+    source: z.object({
+      recordId: z.string(),
+      recordUrl: z.string().url().nullable(),
+      sourceVersion: z.string().nullable(),
+    }),
+  }).nullable(),
+  customerCandidates: z.array(z.object({
+    name: z.string(),
+    contactName: z.string().nullable(),
+    latestSummary: z.string().nullable(),
+    lastFollowupAt: z.string().nullable(),
+    source: z.object({
+      recordId: z.string(),
+      recordUrl: z.string().url().nullable(),
+      sourceVersion: z.string().nullable(),
+    }),
+  })).max(10),
+  opportunities: z.array(z.object({
+    name: z.string(),
+    progress: z.string().nullable(),
+    expectedAmount: z.number().nonnegative().nullable(),
+    nextAction: z.string().nullable(),
+    dueAt: z.string().nullable(),
+    source: z.object({
+      recordId: z.string(),
+      recordUrl: z.string().url().nullable(),
+      sourceVersion: z.string().nullable(),
+    }),
+  })).max(20),
+  recentFollowups: z.array(z.object({
+    summary: z.string(),
+    opportunityRecordId: z.string().nullable().default(null),
+    nextAction: z.string().nullable(),
+    dueAt: z.string().nullable(),
+    source: z.object({
+      recordId: z.string(),
+      recordUrl: z.string().url().nullable(),
+      sourceVersion: z.string().nullable(),
+    }),
+  })).max(20),
+  conflicts: z.array(z.object({
+    field: z.enum(['nextAction', 'dueAt']),
+    opportunityValue: z.string(),
+    followupValue: z.string(),
+    opportunitySource: z.object({
+      recordId: z.string(),
+      recordUrl: z.string().url().nullable(),
+      sourceVersion: z.string().nullable(),
+    }),
+    followupSource: z.object({
+      recordId: z.string(),
+      recordUrl: z.string().url().nullable(),
+      sourceVersion: z.string().nullable(),
+    }),
+    newerSource: z.enum(['opportunity', 'followup', 'same', 'unknown']),
+  })).max(20).default([]),
+  tasks: z.array(z.object({
+    guid: z.string(),
+    title: z.string(),
+    status: z.string(),
+    dueAt: z.string().nullable(),
+    url: z.string().url().nullable(),
+  })).max(20),
+  warnings: z.array(z.string()).max(20),
+  readAt: z.string().datetime(),
+});
+
+const parseSalesContext = (value: unknown): SalesContext =>
+  salesContextSchema.parse(value) as unknown as SalesContext;
+
 const pendingActionPayloadSchema = z.object({
   version: z.literal(1),
   interactionStage: z.enum(['input', 'generating', 'draft']).optional(),
@@ -119,81 +198,7 @@ const pendingActionPayloadSchema = z.object({
     participants: stringListSchema.optional(),
   }).optional(),
   inputError: z.string().trim().min(1).optional(),
-  salesContext: z.object({
-    status: z.enum([
-      'ready', 'partial', 'needs_clarification', 'unavailable',
-    ]),
-    customer: z.object({
-      name: z.string(),
-      contactName: z.string().nullable(),
-      latestSummary: z.string().nullable(),
-      lastFollowupAt: z.string().nullable(),
-      source: z.object({
-        recordId: z.string(),
-        recordUrl: z.string().url().nullable(),
-        sourceVersion: z.string().nullable(),
-      }),
-    }).nullable(),
-    customerCandidates: z.array(z.object({
-      name: z.string(),
-      contactName: z.string().nullable(),
-      latestSummary: z.string().nullable(),
-      lastFollowupAt: z.string().nullable(),
-      source: z.object({
-        recordId: z.string(),
-        recordUrl: z.string().url().nullable(),
-        sourceVersion: z.string().nullable(),
-      }),
-    })).max(10),
-    opportunities: z.array(z.object({
-      name: z.string(),
-      progress: z.string().nullable(),
-      expectedAmount: z.number().nonnegative().nullable(),
-      nextAction: z.string().nullable(),
-      dueAt: z.string().nullable(),
-      source: z.object({
-        recordId: z.string(),
-        recordUrl: z.string().url().nullable(),
-        sourceVersion: z.string().nullable(),
-      }),
-    })).max(20),
-    recentFollowups: z.array(z.object({
-      summary: z.string(),
-      opportunityRecordId: z.string().nullable().default(null),
-      nextAction: z.string().nullable(),
-      dueAt: z.string().nullable(),
-      source: z.object({
-        recordId: z.string(),
-        recordUrl: z.string().url().nullable(),
-        sourceVersion: z.string().nullable(),
-      }),
-    })).max(20),
-    conflicts: z.array(z.object({
-      field: z.enum(['nextAction', 'dueAt']),
-      opportunityValue: z.string(),
-      followupValue: z.string(),
-      opportunitySource: z.object({
-        recordId: z.string(),
-        recordUrl: z.string().url().nullable(),
-        sourceVersion: z.string().nullable(),
-      }),
-      followupSource: z.object({
-        recordId: z.string(),
-        recordUrl: z.string().url().nullable(),
-        sourceVersion: z.string().nullable(),
-      }),
-      newerSource: z.enum(['opportunity', 'followup', 'same', 'unknown']),
-    })).max(20).default([]),
-    tasks: z.array(z.object({
-      guid: z.string(),
-      title: z.string(),
-      status: z.string(),
-      dueAt: z.string().nullable(),
-      url: z.string().url().nullable(),
-    })).max(20),
-    warnings: z.array(z.string()).max(20),
-    readAt: z.string().datetime(),
-  }).optional(),
+  salesContext: salesContextSchema.optional(),
   operationKind: z.enum(['create', 'update']).optional(),
   revisionOfActionId: z.string().uuid().optional(),
   executionTarget: z.object({
@@ -361,7 +366,9 @@ const parsePendingActionPayload = (
     selectedTaskCandidateIds: parsed.selectedTaskCandidateIds,
     inputForm: parsed.inputForm,
     inputError: parsed.inputError,
-    salesContext: parsed.salesContext as SalesContext | undefined,
+    salesContext: parsed.salesContext === undefined
+      ? undefined
+      : parseSalesContext(parsed.salesContext),
     operationKind: parsed.operationKind,
     revisionOfActionId: parsed.revisionOfActionId,
     executionTarget: parsed.executionTarget,
@@ -401,6 +408,8 @@ export {
   parseFollowupDraft,
   parseJsonObject,
   parsePendingActionPayload,
+  parseSalesContext,
+  salesContextSchema,
   parseTenantBaseMapping,
   pendingActionPayloadSchema,
   tenantBaseMappingSchema,

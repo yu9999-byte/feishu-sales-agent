@@ -183,6 +183,7 @@ class FollowupConfirmationService {
         rawText: confirmed.version.sourceText,
         draft: confirmed.version.draft,
         generatedBody: confirmed.version.generatedBody,
+        salesContext: confirmed.version.salesContext,
         taskCandidates,
         selectedTaskCandidateIds,
       },

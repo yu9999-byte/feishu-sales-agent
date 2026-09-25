@@ -11,6 +11,9 @@ import { PostgresFollowupDraftRepository } from '@server/modules/sales-behavior/
 import { FollowupQualityService } from '@server/modules/sales-behavior/followup-quality.service';
 import { PostgresControlStore } from '@server/modules/control-store/postgres-control.store';
 import type {
+  SalesContext,
+} from '@shared/api.interface';
+import type {
   PlatformTenant,
 } from '@server/modules/identity-access/identity-access.ports';
 import type {
@@ -370,6 +373,27 @@ describe('PostgresIdentityAccessRepository', (): void => {
       nextActionParticipants: [],
       evidence: [{ field: 'summary', assertionKind: 'fact', quote: '客户认可试点方案' }],
     });
+    const salesContext: SalesContext = {
+      status: 'partial',
+      customer: {
+        name: '北辰制造',
+        contactName: '张总',
+        latestSummary: '认可方案',
+        lastFollowupAt: null,
+        source: {
+          recordId: 'customer-1',
+          recordUrl: 'https://feishu.cn/customer-1',
+          sourceVersion: '2026-09-25T01:00:00.000Z',
+        },
+      },
+      customerCandidates: [],
+      opportunities: [],
+      recentFollowups: [],
+      conflicts: [],
+      tasks: [],
+      warnings: ['task_context_unavailable'],
+      readAt: '2026-09-25T02:00:00.000Z',
+    };
     const input = {
       tenantId: TENANT_A,
       ownerMemberId: MEMBER_A,
@@ -379,11 +403,13 @@ describe('PostgresIdentityAccessRepository', (): void => {
       generatedBody: '北辰制造客户认可试点方案。下一步发送实施计划。',
       draft,
       quality,
+      salesContext,
       createdAt: new Date(),
     };
     const first = await repository.createGeneratedDraft(input);
     const repeated = await repository.createGeneratedDraft(input);
     expect(repeated.id).toBe(first.id);
+    expect(first.version.salesContext).toEqual(salesContext);
     const edited = await repository.appendUserEdit({
       tenantId: TENANT_A,
       draftId: first.id,
@@ -395,6 +421,7 @@ describe('PostgresIdentityAccessRepository', (): void => {
       createdAt: new Date(),
     });
     expect(edited).toMatchObject({ currentVersion: 2 });
+    expect(edited?.version.salesContext).toEqual(salesContext);
     await expect(repository.appendUserEdit({
       tenantId: TENANT_A,
       draftId: first.id,
@@ -427,6 +454,7 @@ describe('PostgresIdentityAccessRepository', (): void => {
       currentVersion: 3,
       version: { version: 3, creationKind: 'confirmed' },
     });
+    expect(confirmed?.version.salesContext).toEqual(salesContext);
     await expect(repository.markConfirmed({
       tenantId: TENANT_A,
       draftId: first.id,

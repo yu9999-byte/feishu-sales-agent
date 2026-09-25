@@ -108,6 +108,7 @@ class FollowupDraftController {
       const record: FollowupDraftRecord = await this.workflow.create({
         tenantId: session.tenantId,
         ownerMemberId: session.member.id,
+        ownerOpenId: session.member.feishuOpenId,
         sourceType: parsed.sourceType,
         text: sourceText,
         idempotencyKey: parsed.idempotencyKey,
@@ -318,6 +319,7 @@ class FollowupDraftController {
         generatedBody: record.version.generatedBody,
         draft: record.version.draft,
         quality: record.version.quality,
+        salesContext: record.version.salesContext,
         taskCandidates: record.version.taskCandidates,
         createdAt: record.version.createdAt.toISOString(),
       },

@@ -364,6 +364,7 @@ export interface FollowupDraftResponse {
     generatedBody: string;
     draft: FollowupDraft;
     quality: FollowupQualitySnapshot;
+    salesContext?: SalesContext;
     taskCandidates?: FollowupTaskCandidate[];
     createdAt: string;
   };

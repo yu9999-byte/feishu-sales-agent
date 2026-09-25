@@ -1,11 +1,17 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import type { Sql } from 'postgres';
-import type { FollowupDraft } from '@shared/api.interface';
+import type {
+  FollowupDraft,
+  SalesContext,
+} from '@shared/api.interface';
 import {
   AGENT_DATABASE,
 } from '@server/modules/control-store/postgres-control.store';
-import { parseFollowupDraft } from '@server/modules/agent-core/agent.validation';
+import {
+  parseFollowupDraft,
+  parseSalesContext,
+} from '@server/modules/agent-core/agent.validation';
 import type {
   AppendDraftEditInput,
   CreateDraftRecordInput,
@@ -34,6 +40,7 @@ interface DraftRow {
   source_text: string;
   generated_body: string;
   structured_fields: unknown;
+  context_snapshot: unknown;
   quality_snapshot: unknown;
   created_at: Date | string;
 }
@@ -104,7 +111,7 @@ implements FollowupDraftRepository {
         INSERT INTO followup_draft_versions (
           tenant_id, draft_id, version, creation_kind,
           source_text, generated_body, structured_fields,
-          evidence, quality_snapshot, created_at
+          context_snapshot, evidence, quality_snapshot, created_at
         ) VALUES (
           ${input.tenantId}::uuid,
           ${id}::uuid,
@@ -113,6 +120,9 @@ implements FollowupDraftRepository {
           ${input.sourceText},
           ${input.generatedBody},
           ${JSON.stringify(input.draft)}::text::jsonb,
+          ${input.salesContext === undefined
+            ? null
+            : JSON.stringify(input.salesContext)}::text::jsonb,
           ${JSON.stringify(input.draft.evidenceQuotes)}::text::jsonb,
           ${JSON.stringify(input.quality)}::text::jsonb,
           ${input.createdAt}
@@ -146,6 +156,7 @@ implements FollowupDraftRepository {
         version.source_text,
         version.generated_body,
         version.structured_fields,
+        version.context_snapshot,
         version.quality_snapshot,
         version.created_at
       FROM followup_drafts AS draft
@@ -185,7 +196,7 @@ implements FollowupDraftRepository {
           INSERT INTO followup_draft_versions (
             tenant_id, draft_id, version, creation_kind,
             source_text, generated_body, structured_fields,
-            evidence, quality_snapshot, created_at
+            context_snapshot, evidence, quality_snapshot, created_at
           )
           SELECT
             ${input.tenantId}::uuid,
@@ -195,6 +206,7 @@ implements FollowupDraftRepository {
             previous.source_text,
             ${input.generatedBody},
             ${JSON.stringify(input.draft)}::text::jsonb,
+            previous.context_snapshot,
             ${JSON.stringify(input.draft.evidenceQuotes)}::text::jsonb,
             ${JSON.stringify(input.quality)}::text::jsonb,
             ${input.createdAt}
@@ -238,7 +250,7 @@ implements FollowupDraftRepository {
         await tx`
           INSERT INTO followup_draft_versions (
             tenant_id, draft_id, version, creation_kind,
-            source_text, generated_body, structured_fields,
+            source_text, generated_body, structured_fields, context_snapshot,
             evidence, quality_snapshot, llm_model,
             prompt_version, schema_version, confirmed_at, created_at
           )
@@ -250,6 +262,7 @@ implements FollowupDraftRepository {
             previous.source_text,
             previous.generated_body,
             previous.structured_fields,
+            previous.context_snapshot,
             previous.evidence,
             previous.quality_snapshot,
             previous.llm_model,
@@ -270,6 +283,10 @@ implements FollowupDraftRepository {
 
   private mapDraft(row: DraftRow): FollowupDraftRecord {
     const draft: FollowupDraft = parseFollowupDraft(row.structured_fields);
+    const salesContext: SalesContext | undefined =
+      row.context_snapshot === null || row.context_snapshot === undefined
+        ? undefined
+        : parseSalesContext(row.context_snapshot);
     const version: FollowupDraftVersionRecord = {
       tenantId: row.tenant_id,
       draftId: row.id,
@@ -278,6 +295,7 @@ implements FollowupDraftRepository {
       sourceText: row.source_text,
       generatedBody: row.generated_body,
       draft,
+      salesContext,
       quality: parseQuality(row.quality_snapshot),
       createdAt: toDate(row.created_at),
     };
