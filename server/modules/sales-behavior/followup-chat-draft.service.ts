@@ -8,6 +8,7 @@ import type {
   JsonValue,
   PendingActionPayload,
   PlatformSessionResponse,
+  SalesContext,
 } from '@shared/api.interface';
 import type { TenantIntegration } from '@server/modules/agent-core/agent.types';
 import { PlatformSessionService } from '@server/modules/platform-shell/platform-session.service';
@@ -27,6 +28,7 @@ interface CreateChatDraftPayloadInput {
   draft: FollowupDraft;
   now: Date;
   inputForm?: FollowupCardFormInput;
+  salesContext?: SalesContext;
 }
 
 interface ReviewedChatDraft {
@@ -134,6 +136,7 @@ class FollowupChatDraftService {
       generatedBody,
       now: input.now,
       inputForm,
+      salesContext: input.salesContext,
     });
   }
 
@@ -218,6 +221,7 @@ class FollowupChatDraftService {
       generatedBody,
       now,
       inputForm,
+      salesContext: current.salesContext,
     });
     payload.operationKind = current.operationKind;
     payload.revisionOfActionId = current.revisionOfActionId;
@@ -250,6 +254,7 @@ class FollowupChatDraftService {
     generatedBody: string;
     now: Date;
     inputForm?: FollowupCardFormInput;
+    salesContext?: SalesContext;
   }): PendingActionPayload {
     const taskCandidates: FollowupTaskCandidate[] =
       buildFollowupTaskCandidates({
@@ -269,6 +274,7 @@ class FollowupChatDraftService {
       ownerMemberId: input.ownerMemberId,
       generatedBody: input.generatedBody,
       inputForm: input.inputForm,
+      salesContext: input.salesContext,
       quality: this.quality.review(
         this.qualityInput(
           input.rawText,

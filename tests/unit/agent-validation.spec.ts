@@ -9,6 +9,7 @@ import type {
   FollowupDraft,
   JsonObject,
   JsonValue,
+  SalesContext,
 } from '@shared/api.interface';
 import type { AgentRuntimeConfig } from '@server/config/agent.config';
 import {
@@ -155,8 +156,30 @@ describe('follow-up validation', (): void => {
   });
 
   it('round-trips an overdue task candidate in a persisted draft', (): void => {
+    const salesContext: SalesContext = {
+      status: 'ready',
+      customer: {
+        name: '北辰制造',
+        contactName: '张总',
+        latestSummary: '客户认可方案',
+        lastFollowupAt: null,
+        source: {
+          recordId: 'customer-1',
+          recordUrl: 'https://feishu.cn/customer-1',
+          sourceVersion: null,
+        },
+      },
+      customerCandidates: [],
+      opportunities: [],
+      recentFollowups: [],
+      conflicts: [],
+      tasks: [],
+      warnings: [],
+      readAt: '2026-09-25T08:00:00.000Z',
+    };
     const payload: PendingAction['payload'] = {
       ...pendingAction.payload,
+      salesContext,
       taskCandidates: [{
         id: `${pendingAction.id}:v1:task:0`,
         draftId: pendingAction.id,
@@ -175,6 +198,69 @@ describe('follow-up validation', (): void => {
 
     expect(parsePendingActionPayload(JSON.parse(JSON.stringify(payload))))
       .toEqual(payload);
+
+    const { conflicts, ...legacySalesContext } = salesContext;
+    expect(conflicts).toEqual([]);
+    expect(parsePendingActionPayload({
+      ...payload,
+      salesContext: legacySalesContext,
+    })).toEqual(payload);
+  });
+
+  it('shows both sources when business context facts conflict', (): void => {
+    const opportunitySource = {
+      recordId: 'opportunity-1',
+      recordUrl: 'https://feishu.cn/opportunity-1',
+      sourceVersion: '2026-09-24T02:00:00.000Z',
+    };
+    const followupSource = {
+      recordId: 'followup-1',
+      recordUrl: 'https://feishu.cn/followup-1',
+      sourceVersion: '2026-09-25T02:00:00.000Z',
+    };
+    const context: SalesContext = {
+      status: 'partial',
+      customer: null,
+      customerCandidates: [],
+      opportunities: [{
+        name: '北辰数字化项目',
+        progress: '方案已确认',
+        expectedAmount: null,
+        nextAction: '提交实施方案',
+        dueAt: null,
+        source: opportunitySource,
+      }],
+      recentFollowups: [{
+        summary: '客户要求先发送合同',
+        opportunityRecordId: 'opportunity-1',
+        nextAction: '发送合同',
+        dueAt: null,
+        source: followupSource,
+      }],
+      conflicts: [{
+        field: 'nextAction',
+        opportunityValue: '提交实施方案',
+        followupValue: '发送合同',
+        opportunitySource,
+        followupSource,
+        newerSource: 'followup',
+      }],
+      tasks: [],
+      warnings: ['sales_context_source_conflict'],
+      readAt: '2026-09-25T08:00:00.000Z',
+    };
+    const visibleContent: string = collectVisibleContent(
+      createConfirmationCard({
+        ...pendingAction,
+        payload: { ...pendingAction.payload, salesContext: context },
+      }) as JsonObject,
+    ).join('\n');
+
+    expect(visibleContent).toContain(
+      '上下文冲突（下一步）：商机记录“提交实施方案”与跟进记录“发送合同”',
+    );
+    expect(visibleContent).toContain('跟进记录较新');
+    expect(visibleContent).toContain('来源信息不一致');
   });
 
   it('builds a Card 2.0 confirmation with opaque callback values', (): void => {
@@ -298,7 +384,21 @@ describe('follow-up validation', (): void => {
     const extractor: OpenAiFollowupExtractor =
       new OpenAiFollowupExtractor(http, runtimeConfig);
 
-    await expect(extractor.extract(extractionInput)).resolves.toEqual(
+    const salesContext: SalesContext = {
+      status: 'ready',
+      customer: null,
+      customerCandidates: [],
+      opportunities: [],
+      recentFollowups: [],
+      conflicts: [],
+      tasks: [],
+      warnings: [],
+      readAt: '2026-09-25T08:00:00.000Z',
+    };
+    await expect(extractor.extract({
+      ...extractionInput,
+      salesContext,
+    })).resolves.toEqual(
       validDraft,
     );
     expect(post).toHaveBeenCalledTimes(1);
@@ -317,8 +417,8 @@ describe('follow-up validation', (): void => {
           }),
           expect.objectContaining({
             role: 'user',
-            content: expect.stringContaining(
-              '"nowLocal":"2026-09-18T10:00:00+08:00"',
+            content: expect.stringMatching(
+              /"nowLocal":"2026-09-18T10:00:00\+08:00".*"salesContext"/u,
             ),
           }),
         ]),

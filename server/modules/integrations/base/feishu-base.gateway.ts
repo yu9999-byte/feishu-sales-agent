@@ -6,6 +6,8 @@ import type { SalesRecordsGateway } from '@server/modules/agent-core/agent.ports
 import type {
   BaseTableMapping,
   PendingAction,
+  SalesContextBaseResult,
+  SalesContextHints,
   SalesRecordResult,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
@@ -60,9 +62,222 @@ interface SearchCondition {
   value?: string[];
 }
 
+interface BaseContextRecord {
+  record_id?: string;
+  record_url?: string;
+  last_modified_time?: number;
+  fields: Record<string, unknown>;
+}
+
+interface BaseContextSearchResponse {
+  code?: number;
+  msg?: string;
+  data?: {
+    items?: BaseContextRecord[];
+  };
+}
+
 @Injectable()
 export class FeishuBaseGateway implements SalesRecordsGateway {
   constructor(private readonly clients: FeishuClientFactory) {}
+
+  async readSalesContext(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    hints: SalesContextHints,
+  ): Promise<SalesContextBaseResult> {
+    const empty: SalesContextBaseResult = {
+      customers: [],
+      opportunities: [],
+      followups: [],
+      warnings: [],
+    };
+    const customerTable = integration.base.customers;
+    const opportunityTable = integration.base.opportunities;
+    const followupTable = integration.base.followups;
+    if (
+      !customerTable.fields.ownerOpenId ||
+      !opportunityTable.fields.ownerOpenId ||
+      !followupTable.fields.ownerOpenId
+    ) {
+      return {
+        ...empty,
+        warnings: ['owner_scope_mapping_not_configured'],
+      };
+    }
+
+    const customerItems: BaseContextRecord[] = await this.searchContextRecords(
+      integration,
+      customerTable,
+      [
+        {
+          field_name: customerTable.fields.customerName,
+          operator: 'is',
+          value: [hints.customerName ?? ''],
+        },
+        {
+          field_name: customerTable.fields.ownerOpenId,
+          operator: 'is',
+          value: [actorOpenId],
+        },
+      ],
+      [
+        customerTable.fields.customerName,
+        customerTable.fields.contactName,
+        customerTable.fields.latestSummary,
+        customerTable.fields.lastFollowupAt,
+      ],
+      10,
+    );
+    const customers = customerItems.flatMap((item) => {
+      const recordId: string | undefined = item.record_id;
+      const name: string | null = this.readText(
+        item.fields,
+        customerTable.fields.customerName,
+      );
+      if (!recordId || !name) return [];
+      return [{
+        recordId,
+        name,
+        contactName: this.readText(
+          item.fields,
+          customerTable.fields.contactName,
+        ),
+        latestSummary: this.readText(
+          item.fields,
+          customerTable.fields.latestSummary,
+        ),
+        lastFollowupAt: this.readDate(
+          item.fields,
+          customerTable.fields.lastFollowupAt,
+        ),
+        sourceVersion: this.sourceVersion(item.last_modified_time),
+        recordUrl: item.record_url ?? null,
+      }];
+    });
+    if (customers.length !== 1) {
+      return { ...empty, customers };
+    }
+
+    const customer = customers[0];
+    const opportunityConditions: SearchCondition[] = [
+      {
+        field_name: opportunityTable.fields.customerLink,
+        operator: 'is',
+        value: [customer.recordId],
+      },
+      {
+        field_name: opportunityTable.fields.ownerOpenId,
+        operator: 'is',
+        value: [actorOpenId],
+      },
+    ];
+    if (hints.opportunityName) {
+      opportunityConditions.push({
+        field_name: opportunityTable.fields.opportunityName,
+        operator: 'is',
+        value: [hints.opportunityName],
+      });
+    }
+    const opportunityItems: BaseContextRecord[] =
+      await this.searchContextRecords(
+        integration,
+        opportunityTable,
+        opportunityConditions,
+        [
+          opportunityTable.fields.opportunityName,
+          opportunityTable.fields.progress,
+          opportunityTable.fields.expectedAmount,
+          opportunityTable.fields.nextAction,
+          opportunityTable.fields.dueAt,
+          opportunityTable.fields.customerLink,
+        ],
+        20,
+      );
+    const opportunities = opportunityItems.flatMap((item) => {
+      const recordId: string | undefined = item.record_id;
+      const name: string | null = this.readText(
+        item.fields,
+        opportunityTable.fields.opportunityName,
+      );
+      if (!recordId || !name) return [];
+      return [{
+        recordId,
+        customerRecordId: customer.recordId,
+        name,
+        progress: this.readText(
+          item.fields,
+          opportunityTable.fields.progress,
+        ),
+        expectedAmount: this.readNumber(
+          item.fields,
+          opportunityTable.fields.expectedAmount,
+        ),
+        nextAction: this.readText(
+          item.fields,
+          opportunityTable.fields.nextAction,
+        ),
+        dueAt: this.readDate(item.fields, opportunityTable.fields.dueAt),
+        sourceVersion: this.sourceVersion(item.last_modified_time),
+        recordUrl: item.record_url ?? null,
+      }];
+    });
+
+    const followupItems: BaseContextRecord[] =
+      await this.searchContextRecords(
+        integration,
+        followupTable,
+        [
+          {
+            field_name: followupTable.fields.customerLink,
+            operator: 'is',
+            value: [customer.recordId],
+          },
+          {
+            field_name: followupTable.fields.ownerOpenId,
+            operator: 'is',
+            value: [actorOpenId],
+          },
+        ],
+        [
+          followupTable.fields.summary,
+          followupTable.fields.nextAction,
+          followupTable.fields.dueAt,
+          followupTable.fields.opportunityLink,
+        ],
+        100,
+      );
+    const recentFollowups = [...followupItems]
+      .sort((left, right) =>
+        (right.last_modified_time ?? 0) - (left.last_modified_time ?? 0),
+      )
+      .slice(0, 5);
+    const followups = recentFollowups.flatMap((item) => {
+      const recordId: string | undefined = item.record_id;
+      const summary: string | null = this.readText(
+        item.fields,
+        followupTable.fields.summary,
+      );
+      if (!recordId || !summary) return [];
+      return [{
+        recordId,
+        summary,
+        opportunityRecordId: this.readLinkedRecordId(
+          item.fields,
+          followupTable.fields.opportunityLink,
+        ),
+        nextAction: this.readText(
+          item.fields,
+          followupTable.fields.nextAction,
+        ),
+        dueAt: this.readDate(item.fields, followupTable.fields.dueAt),
+        sourceVersion: this.sourceVersion(item.last_modified_time),
+        recordUrl: item.record_url ?? null,
+      }];
+    });
+
+    return { customers, opportunities, followups, warnings: [] };
+  }
 
   async upsertCustomer(
     integration: TenantIntegration,
@@ -313,6 +528,125 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
       recordId: requireFeishuId(item.record_id, 'search Base record'),
       recordUrl: item.record_url,
     };
+  }
+
+  private async searchContextRecords<TFields>(
+    integration: TenantIntegration,
+    table: BaseTableMapping<TFields>,
+    conditions: SearchCondition[],
+    fieldNames: Array<string | undefined>,
+    pageSize: number,
+  ): Promise<BaseContextRecord[]> {
+    const client = this.clients.getClient(integration);
+    const response: BaseContextSearchResponse =
+      await client.bitable.appTableRecord.search(
+        {
+          path: {
+            app_token: integration.base.appToken,
+            table_id: table.tableId,
+          },
+          params: {
+            page_size: pageSize,
+            user_id_type: 'open_id',
+          },
+          data: {
+            field_names: fieldNames.filter(
+              (name: string | undefined): name is string => name !== undefined,
+            ),
+            filter: {
+              conjunction: 'and',
+              conditions,
+            },
+          },
+        },
+        this.clients.getRequestOptions(integration),
+      );
+    assertFeishuSuccess(response.code, response.msg, 'read Base context');
+    return response.data?.items ?? [];
+  }
+
+  private readText(
+    fields: Record<string, unknown>,
+    fieldName: string | undefined,
+  ): string | null {
+    if (!fieldName) return null;
+    const value: unknown = fields[fieldName];
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number') return String(value);
+    if (Array.isArray(value)) {
+      const names: string[] = value.flatMap((item: unknown): string[] => {
+        if (typeof item === 'string') return [item];
+        if (typeof item !== 'object' || item === null) return [];
+        const candidate: unknown = 'name' in item ? item.name : undefined;
+        return typeof candidate === 'string' ? [candidate] : [];
+      });
+      return names.length > 0 ? names.join('、') : null;
+    }
+    if (typeof value === 'object' && value !== null && 'text' in value) {
+      const text: unknown = value.text;
+      return typeof text === 'string' ? text : null;
+    }
+    return null;
+  }
+
+  private readLinkedRecordId(
+    fields: Record<string, unknown>,
+    fieldName: string | undefined,
+  ): string | null {
+    if (!fieldName || !Array.isArray(fields[fieldName])) return null;
+    const items: unknown[] = fields[fieldName];
+    for (const item of items) {
+      if (typeof item !== 'object' || item === null) continue;
+      const recordId: unknown =
+        'record_id' in item
+          ? item.record_id
+          : 'link_record_id' in item
+            ? item.link_record_id
+            : undefined;
+      if (typeof recordId === 'string' && recordId.length > 0) {
+        return recordId;
+      }
+      const recordIds: unknown =
+        'link_record_ids' in item ? item.link_record_ids : undefined;
+      if (
+        Array.isArray(recordIds) &&
+        typeof recordIds[0] === 'string' &&
+        recordIds[0].length > 0
+      ) {
+        return recordIds[0];
+      }
+    }
+    return null;
+  }
+
+  private readNumber(
+    fields: Record<string, unknown>,
+    fieldName: string | undefined,
+  ): number | null {
+    if (!fieldName) return null;
+    const value: unknown = fields[fieldName];
+    const number: number = typeof value === 'number'
+      ? value
+      : typeof value === 'string' ? Number(value) : Number.NaN;
+    return Number.isFinite(number) ? number : null;
+  }
+
+  private readDate(
+    fields: Record<string, unknown>,
+    fieldName: string | undefined,
+  ): string | null {
+    if (!fieldName) return null;
+    const value: unknown = fields[fieldName];
+    const timestamp: number = typeof value === 'number'
+      ? value
+      : typeof value === 'string' ? Date.parse(value) : Number.NaN;
+    return Number.isFinite(timestamp)
+      ? new Date(timestamp).toISOString()
+      : null;
+  }
+
+  private sourceVersion(value: number | undefined): string | null {
+    return value === undefined ? null : new Date(value).toISOString();
   }
 
   private async createRecord<TFields>(

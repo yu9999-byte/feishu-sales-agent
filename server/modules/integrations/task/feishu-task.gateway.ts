@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import type { TaskGateway } from '@server/modules/agent-core/agent.ports';
 import type {
   PendingAction,
+  SalesContextTaskResult,
   TaskCreationResult,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
@@ -58,6 +59,60 @@ const resolveTaskInput = (action: PendingAction): ResolvedTaskInput => {
 @Injectable()
 class FeishuTaskGateway implements TaskGateway {
   constructor(private readonly clients: FeishuClientFactory) {}
+
+  async searchOwnedTasks(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    customerName: string,
+  ): Promise<SalesContextTaskResult> {
+    const client = this.clients.getClient(integration);
+    const response = await client.task.v2.task.search(
+      {
+        data: {
+          query: customerName,
+          filter: {
+            assignee_ids: [actorOpenId],
+            is_completed: false,
+          },
+        },
+        params: {
+          page_size: 10,
+          user_id_type: 'open_id',
+        },
+      },
+      this.clients.getRequestOptions(integration),
+    );
+    assertFeishuSuccess(response.code, response.msg, 'read Feishu tasks');
+    const items = response.data?.items ?? [];
+    const tasks = await Promise.all(items.map(async (item) => {
+      const detail = await client.task.v2.task.get(
+        {
+          path: { task_guid: item.id },
+          params: { user_id_type: 'open_id' },
+        },
+        this.clients.getRequestOptions(integration),
+      );
+      assertFeishuSuccess(detail.code, detail.msg, 'read Feishu task');
+      const task = detail.data?.task;
+      if (!task?.guid) return null;
+      const dueTimestamp: number = Number(task.due?.timestamp);
+      return {
+        guid: task.guid,
+        title: task.summary ?? item.meta_data?.description ?? '未命名任务',
+        status: task.completed_at ? 'completed' : task.status ?? 'todo',
+        dueAt: Number.isFinite(dueTimestamp) && dueTimestamp > 0
+          ? new Date(dueTimestamp).toISOString()
+          : null,
+        url: task.url ?? item.meta_data?.app_link ?? null,
+      };
+    }));
+    return {
+      items: tasks.filter((task) => task !== null),
+      ...(response.data?.notice
+        ? { warning: 'task_query_scope_limited' }
+        : {}),
+    };
+  }
 
   async createTask(
     integration: TenantIntegration,

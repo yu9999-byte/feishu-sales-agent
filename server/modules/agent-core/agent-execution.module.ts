@@ -17,11 +17,13 @@ import {
 import { LangGraphConversationAssistant } from '@server/modules/llm/langgraph-conversation.assistant';
 import { FollowupProjectRiskService } from '@server/modules/insight/followup-project-risk.service';
 import { AgentActionExecutorService } from './agent-action-executor.service';
+import { SalesContextService } from './sales-context.service';
 import {
   FEISHU_MESSENGER,
   CONVERSATION_ASSISTANT,
   FOLLOWUP_EXTRACTOR,
   SALES_RECORDS_GATEWAY,
+  SALES_CONTEXT_READER,
   TASK_GATEWAY,
 } from './agent.ports';
 import { LANGCHAIN_INTENT_MODEL } from '@server/modules/llm/langchain-intent.model';
@@ -45,6 +47,7 @@ import {
     FeishuMessengerService,
     FeishuBaseGateway,
     FeishuTaskGateway,
+    SalesContextService,
     FollowupProjectRiskService,
     AgentActionExecutorService,
     { provide: FOLLOWUP_EXTRACTOR, useExisting: OpenAiFollowupExtractor },
@@ -64,6 +67,7 @@ import {
     { provide: FEISHU_MESSENGER, useExisting: FeishuMessengerService },
     { provide: SALES_RECORDS_GATEWAY, useExisting: FeishuBaseGateway },
     { provide: TASK_GATEWAY, useExisting: FeishuTaskGateway },
+    { provide: SALES_CONTEXT_READER, useExisting: SalesContextService },
   ],
   exports: [
     FOLLOWUP_EXTRACTOR,
@@ -71,6 +75,7 @@ import {
     LONG_TERM_MEMORY,
     FEISHU_MESSENGER,
     AgentActionExecutorService,
+    SALES_CONTEXT_READER,
   ],
 })
 class AgentExecutionModule {}

@@ -5,6 +5,7 @@ import type {
   JsonObject,
   PendingActionPayload,
   PendingActionStatus,
+  SalesContext,
 } from '@shared/api.interface';
 
 export type FeishuAppType = 'selfBuild' | 'isv';
@@ -175,6 +176,57 @@ export interface FollowupExtractionInput {
   previousDraft: FollowupDraft | null;
   timezone: string;
   now: Date;
+  salesContext?: SalesContext;
+}
+
+export interface SalesContextHints {
+  customerName?: string;
+  opportunityName?: string;
+  contactName?: string;
+}
+
+export interface SalesContextBaseResult {
+  customers: Array<{
+    recordId: string;
+    name: string;
+    contactName: string | null;
+    latestSummary: string | null;
+    lastFollowupAt: string | null;
+    sourceVersion: string | null;
+    recordUrl: string | null;
+  }>;
+  opportunities: Array<{
+    recordId: string;
+    customerRecordId: string;
+    name: string;
+    progress: string | null;
+    expectedAmount: number | null;
+    nextAction: string | null;
+    dueAt: string | null;
+    sourceVersion: string | null;
+    recordUrl: string | null;
+  }>;
+  followups: Array<{
+    recordId: string;
+    summary: string;
+    opportunityRecordId: string | null;
+    nextAction: string | null;
+    dueAt: string | null;
+    sourceVersion: string | null;
+    recordUrl: string | null;
+  }>;
+  warnings: string[];
+}
+
+export interface SalesContextTaskResult {
+  items: Array<{
+    guid: string;
+    title: string;
+    status: string;
+    dueAt: string | null;
+    url: string | null;
+  }>;
+  warning?: string;
 }
 
 export type ConversationIntent =

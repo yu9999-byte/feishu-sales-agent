@@ -5,6 +5,7 @@ import type {
   FollowupDraft,
   FollowupMissingField,
   JsonObject,
+  SalesContext,
 } from '@shared/api.interface';
 import { AgentWorkflowService } from '@server/modules/agent-core/agent-workflow.service';
 import { AgentActionExecutorService } from '@server/modules/agent-core/agent-action-executor.service';
@@ -20,6 +21,7 @@ import type {
   ConversationAssistant,
   FeishuMessenger,
   FollowupExtractor,
+  SalesContextReader,
   SalesRecordsGateway,
   TaskGateway,
 } from '@server/modules/agent-core/agent.ports';
@@ -358,6 +360,7 @@ interface TestHarness {
 
 const createHarness = (
   draft: FollowupDraft = completeDraft,
+  salesContext?: SalesContextReader,
 ): TestHarness => {
   const integrationA: TenantIntegration = createIntegration(
     '00000000-0000-0000-0000-00000000000a',
@@ -421,6 +424,7 @@ const createHarness = (
     messenger,
     executor,
     chatDrafts,
+    salesContext,
   );
   return {
     integrationA,
@@ -1217,6 +1221,53 @@ describe('AgentWorkflowService', (): void => {
 
     expect(harness.extractor.calls).toBe(1);
     expect(harness.messenger.actions).toHaveLength(1);
+  });
+
+  it('reads owner-scoped context before finalizing the visible followup draft', async (): Promise<void> => {
+    const context: SalesContext = {
+      status: 'ready',
+      customer: {
+        name: '北辰制造',
+        contactName: '张总',
+        latestSummary: '客户认可方案',
+        lastFollowupAt: '2026-09-24T02:00:00.000Z',
+        source: {
+          recordId: 'customer-1',
+          recordUrl: 'https://feishu.cn/base/customer-1',
+          sourceVersion: '2026-09-24T02:00:00.000Z',
+        },
+      },
+      customerCandidates: [],
+      opportunities: [],
+      recentFollowups: [],
+      conflicts: [],
+      tasks: [],
+      warnings: [],
+      readAt: '2026-09-25T08:00:00.000Z',
+    };
+    const reader: SalesContextReader = {
+      read: vi.fn(async (): Promise<SalesContext> => context),
+    };
+    const harness: TestHarness = createHarness(completeDraft, reader);
+
+    await harness.workflow.handleMessage(createMessage());
+
+    expect(reader.read).toHaveBeenCalledWith(
+      harness.integrationA,
+      'ou_sales',
+      {
+        customerName: '北辰制造',
+        opportunityName: '北辰数字化项目',
+        contactName: '张总',
+      },
+      expect.any(Date),
+    );
+    expect(harness.extractor.calls).toBe(2);
+    expect(harness.extractor.lastInput?.salesContext).toEqual(context);
+    expect(harness.messenger.actions[0].payload.salesContext).toEqual(context);
+    expect(JSON.stringify(
+      createConfirmationCard(harness.messenger.actions[0]),
+    )).toContain('customer-1');
   });
 
   it('opens an owned Card 2.0 intake form for 写跟进 without model routing', async (): Promise<void> => {

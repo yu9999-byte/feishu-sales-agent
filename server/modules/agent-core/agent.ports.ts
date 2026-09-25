@@ -16,9 +16,13 @@ import type {
   SalesRecordResult,
   SaveCollectingSessionInput,
   SaveIntentClarificationSessionInput,
+  SalesContextBaseResult,
+  SalesContextHints,
+  SalesContextTaskResult,
   TaskCreationResult,
   TenantIntegration,
 } from './agent.types';
+import type { SalesContext } from '@shared/api.interface';
 import type { FollowupProjectRiskInsight } from '@server/modules/insight/followup-project-risk.service';
 
 export const CONTROL_STORE = Symbol('CONTROL_STORE');
@@ -27,6 +31,7 @@ export const CONVERSATION_ASSISTANT = Symbol('CONVERSATION_ASSISTANT');
 export const FEISHU_MESSENGER = Symbol('FEISHU_MESSENGER');
 export const SALES_RECORDS_GATEWAY = Symbol('SALES_RECORDS_GATEWAY');
 export const TASK_GATEWAY = Symbol('TASK_GATEWAY');
+export const SALES_CONTEXT_READER = Symbol('SALES_CONTEXT_READER');
 
 export interface ControlStore {
   resolveTenant(feishuTenantKey: string): Promise<TenantIntegration | null>;
@@ -148,6 +153,11 @@ export interface FeishuMessenger {
 }
 
 export interface SalesRecordsGateway {
+  readSalesContext?(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    hints: SalesContextHints,
+  ): Promise<SalesContextBaseResult>;
   upsertCustomer(
     integration: TenantIntegration,
     action: PendingAction,
@@ -173,6 +183,11 @@ export interface SalesRecordsGateway {
 }
 
 export interface TaskGateway {
+  searchOwnedTasks?(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    customerName: string,
+  ): Promise<SalesContextTaskResult>;
   createTask(
     integration: TenantIntegration,
     action: PendingAction,
@@ -184,4 +199,13 @@ export interface TaskGateway {
     followupRecordId: string,
     taskGuid: string,
   ): Promise<TaskCreationResult>;
+}
+
+export interface SalesContextReader {
+  read(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    hints: SalesContextHints,
+    now?: Date,
+  ): Promise<SalesContext>;
 }

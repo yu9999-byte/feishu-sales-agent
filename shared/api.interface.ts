@@ -72,9 +72,76 @@ export interface PendingActionPayload {
   selectedTaskCandidateIds?: string[];
   inputForm?: FollowupCardFormInput;
   inputError?: string;
+  salesContext?: SalesContext;
   operationKind?: FollowupOperationKind;
   revisionOfActionId?: string;
   executionTarget?: ExecutionTarget;
+}
+
+export type SalesContextStatus =
+  | 'ready'
+  | 'partial'
+  | 'needs_clarification'
+  | 'unavailable';
+
+export interface SalesContextSource {
+  recordId: string;
+  recordUrl: string | null;
+  sourceVersion: string | null;
+}
+
+export interface SalesContextCustomer {
+  name: string;
+  contactName: string | null;
+  latestSummary: string | null;
+  lastFollowupAt: string | null;
+  source: SalesContextSource;
+}
+
+export interface SalesContextOpportunity {
+  name: string;
+  progress: string | null;
+  expectedAmount: number | null;
+  nextAction: string | null;
+  dueAt: string | null;
+  source: SalesContextSource;
+}
+
+export interface SalesContextConflict {
+  field: 'nextAction' | 'dueAt';
+  opportunityValue: string;
+  followupValue: string;
+  opportunitySource: SalesContextSource;
+  followupSource: SalesContextSource;
+  newerSource: 'opportunity' | 'followup' | 'same' | 'unknown';
+}
+
+export interface SalesContextFollowup {
+  summary: string;
+  opportunityRecordId: string | null;
+  nextAction: string | null;
+  dueAt: string | null;
+  source: SalesContextSource;
+}
+
+export interface SalesContextTask {
+  guid: string;
+  title: string;
+  status: string;
+  dueAt: string | null;
+  url: string | null;
+}
+
+export interface SalesContext {
+  status: SalesContextStatus;
+  customer: SalesContextCustomer | null;
+  customerCandidates: SalesContextCustomer[];
+  opportunities: SalesContextOpportunity[];
+  recentFollowups: SalesContextFollowup[];
+  conflicts: SalesContextConflict[];
+  tasks: SalesContextTask[];
+  warnings: string[];
+  readAt: string;
 }
 
 export interface ConfirmationCardAction {

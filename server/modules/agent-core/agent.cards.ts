@@ -6,6 +6,7 @@ import type {
   FollowupTaskMissingField,
   JsonObject,
   JsonValue,
+  SalesContext,
 } from '@shared/api.interface';
 import type { FollowupProjectRiskInsight } from '@server/modules/insight/followup-project-risk.service';
 import type { PendingAction } from './agent.types';
@@ -29,6 +30,22 @@ const formatAmount = (amount: number | null): string =>
         currency: 'CNY',
         maximumFractionDigits: 0,
       }).format(amount);
+
+const createSourceLink = (url: string | null, label: string): string => {
+  if (url === null) return '';
+  try {
+    const parsed: URL = new URL(url);
+    const trustedHost: boolean =
+      parsed.hostname === 'feishu.cn' ||
+      parsed.hostname.endsWith('.feishu.cn') ||
+      parsed.hostname === 'larksuite.com' ||
+      parsed.hostname.endsWith('.larksuite.com');
+    if (parsed.protocol !== 'https:' || !trustedHost) return '';
+    return ` · [${label}](<${parsed.href}>)`;
+  } catch {
+    return '';
+  }
+};
 
 const createBaseCard = (
   title: string,
@@ -112,6 +129,80 @@ const createDraftFields = (draft: FollowupDraft): JsonObject => ({
     },
   ],
 });
+
+const createSalesContextBlock = (context: SalesContext): JsonObject => {
+  const lines: string[] = ['**本人可见的业务上下文**'];
+  if (context.customer) {
+    lines.push(
+      `客户：${escapeMarkdown(context.customer.name)}（来源记录 ` +
+      `${escapeMarkdown(context.customer.source.recordId)}）` +
+      createSourceLink(context.customer.source.recordUrl, '查看客户'),
+    );
+    if (context.customer.latestSummary) {
+      lines.push(`最近摘要：${escapeMarkdown(context.customer.latestSummary)}`);
+    }
+  }
+  if (context.customerCandidates.length > 0) {
+    lines.push('客户匹配不唯一，请核对：');
+    for (const candidate of context.customerCandidates) {
+      lines.push(
+        `- ${escapeMarkdown(candidate.name)}（记录 ` +
+        `${escapeMarkdown(candidate.source.recordId)}）`,
+      );
+    }
+  }
+  for (const opportunity of context.opportunities.slice(0, 3)) {
+    lines.push(
+      `商机：${escapeMarkdown(opportunity.name)}；进展：` +
+      `${escapeMarkdown(opportunity.progress ?? '未提供')}；来源记录 ` +
+      `${escapeMarkdown(opportunity.source.recordId)}` +
+      createSourceLink(opportunity.source.recordUrl, '查看商机'),
+    );
+  }
+  for (const followup of context.recentFollowups.slice(0, 3)) {
+    lines.push(
+      `近期跟进：${escapeMarkdown(followup.summary)}（记录 ` +
+      `${escapeMarkdown(followup.source.recordId)}）` +
+      createSourceLink(followup.source.recordUrl, '查看跟进'),
+    );
+  }
+  for (const conflict of context.conflicts.slice(0, 3)) {
+    const fieldName: string = conflict.field === 'nextAction'
+      ? '下一步'
+      : '截止时间';
+    const newerSource: string = {
+      opportunity: '商机记录较新',
+      followup: '跟进记录较新',
+      same: '两条记录时间相同',
+      unknown: '无法比较记录时间',
+    }[conflict.newerSource];
+    lines.push(
+      `上下文冲突（${fieldName}）：商机记录“` +
+      `${escapeMarkdown(conflict.opportunityValue)}”与跟进记录“` +
+      `${escapeMarkdown(conflict.followupValue)}”；${newerSource}。` +
+      createSourceLink(conflict.opportunitySource.recordUrl, '查看商机') +
+      createSourceLink(conflict.followupSource.recordUrl, '查看跟进'),
+    );
+  }
+  for (const task of context.tasks.slice(0, 3)) {
+    lines.push(
+      `本人待办：${escapeMarkdown(task.title)}；状态：` +
+      `${escapeMarkdown(task.status)}；任务 ${escapeMarkdown(task.guid)}` +
+      createSourceLink(task.url, '查看待办'),
+    );
+  }
+  if (context.warnings.length > 0 || context.status !== 'ready') {
+    if (context.warnings.includes('sales_context_source_conflict')) {
+      lines.push('来源信息不一致，已保留双方事实；请核对后再确认。');
+    }
+    lines.push(
+      context.warnings.includes('business_context_permission_denied')
+        ? '无权读取部分业务资料，本次草稿未将缺失信息当作事实。'
+        : '上下文不完整，本次草稿未将缺失信息当作事实。',
+    );
+  }
+  return { tag: 'markdown', content: lines.join('\n') };
+};
 
 const toPickerDateTime = (value: string | null): string | undefined => {
   if (value === null) return undefined;
@@ -493,6 +584,9 @@ const createConfirmationCard = (action: PendingAction): JsonObject => {
     'blue',
     '待确认',
     [
+      ...(action.payload.salesContext
+        ? [createSalesContextBlock(action.payload.salesContext)]
+        : []),
       createDraftFields(draft),
       createQualityBlock(action.payload.quality),
       {

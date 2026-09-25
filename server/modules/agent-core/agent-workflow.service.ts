@@ -19,12 +19,14 @@ import {
   CONVERSATION_ASSISTANT,
   FEISHU_MESSENGER,
   FOLLOWUP_EXTRACTOR,
+  SALES_CONTEXT_READER,
 } from './agent.ports';
 import type {
   ControlStore,
   ConversationAssistant,
   FeishuMessenger,
   FollowupExtractor,
+  SalesContextReader,
 } from './agent.ports';
 import {
   createAlreadyHandledCard,
@@ -42,6 +44,7 @@ import type {
   IncomingCardAction,
   IncomingMessage,
   PendingAction,
+  SalesContextHints,
   TenantIntegration,
 } from './agent.types';
 import { parseConfirmationCardAction } from './agent.validation';
@@ -85,6 +88,9 @@ export class AgentWorkflowService {
     private readonly messenger: FeishuMessenger,
     private readonly executor: AgentActionExecutorService,
     private readonly chatDrafts: FollowupChatDraftService,
+    @Optional()
+    @Inject(SALES_CONTEXT_READER)
+    private readonly salesContext?: SalesContextReader,
     @Optional()
     @Inject(LONG_TERM_MEMORY)
     private readonly longTermMemory?: LongTermMemoryPort,
@@ -581,13 +587,32 @@ export class AgentWorkflowService {
     const combinedText: string = session
       ? `${session.rawText}\n补充信息：${currentText}`
       : currentText;
-    const draft: FollowupDraft = await this.extractor.extract({
+    const extractionInput = {
       currentText,
       combinedText,
       previousDraft: session?.draft ?? null,
       timezone: 'Asia/Shanghai',
       now: message.receivedAt,
-    });
+    };
+    const entityHints: FollowupDraft = await this.extractor.extract(
+      extractionInput,
+    );
+    const hints: SalesContextHints = {
+      customerName: entityHints.customerName ?? undefined,
+      opportunityName: entityHints.opportunityName ?? undefined,
+      contactName: entityHints.contactName ?? undefined,
+    };
+    const salesContext = this.salesContext && hints.customerName
+      ? await this.salesContext.read(
+          integration,
+          message.senderOpenId,
+          hints,
+          message.receivedAt,
+        )
+      : undefined;
+    const draft: FollowupDraft = salesContext
+      ? await this.extractor.extract({ ...extractionInput, salesContext })
+      : entityHints;
     const actionId: string = randomUUID();
     const payload = await this.chatDrafts.createPayload({
       integration,
@@ -598,6 +623,7 @@ export class AgentWorkflowService {
       rawText: combinedText,
       draft,
       now: message.receivedAt,
+      salesContext,
     });
     const pending: PendingAction =
       await this.store.createPendingAction({
@@ -984,12 +1010,25 @@ export class AgentWorkflowService {
     inputForm: FollowupCardFormInput,
   ): Promise<void> {
     try {
+      const hints: SalesContextHints = {
+        customerName: inputForm.customerName,
+        contactName: inputForm.contactName,
+      };
+      const salesContext = this.salesContext && hints.customerName
+        ? await this.salesContext.read(
+            integration,
+            action.operatorOpenId,
+            hints,
+            action.receivedAt,
+          )
+        : undefined;
       const draft: FollowupDraft = await this.extractor.extract({
         currentText: communicationContent,
         combinedText: normalizedSource,
         previousDraft: null,
         timezone: 'Asia/Shanghai',
         now: action.receivedAt,
+        salesContext,
       });
       const payload = await this.chatDrafts.createPayload({
         integration,
@@ -1000,6 +1039,7 @@ export class AgentWorkflowService {
         draft,
         now: action.receivedAt,
         inputForm,
+        salesContext,
       });
       const updated: PendingAction | null =
         await this.store.replacePendingActionPayload(
