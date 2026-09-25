@@ -29,6 +29,9 @@ export interface FollowupDraft {
   evidenceQuotes: string[];
   nextActionChannel?: string | null;
   nextActionParticipants?: string[];
+  agreements?: string[];
+  decisionChain?: string[];
+  competitors?: string[];
 }
 
 export type AgentSessionState =
@@ -68,6 +71,7 @@ export interface PendingActionPayload {
   ownerMemberId?: string;
   generatedBody?: string;
   quality?: FollowupQualitySnapshot;
+  progressAssessment?: FollowupProgressSnapshot;
   taskCandidates?: FollowupTaskCandidate[];
   selectedTaskCandidateIds?: string[];
   inputForm?: FollowupCardFormInput;
@@ -76,6 +80,59 @@ export interface PendingActionPayload {
   operationKind?: FollowupOperationKind;
   revisionOfActionId?: string;
   executionTarget?: ExecutionTarget;
+}
+
+export type FollowupProgressState =
+  | 'advanced'
+  | 'steady'
+  | 'needs_attention'
+  | 'at_risk'
+  | 'insufficient';
+
+export type FollowupProgressFactKind =
+  | 'message'
+  | 'customer'
+  | 'opportunity'
+  | 'followup'
+  | 'task';
+
+export type FollowupProgressFindingKind = 'change' | 'gap' | 'risk';
+
+export interface FollowupProgressFact {
+  id: string;
+  kind: FollowupProgressFactKind;
+  label: string;
+  content: string;
+  quote: string | null;
+  source: SalesContextSource | null;
+}
+
+export interface FollowupProgressFinding {
+  id: string;
+  kind: FollowupProgressFindingKind;
+  code: string;
+  title: string;
+  detail: string;
+  evidenceIds: string[];
+}
+
+export interface FollowupProgressRecommendation {
+  action: string;
+  dueAt: string | null;
+  reason: string;
+  evidenceIds: string[];
+  requiresConfirmation: true;
+  editableFields: Array<'nextAction' | 'dueAt'>;
+}
+
+export interface FollowupProgressSnapshot {
+  state: FollowupProgressState;
+  headline: string;
+  facts: FollowupProgressFact[];
+  findings: FollowupProgressFinding[];
+  recommendation: FollowupProgressRecommendation | null;
+  warnings: string[];
+  assessedAt: string;
 }
 
 export type SalesContextStatus =
@@ -365,6 +422,7 @@ export interface FollowupDraftResponse {
     draft: FollowupDraft;
     quality: FollowupQualitySnapshot;
     salesContext?: SalesContext;
+    progressAssessment?: FollowupProgressSnapshot;
     taskCandidates?: FollowupTaskCandidate[];
     createdAt: string;
   };

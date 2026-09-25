@@ -226,6 +226,7 @@ export class OpenAiFollowupExtractor implements FollowupExtractor {
             'evidenceQuotes 中每一项都必须是 combinedText 中逐字出现的连续原文。',
             'summary 用简洁中文概括已知事实，不添加推断。',
             'salesContext 仅用于客户/商机匹配、发现冲突和避免重复动作；不要把业务上下文里、但 combinedText 未提到的历史事实写入本次跟进 summary、progress 或 risks。',
+            'agreements、decisionChain、competitors 只记录 combinedText 中明确出现的内容；未知时输出空数组。',
             '若 salesContext.conflicts 非空，不得静默采用任一来源的冲突值；保留 combinedText 中用户本次明确提供的内容，冲突来源和较新标记由确认卡展示。',
             '若 salesContext.status 为 needs_clarification 或 unavailable，不要擅自选择客户/商机；未知字段按 null 输出。',
           ].join('\n'),

@@ -12,6 +12,7 @@ import { Link, useParams } from 'react-router-dom';
 import type {
   AgentExecutionResult,
   FollowupDraftResponse,
+  FollowupProgressSnapshot,
   FollowupTaskCandidate,
   SalesContext,
   SalesContextConflict,
@@ -216,6 +217,121 @@ const SalesContextPanel: React.FC<SalesContextPanelProps> = ({ context }) => (
     )}
   </section>
 );
+
+interface ProgressAssessmentPanelProps {
+  assessment: FollowupProgressSnapshot;
+}
+
+const ProgressAssessmentPanel: React.FC<ProgressAssessmentPanelProps> = ({
+  assessment,
+}) => {
+  const stateLabels: Record<FollowupProgressSnapshot['state'], string> = {
+    advanced: '有新的进展',
+    steady: '暂未发现明显变化',
+    needs_attention: '还有信息需要补齐',
+    at_risk: '存在需要优先处理的风险',
+    insufficient: '暂时无法完整判断',
+  };
+  const kindLabels: Record<string, string> = {
+    change: '进展变化',
+    gap: '还需确认',
+    risk: '风险提示',
+  };
+  return (
+    <section className="rounded-xl border border-border bg-card p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">商机推进判断</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {stateLabels[assessment.state]}
+          </p>
+        </div>
+        {assessment.recommendation && (
+          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
+            待确认
+          </span>
+        )}
+      </div>
+      <p className="mt-4 text-sm">{assessment.headline}</p>
+      <div className="mt-5 border-t border-border pt-4">
+        <p className="text-sm font-medium">事实依据</p>
+        {assessment.facts.length > 0 ? (
+          <ul className="mt-2 space-y-3 text-sm">
+            {assessment.facts.slice(0, 5).map((fact) => (
+              <li key={fact.id}>
+                <p className="font-medium">{fact.label}</p>
+                <p className="mt-1 break-words text-muted-foreground">
+                  {fact.content}
+                </p>
+                {fact.source && (
+                  <div className="mt-1 text-xs">
+                    <ContextSource
+                      label="查看来源"
+                      recordId={fact.source.recordId}
+                      recordUrl={fact.source.recordUrl}
+                    />
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-muted-foreground">
+            暂无可定位的业务事实。
+          </p>
+        )}
+      </div>
+      <div className="mt-5 space-y-4 border-t border-border pt-4">
+        <p className="text-sm font-medium">Agent 判断</p>
+        {(['change', 'gap', 'risk'] as const).map((kind) => {
+          const findings = assessment.findings.filter((item) => item.kind === kind);
+          if (findings.length === 0) return null;
+          return (
+            <div key={kind}>
+              <p className="text-xs font-medium text-muted-foreground">{kindLabels[kind]}</p>
+              <ul className="mt-2 space-y-2 text-sm">
+                {findings.slice(0, 4).map((item) => (
+                  <li key={item.id}>
+                    <p className="font-medium">{item.title}</p>
+                    <p className="text-muted-foreground">{item.detail}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+      {assessment.recommendation ? (
+        <div className="mt-5 border-t border-border pt-4 text-sm">
+          <p className="font-medium">建议下一步</p>
+          <p className="mt-1">{assessment.recommendation.action}</p>
+          <p className="mt-1 text-muted-foreground">
+            时间：{assessment.recommendation.dueAt ?? '待补充'} ·
+            {' '}{assessment.recommendation.reason}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            确认后才会执行，你可以在左侧修改下一步和时间。
+          </p>
+        </div>
+      ) : (
+        <p className="mt-5 border-t border-border pt-4 text-sm text-muted-foreground">
+          当前没有可直接执行的建议，请先补充或确认信息。
+        </p>
+      )}
+      <div className="mt-5 border-t border-border pt-4 text-sm">
+        <p className="font-medium">确认后执行</p>
+        <p className="mt-1 text-muted-foreground">
+          确认后才会保存本次跟进，并仅创建你勾选的本人任务。
+        </p>
+      </div>
+      {assessment.warnings.length > 0 && (
+        <p className="mt-4 text-xs text-amber-700">
+          资料提示：{assessment.warnings.join('；')}
+        </p>
+      )}
+    </section>
+  );
+};
 
 const FollowupDraftPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -459,6 +575,11 @@ const FollowupDraftPage: React.FC = () => {
           </div>
         </section>
         <aside className="space-y-5">
+          {draft.version.progressAssessment && (
+            <ProgressAssessmentPanel
+              assessment={draft.version.progressAssessment}
+            />
+          )}
           {draft.version.salesContext && (
             <SalesContextPanel context={draft.version.salesContext} />
           )}

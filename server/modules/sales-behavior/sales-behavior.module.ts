@@ -13,6 +13,7 @@ import { FollowupDraftWorkflowService } from './followup-draft-workflow.service'
 import { FollowupConfirmationService } from './followup-confirmation.service';
 import { FollowupChatDraftService } from './followup-chat-draft.service';
 import { FollowupQualityService } from './followup-quality.service';
+import { FollowupProgressService } from './followup-progress.service';
 import { PostgresFollowupDraftRepository } from './postgres-followup-draft.repository';
 
 @Module({
@@ -27,6 +28,7 @@ import { PostgresFollowupDraftRepository } from './postgres-followup-draft.repos
   providers: [
     PostgresFollowupDraftRepository,
     FollowupQualityService,
+    FollowupProgressService,
     FollowupChatDraftService,
     FollowupDraftWorkflowService,
     FollowupConfirmationService,

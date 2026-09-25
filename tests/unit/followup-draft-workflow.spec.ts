@@ -42,6 +42,39 @@ const extractedDraft = (): FollowupDraft => ({
   evidenceQuotes: ['客户认可试点方案', '发送实施计划'],
 });
 
+const readySalesContext = (): SalesContext => ({
+  status: 'ready',
+  customer: {
+    name: '北辰制造',
+    contactName: '张总',
+    latestSummary: '正在评估试点方案',
+    lastFollowupAt: '2026-09-18T02:00:00.000Z',
+    source: {
+      recordId: 'customer-1',
+      recordUrl: 'https://feishu.cn/customer-1',
+      sourceVersion: '2026-09-18T02:00:00.000Z',
+    },
+  },
+  customerCandidates: [],
+  opportunities: [{
+    name: '数字化项目',
+    progress: '方案评估中',
+    expectedAmount: 500000,
+    nextAction: '等待客户反馈',
+    dueAt: '2026-09-19T18:00:00+08:00',
+    source: {
+      recordId: 'opportunity-1',
+      recordUrl: 'https://feishu.cn/opportunity-1',
+      sourceVersion: '2026-09-18T03:00:00.000Z',
+    },
+  }],
+  recentFollowups: [],
+  conflicts: [],
+  tasks: [],
+  warnings: [],
+  readAt: '2026-09-19T02:00:00.000Z',
+});
+
 class FixedExtractor implements FollowupExtractor {
   async extract(_input: FollowupExtractionInput): Promise<FollowupDraft> {
     return extractedDraft();
@@ -84,6 +117,7 @@ class MemoryDraftRepository implements FollowupDraftRepository {
       draft: structuredClone(input.draft),
       quality: structuredClone(input.quality),
       salesContext: structuredClone(input.salesContext),
+      progressAssessment: structuredClone(input.progressAssessment),
       createdAt: input.createdAt,
     };
     const record: FollowupDraftRecord = {
@@ -116,6 +150,7 @@ class MemoryDraftRepository implements FollowupDraftRepository {
     generatedBody: string;
     draft: FollowupDraft;
     quality: FollowupDraftVersionRecord['quality'];
+    progressAssessment?: FollowupDraftVersionRecord['progressAssessment'];
     createdAt: Date;
   }): Promise<FollowupDraftRecord | null> {
     const record = this.records.get(input.draftId);
@@ -132,6 +167,7 @@ class MemoryDraftRepository implements FollowupDraftRepository {
       generatedBody: input.generatedBody,
       draft: structuredClone(input.draft),
       quality: structuredClone(input.quality),
+      progressAssessment: structuredClone(input.progressAssessment),
       createdAt: input.createdAt,
     };
     return structuredClone(record);
@@ -161,12 +197,54 @@ class MemoryDraftRepository implements FollowupDraftRepository {
   }
 }
 
-const service = (repository: MemoryDraftRepository): FollowupDraftWorkflowService =>
-  new FollowupDraftWorkflowService(
+const service = (
+  repository: MemoryDraftRepository,
+  salesContext?: SalesContext,
+): FollowupDraftWorkflowService => {
+  const controlStore: ControlStore | undefined = salesContext === undefined
+    ? undefined
+    : {
+      resolveTenantById: async (): Promise<TenantIntegration> => ({
+        tenantId: TENANT_ID,
+        feishuTenantKey: 'tenant-a',
+        name: '企业 A',
+        status: 'active',
+        appId: 'cli_test',
+        appSecretEnv: 'TEST_SECRET',
+        appType: 'selfBuild',
+        base: {
+          appToken: 'base-a',
+          customers: {
+            tableId: 'customers', primaryField: '客户',
+            fields: { customerName: '客户' },
+          },
+          opportunities: {
+            tableId: 'opportunities', primaryField: '商机',
+            fields: { opportunityName: '商机', customerLink: '客户' },
+          },
+          followups: {
+            tableId: 'followups', primaryField: '跟进',
+            fields: {
+              sourceMessageId: '消息', customerLink: '客户',
+              opportunityLink: '商机', rawText: '原文', summary: '摘要',
+            },
+          },
+        },
+      }),
+    } as ControlStore;
+  const reader: SalesContextReader | undefined = salesContext === undefined
+    ? undefined
+    : {
+      read: async (): Promise<SalesContext> => salesContext,
+    } as SalesContextReader;
+  return new FollowupDraftWorkflowService(
     new FixedExtractor(),
     repository,
     new FollowupQualityService(),
+    controlStore,
+    reader,
   );
+};
 
 describe('FollowupDraftWorkflowService', (): void => {
   it('reads owner-scoped context before the visible Web draft and persists it', async (): Promise<void> => {
@@ -262,6 +340,12 @@ describe('FollowupDraftWorkflowService', (): void => {
     expect(extractor.inputs[1]?.salesContext).toEqual(context);
     expect(controlStore.resolveTenantById).toHaveBeenCalledWith(TENANT_ID);
     expect(created.version.salesContext).toEqual(context);
+    expect(created.version.progressAssessment).toMatchObject({
+      recommendation: {
+        action: '发送实施计划',
+        requiresConfirmation: true,
+      },
+    });
     expect(repository.records.get(created.id)?.version.salesContext)
       .toEqual(context);
   });
@@ -349,10 +433,11 @@ describe('FollowupDraftWorkflowService', (): void => {
 
   it('creates an immutable new version when the owner edits the generated body', async (): Promise<void> => {
     const repository = new MemoryDraftRepository();
-    const workflow = service(repository);
+    const workflow = service(repository, readySalesContext());
     const created = await workflow.create({
       tenantId: TENANT_ID,
       ownerMemberId: MEMBER_ID,
+      ownerOpenId: 'ou_owner',
       sourceType: 'text',
       text: '客户认可试点方案，下一步发送实施计划。',
       idempotencyKey: 'input-002',
@@ -373,7 +458,15 @@ describe('FollowupDraftWorkflowService', (): void => {
     });
     expect(edited).toMatchObject({
       currentVersion: 2,
-      version: { version: 2, creationKind: 'user_edit' },
+      version: {
+        version: 2,
+        creationKind: 'user_edit',
+        progressAssessment: {
+          recommendation: {
+            action: '发送实施计划并约张总复盘',
+          },
+        },
+      },
     });
   });
 

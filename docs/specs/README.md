@@ -1,6 +1,6 @@
 # 销策 Agent SDD 索引
 
-状态：`Approved / implementation started 2026-09-19 / framework decision update 2026-09-23`
+状态：`Approved / Goal v3 P1-PROGRESS automated Green 2026-09-25`
 
 本目录是 Goal v3 的规格权威来源。代码、测试、飞书配置和 UI 验收都必须能追溯到这里的
 需求编号；参考文档只提供业务输入，不能直接替代本项目规格。
@@ -25,6 +25,11 @@
 | `10-langgraph-agent-runtime-sdd.md` | LangChain/LangGraph 运行时、Checkpointer、Mem0 分层、迁移和 TDD 门禁 | 已实现，运行验证通过，UI 复测待完成 |
 | `11-mem0-long-term-memory-sdd.md` | Mem0 OSS 长期记忆边界、确认门、命名空间、ACL 和上线门禁 | 已确认，适配器默认关闭 |
 | `12-mem0-long-term-memory-tdd.md` | Mem0 端口的隔离、批准、删除、失败降级和真实后端评测用例 | Red/Green 基础契约完成 |
+| `13-project-hardening-sdd.md` | OAuth、执行恢复、版本幂等和运行时整改 | 已实现，UI 复测待完成 |
+| `14-followup-context-read-sdd.md` | 客户、商机、跟进和任务上下文读取契约 | 已实现，UI 待验收 |
+| `15-followup-context-read-tdd.md` | 上下文读取、隔离、冲突和持久化测试 | Green |
+| `16-followup-progress-assessment-sdd.md` | 本次进展、缺口、风险、建议和确认动作契约 | 已实现，UI 待验收 |
+| `17-followup-progress-assessment-tdd.md` | 推进判断、展示、版本和兼容测试 | Green |
 
 ## 2. 规格状态
 
@@ -63,6 +68,8 @@ Draft -> Approved -> Implementing -> Implemented -> UI Verified
 | `FUP` | 跟进生成、质检、确认、写入和推送 |
 | `TSK` | 飞书任务生命周期和提醒 |
 | `COP` | 客户、商机、拜访攻略和推进决策 |
+| `CTX` | 客户、商机、跟进和任务上下文读取 |
+| `PRG` | 跟进对应的商机进展、缺口、风险和行动建议 |
 | `SIA` | 智能问答、知识检索和对话式操作 |
 | `REV` | 日报、周报、人员效能和经营 Review |
 | `BPA` | 最佳实践和 Sales Playbook |

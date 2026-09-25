@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { Sql } from 'postgres';
 import type {
   FollowupDraft,
+  FollowupProgressSnapshot,
   SalesContext,
 } from '@shared/api.interface';
 import {
@@ -10,6 +11,7 @@ import {
 } from '@server/modules/control-store/postgres-control.store';
 import {
   parseFollowupDraft,
+  parseProgressAssessment,
   parseSalesContext,
 } from '@server/modules/agent-core/agent.validation';
 import type {
@@ -41,6 +43,7 @@ interface DraftRow {
   generated_body: string;
   structured_fields: unknown;
   context_snapshot: unknown;
+  progress_assessment: unknown;
   quality_snapshot: unknown;
   created_at: Date | string;
 }
@@ -111,7 +114,8 @@ implements FollowupDraftRepository {
         INSERT INTO followup_draft_versions (
           tenant_id, draft_id, version, creation_kind,
           source_text, generated_body, structured_fields,
-          context_snapshot, evidence, quality_snapshot, created_at
+          context_snapshot, progress_assessment, evidence,
+          quality_snapshot, created_at
         ) VALUES (
           ${input.tenantId}::uuid,
           ${id}::uuid,
@@ -123,6 +127,9 @@ implements FollowupDraftRepository {
           ${input.salesContext === undefined
             ? null
             : JSON.stringify(input.salesContext)}::text::jsonb,
+          ${input.progressAssessment === undefined
+            ? null
+            : JSON.stringify(input.progressAssessment)}::text::jsonb,
           ${JSON.stringify(input.draft.evidenceQuotes)}::text::jsonb,
           ${JSON.stringify(input.quality)}::text::jsonb,
           ${input.createdAt}
@@ -157,6 +164,7 @@ implements FollowupDraftRepository {
         version.generated_body,
         version.structured_fields,
         version.context_snapshot,
+        version.progress_assessment,
         version.quality_snapshot,
         version.created_at
       FROM followup_drafts AS draft
@@ -196,7 +204,8 @@ implements FollowupDraftRepository {
           INSERT INTO followup_draft_versions (
             tenant_id, draft_id, version, creation_kind,
             source_text, generated_body, structured_fields,
-            context_snapshot, evidence, quality_snapshot, created_at
+            context_snapshot, progress_assessment, evidence,
+            quality_snapshot, created_at
           )
           SELECT
             ${input.tenantId}::uuid,
@@ -207,6 +216,12 @@ implements FollowupDraftRepository {
             ${input.generatedBody},
             ${JSON.stringify(input.draft)}::text::jsonb,
             previous.context_snapshot,
+            COALESCE(
+              ${input.progressAssessment === undefined
+                ? null
+                : JSON.stringify(input.progressAssessment)}::text::jsonb,
+              previous.progress_assessment
+            ),
             ${JSON.stringify(input.draft.evidenceQuotes)}::text::jsonb,
             ${JSON.stringify(input.quality)}::text::jsonb,
             ${input.createdAt}
@@ -251,7 +266,7 @@ implements FollowupDraftRepository {
           INSERT INTO followup_draft_versions (
             tenant_id, draft_id, version, creation_kind,
             source_text, generated_body, structured_fields, context_snapshot,
-            evidence, quality_snapshot, llm_model,
+            progress_assessment, evidence, quality_snapshot, llm_model,
             prompt_version, schema_version, confirmed_at, created_at
           )
           SELECT
@@ -263,6 +278,7 @@ implements FollowupDraftRepository {
             previous.generated_body,
             previous.structured_fields,
             previous.context_snapshot,
+            previous.progress_assessment,
             previous.evidence,
             previous.quality_snapshot,
             previous.llm_model,
@@ -287,6 +303,10 @@ implements FollowupDraftRepository {
       row.context_snapshot === null || row.context_snapshot === undefined
         ? undefined
         : parseSalesContext(row.context_snapshot);
+    const progressAssessment: FollowupProgressSnapshot | undefined =
+      row.progress_assessment === null || row.progress_assessment === undefined
+        ? undefined
+        : parseProgressAssessment(row.progress_assessment);
     const version: FollowupDraftVersionRecord = {
       tenantId: row.tenant_id,
       draftId: row.id,
@@ -296,6 +316,7 @@ implements FollowupDraftRepository {
       generatedBody: row.generated_body,
       draft,
       salesContext,
+      progressAssessment,
       quality: parseQuality(row.quality_snapshot),
       createdAt: toDate(row.created_at),
     };

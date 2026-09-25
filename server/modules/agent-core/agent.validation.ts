@@ -5,6 +5,7 @@ import type {
   ConfirmationCardAction,
   FollowupDraft,
   FollowupMissingField,
+  FollowupProgressSnapshot,
   FollowupTaskCandidate,
   JsonObject,
   PendingActionPayload,
@@ -37,6 +38,9 @@ const followupDraftSchema = z.object({
   dueAt: nullableTrimmedStringSchema,
   nextActionChannel: nullableTrimmedStringSchema.optional(),
   nextActionParticipants: stringListSchema.optional(),
+  agreements: stringListSchema.optional(),
+  decisionChain: stringListSchema.optional(),
+  competitors: stringListSchema.optional(),
   evidenceQuotes: stringListSchema,
 });
 
@@ -55,6 +59,43 @@ const followupTaskCandidateSchema = z.object({
   missingFields: z.array(
     z.enum(['dueAt', 'pastDueAt', 'channel', 'participants']),
   ).max(3),
+});
+
+const progressAssessmentSchema = z.object({
+  state: z.enum([
+    'advanced', 'steady', 'needs_attention', 'at_risk', 'insufficient',
+  ]),
+  headline: z.string().trim().min(1),
+  facts: z.array(z.object({
+    id: z.string().trim().min(1),
+    kind: z.enum(['message', 'customer', 'opportunity', 'followup', 'task']),
+    label: z.string().trim().min(1),
+    content: z.string().trim().min(1),
+    quote: z.string().nullable(),
+    source: z.object({
+      recordId: z.string(),
+      recordUrl: z.string().url().nullable(),
+      sourceVersion: z.string().nullable(),
+    }).nullable(),
+  })).max(40),
+  findings: z.array(z.object({
+    id: z.string().trim().min(1),
+    kind: z.enum(['change', 'gap', 'risk']),
+    code: z.string().trim().min(1),
+    title: z.string().trim().min(1),
+    detail: z.string().trim().min(1),
+    evidenceIds: z.array(z.string().trim().min(1)).max(20),
+  })).max(40),
+  recommendation: z.object({
+    action: z.string().trim().min(1),
+    dueAt: z.string().nullable(),
+    reason: z.string().trim().min(1),
+    evidenceIds: z.array(z.string().trim().min(1)).max(20),
+    requiresConfirmation: z.literal(true),
+    editableFields: z.array(z.enum(['nextAction', 'dueAt'])).max(2),
+  }).nullable(),
+  warnings: z.array(z.string()).max(20),
+  assessedAt: z.string().datetime(),
 });
 
 const confirmationCardActionSchema = z.object({
@@ -151,6 +192,11 @@ const salesContextSchema = z.object({
 const parseSalesContext = (value: unknown): SalesContext =>
   salesContextSchema.parse(value) as unknown as SalesContext;
 
+const parseProgressAssessment = (
+  value: unknown,
+): FollowupProgressSnapshot =>
+  progressAssessmentSchema.parse(value) as unknown as FollowupProgressSnapshot;
+
 const pendingActionPayloadSchema = z.object({
   version: z.literal(1),
   interactionStage: z.enum(['input', 'generating', 'draft']).optional(),
@@ -180,6 +226,7 @@ const pendingActionPayloadSchema = z.object({
     risks: z.array(z.string()),
     suggestions: z.array(z.string()),
   }).optional(),
+  progressAssessment: progressAssessmentSchema.optional(),
   taskCandidates: z.array(followupTaskCandidateSchema).max(20).optional(),
   selectedTaskCandidateIds: z.array(
     z.string().trim().min(1),
@@ -311,6 +358,15 @@ const parseFollowupDraft = (value: unknown): FollowupDraft => {
   if (parsed.nextActionParticipants !== undefined) {
     draft.nextActionParticipants = parsed.nextActionParticipants;
   }
+  if (parsed.agreements !== undefined) {
+    draft.agreements = parsed.agreements;
+  }
+  if (parsed.decisionChain !== undefined) {
+    draft.decisionChain = parsed.decisionChain;
+  }
+  if (parsed.competitors !== undefined) {
+    draft.competitors = parsed.competitors;
+  }
   if (parsed.communicationMethod !== undefined) {
     draft.communicationMethod = parsed.communicationMethod;
   }
@@ -362,6 +418,9 @@ const parsePendingActionPayload = (
     ownerMemberId: parsed.ownerMemberId,
     generatedBody: parsed.generatedBody,
     quality: parsed.quality,
+    progressAssessment: parsed.progressAssessment === undefined
+      ? undefined
+      : parseProgressAssessment(parsed.progressAssessment),
     taskCandidates,
     selectedTaskCandidateIds: parsed.selectedTaskCandidateIds,
     inputForm: parsed.inputForm,
@@ -408,6 +467,7 @@ export {
   parseFollowupDraft,
   parseJsonObject,
   parsePendingActionPayload,
+  parseProgressAssessment,
   parseSalesContext,
   salesContextSchema,
   parseTenantBaseMapping,

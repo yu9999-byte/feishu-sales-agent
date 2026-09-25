@@ -4,6 +4,7 @@ import type {
   FollowupQualitySnapshot,
   FollowupTaskCandidate,
   FollowupTaskMissingField,
+  FollowupProgressSnapshot,
   JsonObject,
   JsonValue,
   SalesContext,
@@ -200,6 +201,72 @@ const createSalesContextBlock = (context: SalesContext): JsonObject => {
         ? '无权读取部分业务资料，本次草稿未将缺失信息当作事实。'
         : '上下文不完整，本次草稿未将缺失信息当作事实。',
     );
+  }
+  return { tag: 'markdown', content: lines.join('\n') };
+};
+
+const createProgressAssessmentBlock = (
+  assessment: FollowupProgressSnapshot,
+): JsonObject => {
+  const stateLabels: Record<FollowupProgressSnapshot['state'], string> = {
+    advanced: '有新的进展',
+    steady: '暂未发现明显变化',
+    needs_attention: '还有信息需要补齐',
+    at_risk: '存在需要优先处理的风险',
+    insufficient: '暂时无法完整判断',
+  };
+  const kindLabels: Record<string, string> = {
+    change: '进展变化',
+    gap: '还需确认',
+    risk: '风险提示',
+  };
+  const lines: string[] = [
+    `**当前判断：${stateLabels[assessment.state]}**`,
+    escapeMarkdown(assessment.headline),
+    '**事实依据**',
+  ];
+  for (const fact of assessment.facts.slice(0, 5)) {
+    const sourceLink: string = fact.source === null
+      ? ''
+      : createSourceLink(fact.source.recordUrl, '查看来源');
+    lines.push(
+      `- ${escapeMarkdown(fact.label)}：${escapeMarkdown(fact.content)}` +
+      sourceLink,
+    );
+  }
+  if (assessment.facts.length === 0) {
+    lines.push('- 暂无可定位的业务事实');
+  }
+  lines.push('**Agent 判断**');
+  for (const kind of ['change', 'gap', 'risk']) {
+    const items = assessment.findings.filter((finding) => finding.kind === kind);
+    if (items.length === 0) continue;
+    lines.push(`**${kindLabels[kind]}**`);
+    for (const item of items.slice(0, 4)) {
+      const evidence: string = item.evidenceIds
+        .map((id) => assessment.facts.find((fact) => fact.id === id)?.content)
+        .filter((content): content is string => Boolean(content))
+        .slice(0, 2)
+        .join('；');
+      lines.push(`- ${escapeMarkdown(item.title)}：${escapeMarkdown(item.detail)}`);
+      if (evidence) lines.push(`  依据：${escapeMarkdown(evidence)}`);
+    }
+  }
+  if (assessment.recommendation !== null) {
+    const dueAt = assessment.recommendation.dueAt ?? '时间待补充';
+    lines.push(
+      `**建议下一步**\n${escapeMarkdown(assessment.recommendation.action)}；` +
+      `时间：${escapeMarkdown(dueAt)}\n` +
+      `${escapeMarkdown(assessment.recommendation.reason)}\n确认后才会执行。`,
+    );
+  } else {
+    lines.push('**建议下一步**\n当前没有可直接执行的建议，请先补充或确认信息。');
+  }
+  lines.push(
+    '**确认后执行**\n确认后才会保存本次跟进，并仅创建你勾选的本人任务。',
+  );
+  if (assessment.warnings.length > 0) {
+    lines.push(`**资料提示**\n${assessment.warnings.map(escapeMarkdown).join('；')}`);
   }
   return { tag: 'markdown', content: lines.join('\n') };
 };
@@ -584,6 +651,9 @@ const createConfirmationCard = (action: PendingAction): JsonObject => {
     'blue',
     '待确认',
     [
+      ...(action.payload.progressAssessment
+        ? [createProgressAssessmentBlock(action.payload.progressAssessment)]
+        : []),
       ...(action.payload.salesContext
         ? [createSalesContextBlock(action.payload.salesContext)]
         : []),

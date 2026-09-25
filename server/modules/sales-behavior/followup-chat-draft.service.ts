@@ -8,12 +8,14 @@ import type {
   JsonValue,
   PendingActionPayload,
   PlatformSessionResponse,
+  FollowupProgressSnapshot,
   SalesContext,
 } from '@shared/api.interface';
 import type { TenantIntegration } from '@server/modules/agent-core/agent.types';
 import { PlatformSessionService } from '@server/modules/platform-shell/platform-session.service';
 import { buildFollowupTaskCandidates } from './followup-task-preview';
 import { FollowupQualityService } from './followup-quality.service';
+import { FollowupProgressService } from './followup-progress.service';
 import type {
   FollowupEvidenceInput,
   FollowupQualityInput,
@@ -43,6 +45,7 @@ class FollowupChatDraftService {
   constructor(
     private readonly sessions: PlatformSessionService,
     private readonly quality: FollowupQualityService,
+    private readonly progress?: FollowupProgressService,
   ) {}
 
   createInputPayload(sourceMessageId: string): PendingActionPayload {
@@ -256,14 +259,22 @@ class FollowupChatDraftService {
     inputForm?: FollowupCardFormInput;
     salesContext?: SalesContext;
   }): PendingActionPayload {
+    const progressAssessment: FollowupProgressSnapshot = this.assessProgress(
+      input.draft,
+      input.salesContext,
+      input.rawText,
+      input.now,
+    );
     const taskCandidates: FollowupTaskCandidate[] =
-      buildFollowupTaskCandidates({
-        draftId: input.actionId,
-        version: input.draftVersion,
-        ownerMemberId: input.ownerMemberId,
-        draft: input.draft,
-        now: input.now,
-      });
+      progressAssessment.recommendation === null
+        ? []
+        : buildFollowupTaskCandidates({
+          draftId: input.actionId,
+          version: input.draftVersion,
+          ownerMemberId: input.ownerMemberId,
+          draft: input.draft,
+          now: input.now,
+        });
     const payload: PendingActionPayload = {
       version: 1,
       interactionStage: 'draft',
@@ -284,6 +295,7 @@ class FollowupChatDraftService {
         ),
         input.now,
       ),
+      progressAssessment,
       taskCandidates,
       selectedTaskCandidateIds: taskCandidates
         .filter((candidate: FollowupTaskCandidate): boolean =>
@@ -314,13 +326,24 @@ class FollowupChatDraftService {
       communicationMethod: inputForm?.communicationMethod ?? null,
       communicationAt: inputForm?.communicationAt ?? null,
       topic: inputForm?.topic ?? draft.opportunityName,
-      agreements: [],
-      decisionChain: [],
-      competitors: [],
+      agreements: draft.agreements ?? [],
+      decisionChain: draft.decisionChain ?? [],
+      competitors: draft.competitors ?? [],
       nextActionOwner: '销售本人',
       nextActionParticipants: draft.nextActionParticipants ?? [],
       evidence,
     };
+  }
+
+  private assessProgress(
+    draft: FollowupDraft,
+    salesContext: SalesContext | undefined,
+    sourceText: string,
+    now: Date,
+  ): FollowupProgressSnapshot {
+    const service: FollowupProgressService =
+      this.progress ?? new FollowupProgressService();
+    return service.assess({ draft, salesContext, sourceText, now });
   }
 
   private generateBody(draft: FollowupDraft): string {

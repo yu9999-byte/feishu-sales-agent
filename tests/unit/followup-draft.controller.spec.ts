@@ -52,6 +52,15 @@ const setup = (): {
         dimensions: { basics: 10, dealFacts: 10, nextStep: 20, evidence: 10, writing: 10 },
         missingItems: [], invalidEvidence: [], risks: [], suggestions: [],
       },
+      progressAssessment: {
+        state: 'needs_attention',
+        headline: '商机可以继续推进，但还有信息缺口',
+        facts: [],
+        findings: [],
+        recommendation: null,
+        warnings: [],
+        assessedAt: '2026-09-25T02:00:00.000Z',
+      },
       createdAt: new Date(),
     },
   };
@@ -93,6 +102,18 @@ const setup = (): {
 };
 
 describe('FollowupDraftController boundary', (): void => {
+  it('returns the versioned progress assessment to the Web draft', async (): Promise<void> => {
+    const { controller } = setup();
+
+    const result = await controller.get(request(), 'draft-1');
+
+    expect(result.version.progressAssessment).toMatchObject({
+      state: 'needs_attention',
+      headline: '商机可以继续推进，但还有信息缺口',
+      recommendation: null,
+    });
+  });
+
   it('derives tenant and owner from the trusted session, ignoring forged body identifiers', async (): Promise<void> => {
     const { controller, workflow } = setup();
     await controller.create(request(), {

@@ -7,6 +7,7 @@ import type { AxiosResponse } from 'axios';
 import type { Observable } from 'rxjs';
 import type {
   FollowupDraft,
+  FollowupProgressSnapshot,
   JsonObject,
   JsonValue,
   SalesContext,
@@ -92,6 +93,51 @@ const pendingAction: PendingAction = {
   updatedAt: new Date('2026-09-18T10:00:00+08:00'),
 };
 
+const progressAssessment: FollowupProgressSnapshot = {
+  state: 'advanced',
+  headline: '本次沟通带来了新的商机进展',
+  facts: [
+    {
+      id: 'message-0',
+      kind: 'message',
+      label: '本次沟通',
+      content: '客户认可方案',
+      quote: '客户认可方案',
+      source: null,
+    },
+    {
+      id: 'opportunity-1',
+      kind: 'opportunity',
+      label: '商机记录',
+      content: '方案评估中',
+      quote: null,
+      source: {
+        recordId: 'opportunity-1',
+        recordUrl: 'https://feishu.cn/opportunity-1',
+        sourceVersion: '2026-09-17T08:00:00.000Z',
+      },
+    },
+  ],
+  findings: [{
+    id: 'progress_changed',
+    kind: 'change',
+    code: 'progress_changed',
+    title: '本次沟通有新的进展',
+    detail: '商机原进展为“方案评估中”，本次记录为“方案已认可”。',
+    evidenceIds: ['message-0', 'opportunity-1'],
+  }],
+  recommendation: {
+    action: '发送实施计划',
+    dueAt: '2026-09-20T10:00:00+08:00',
+    reason: '根据本次沟通和当前业务上下文整理，确认后才会执行。',
+    evidenceIds: ['message-0'],
+    requiresConfirmation: true,
+    editableFields: ['nextAction', 'dueAt'],
+  },
+  warnings: [],
+  assessedAt: '2026-09-18T02:00:00.000Z',
+};
+
 const createResponse = (draft: FollowupDraft): AxiosResponse<unknown> => ({
   data: {
     choices: [
@@ -153,6 +199,28 @@ describe('follow-up validation', (): void => {
     };
 
     expect((): FollowupDraft => parseFollowupDraft(invalid)).toThrow();
+  });
+
+  it('round-trips a progress assessment while accepting legacy payloads', (): void => {
+    const payload: PendingAction['payload'] = {
+      ...pendingAction.payload,
+      progressAssessment,
+    };
+
+    expect(parsePendingActionPayload(payload).progressAssessment)
+      .toEqual(progressAssessment);
+    expect(parsePendingActionPayload(pendingAction.payload).progressAssessment)
+      .toBeUndefined();
+    expect(() => parsePendingActionPayload({
+      ...payload,
+      progressAssessment: {
+        ...progressAssessment,
+        recommendation: {
+          ...progressAssessment.recommendation,
+          requiresConfirmation: false,
+        },
+      },
+    })).toThrow();
   });
 
   it('round-trips an overdue task candidate in a persisted draft', (): void => {
@@ -288,6 +356,7 @@ describe('follow-up validation', (): void => {
             '建议补充预算信息',
           ],
         },
+        progressAssessment,
         taskCandidates: [{
           id: `${pendingAction.id}:v1:task:0`,
           draftId: pendingAction.id,
@@ -337,6 +406,11 @@ describe('follow-up validation', (): void => {
     expect(visibleContent).not.toContain('communicationAt');
     expect(visibleContent.match(/补充沟通方式/gu)).toHaveLength(1);
     expect(visibleContent.match(/补充沟通时间/gu)).toHaveLength(1);
+    expect(visibleContent).toContain('事实依据');
+    expect(visibleContent).toContain('Agent 判断');
+    expect(visibleContent).toContain('建议下一步');
+    expect(visibleContent).toContain('确认后执行');
+    expect(visibleContent).toContain('查看来源');
   });
 
   it('describes a successful save without claiming an uncreated task', (): void => {

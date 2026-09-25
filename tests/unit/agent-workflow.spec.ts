@@ -54,6 +54,44 @@ const completeDraft: FollowupDraft = {
   nextActionParticipants: ['张总'],
 };
 
+const readySalesContext: SalesContext = {
+  status: 'ready',
+  customer: {
+    name: '北辰制造',
+    contactName: '张总',
+    latestSummary: '客户正在评估方案',
+    lastFollowupAt: '2026-09-16T02:00:00.000Z',
+    source: {
+      recordId: 'customer-1',
+      recordUrl: 'https://feishu.cn/base/customer-1',
+      sourceVersion: '2026-09-16T02:00:00.000Z',
+    },
+  },
+  customerCandidates: [],
+  opportunities: [{
+    name: '北辰数字化项目',
+    progress: '方案评估中',
+    expectedAmount: 500000,
+    nextAction: '等待客户反馈',
+    dueAt: '2026-09-18T10:00:00+08:00',
+    source: {
+      recordId: 'opportunity-1',
+      recordUrl: 'https://feishu.cn/base/opportunity-1',
+      sourceVersion: '2026-09-16T03:00:00.000Z',
+    },
+  }],
+  recentFollowups: [],
+  conflicts: [],
+  tasks: [],
+  warnings: [],
+  readAt: '2026-09-17T02:00:00.000Z',
+};
+
+const createReadySalesContextReader = (): SalesContextReader => ({
+  read: vi.fn(async (): Promise<SalesContext> =>
+    structuredClone(readySalesContext)),
+});
+
 const createIntegration = (
   tenantId: string,
   tenantKey: string,
@@ -814,7 +852,10 @@ describe('AgentWorkflowService', (): void => {
   });
 
   it('uses the previous raw message when 写跟进呀 resolves clarification', async (): Promise<void> => {
-    const harness: TestHarness = createHarness();
+    const harness: TestHarness = createHarness(
+      completeDraft,
+      createReadySalesContextReader(),
+    );
     const receivedAt: Date = new Date();
     const originalText: string =
       '今天跟进星河科技，客户要销售自动归档，下一步发送报价方案。';
@@ -830,7 +871,7 @@ describe('AgentWorkflowService', (): void => {
       receivedAt: new Date(receivedAt.getTime() + 1_000),
     });
 
-    expect(harness.extractor.calls).toBe(1);
+    expect(harness.extractor.calls).toBe(2);
     expect(harness.conversation.calls).toBe(1);
     expect(harness.extractor.lastInput?.currentText).toBe(originalText);
     expect(harness.extractor.lastInput?.combinedText).toBe(originalText);
@@ -1018,7 +1059,7 @@ describe('AgentWorkflowService', (): void => {
       dueAt: '2026-10-01T10:00:00+08:00',
       nextActionChannel: null,
       nextActionParticipants: [],
-    });
+    }, createReadySalesContextReader());
 
     await harness.workflow.handleMessage({
       ...createMessage('tenant-a', 'om-task-optional'),
@@ -1605,7 +1646,10 @@ describe('AgentWorkflowService', (): void => {
   });
 
   it('executes duplicate confirmation only once', async (): Promise<void> => {
-    const harness: TestHarness = createHarness();
+    const harness: TestHarness = createHarness(
+      completeDraft,
+      createReadySalesContextReader(),
+    );
     await harness.workflow.handleMessage(createMessage());
     const pending: PendingAction = harness.messenger.actions[0];
 
@@ -1659,7 +1703,10 @@ describe('AgentWorkflowService', (): void => {
   });
 
   it('executes edited card fields with one confirmation and returns a record link', async (): Promise<void> => {
-    const harness: TestHarness = createHarness();
+    const harness: TestHarness = createHarness(
+      completeDraft,
+      createReadySalesContextReader(),
+    );
     await harness.workflow.handleMessage(createMessage());
     const original: PendingAction = harness.messenger.actions[0];
 
@@ -1687,7 +1734,10 @@ describe('AgentWorkflowService', (): void => {
   });
 
   it('opens a terminal result as one editable revision and updates original records', async (): Promise<void> => {
-    const harness: TestHarness = createHarness();
+    const harness: TestHarness = createHarness(
+      completeDraft,
+      createReadySalesContextReader(),
+    );
     await harness.workflow.handleMessage(createMessage());
     const original: PendingAction = harness.messenger.actions[0];
     await harness.workflow.handleCardAction(
@@ -1789,7 +1839,10 @@ describe('AgentWorkflowService', (): void => {
   });
 
   it('updates the confirmed draft card to processing before execution', async (): Promise<void> => {
-    const harness: TestHarness = createHarness();
+    const harness: TestHarness = createHarness(
+      completeDraft,
+      createReadySalesContextReader(),
+    );
     await harness.workflow.handleMessage(createMessage());
     const pending: PendingAction = harness.messenger.actions[0];
     await harness.workflow.handleCardAction(
@@ -1835,7 +1888,10 @@ describe('AgentWorkflowService', (): void => {
   });
 
   it('retries only the unfinished steps after partial failure', async (): Promise<void> => {
-    const harness: TestHarness = createHarness();
+    const harness: TestHarness = createHarness(
+      completeDraft,
+      createReadySalesContextReader(),
+    );
     harness.records.failNextFollowup = true;
     await harness.workflow.handleMessage(createMessage());
     const pending: PendingAction = harness.messenger.actions[0];
@@ -1866,7 +1922,10 @@ describe('AgentWorkflowService', (): void => {
   });
 
   it('keeps a zero-progress failure retryable', async (): Promise<void> => {
-    const harness: TestHarness = createHarness();
+    const harness: TestHarness = createHarness(
+      completeDraft,
+      createReadySalesContextReader(),
+    );
     harness.records.failNextCustomer = true;
     await harness.workflow.handleMessage(createMessage());
     const pending: PendingAction = harness.messenger.actions[0];

@@ -320,6 +320,7 @@ class FollowupDraftController {
         draft: record.version.draft,
         quality: record.version.quality,
         salesContext: record.version.salesContext,
+        progressAssessment: record.version.progressAssessment,
         taskCandidates: record.version.taskCandidates,
         createdAt: record.version.createdAt.toISOString(),
       },

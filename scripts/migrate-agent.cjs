@@ -13,6 +13,7 @@ const MIGRATION_FILES = [
   '007_sales_behavior_drafts.sql',
   '008_conversation_memory.sql',
   '009_followup_context_snapshot.sql',
+  '010_followup_progress_assessment.sql',
 ];
 
 const checksum = (content) => createHash('sha256')

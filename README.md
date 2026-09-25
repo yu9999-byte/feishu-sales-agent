@@ -38,8 +38,10 @@ CSPRNG 初始化崩溃。
 - `base:record:retrieve` 已按真实 API 缺权响应补充；Base 查询、创建和更新权限均已生效。
 - `task:task:write` 已生效，真实任务已创建并通过 Task v2 回读。
 - 真实聊天已完成 Card 2.0 录入、AI 草案、v2/v3 再质检、一次确认、Base 三表写入和本人
-  任务创建；现行实现将原确认卡就地更新为唯一成功/失败终态。历史双卡只保留为缺陷修复证据，
+任务创建；现行实现将原确认卡就地更新为唯一成功/失败终态。历史双卡只保留为缺陷修复证据，
   不属于当前交互。
+- P1-CTX 与 P1-PROGRESS 已达到自动化 Green：草案会读取本人范围的客户、商机、近期跟进和
+  任务，展示事实依据、Agent 判断、下一步建议和确认后动作；真实飞书/Web 对账仍为 UI pending。
 
 本次验收数据统一使用 `P0测试` 前缀。智谱免费 `glm-4.7-flash` 在高峰期可能返回模型拥堵
 码 `1305`；Agent 会有限退避重试，仍失败时明确回复且不会写入业务数据。
@@ -47,7 +49,7 @@ CSPRNG 初始化崩溃。
 ## P0 本地运行
 
 1. 准备独立 Postgres，在 `.env.local` 配置 `DATABASE_URL` 后运行
-   `npm run migrate:agent`。该命令固定执行 `003`、`005`、`006`、`007`、`008`，记录文件
+   `npm run migrate:agent`。该命令固定执行 `003`、`005`、`006`、`007`、`008`、`009`、`010`，记录文件
    校验和并可重复运行；不会执行 Demo 租户种子。
 2. 创建客户、商机、跟进三张 Base 表，并按
    `migrations/004_agent_p0_demo_tenant.example.sql` 写入租户配置。
@@ -101,6 +103,7 @@ npm run build:web
 | [飞书应用配置](docs/feishu-app-setup.md) | 机器人、事件、卡片、Base 与任务的配置检查 |
 | [P0 验收矩阵](docs/p0-acceptance.md) | 每项能力的验证方式、证据和当前状态 |
 | [当前工程说明](docs/current-state.md) | 现有文件、遗留资产和真实完成度 |
+| [问题日志](docs/issue-log.md) | 当前问题、状态、证据和下一动作 |
 | [竞品能力映射](docs/reference-capability-map.md) | APTSell 公开能力与本项目阶段映射 |
 | [跟进卡片决策问答](docs/decisions/2026-09-20-followup-chat-cards.md) | 三种条件卡、一次确认、质检/推送边界和被覆盖旧口径 |
 | [GitHub 自动检查点](docs/github-publish-automation.md) | 阶段发布、每日补漏、安全门与命令说明 |

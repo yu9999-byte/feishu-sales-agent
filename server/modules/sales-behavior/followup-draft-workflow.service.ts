@@ -6,6 +6,7 @@ import {
 
 import type {
   FollowupDraft,
+  FollowupProgressSnapshot,
   FollowupTaskCandidate,
   SalesContext,
 } from '@shared/api.interface';
@@ -21,6 +22,7 @@ import type {
   SalesContextHints,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
+import { FollowupProgressService } from './followup-progress.service';
 import {
   FOLLOWUP_DRAFT_REPOSITORY,
   type FollowupDraftRecord,
@@ -81,6 +83,8 @@ class FollowupDraftWorkflowService {
     @Optional()
     @Inject(SALES_CONTEXT_READER)
     private readonly salesContextReader?: SalesContextReader,
+    @Optional()
+    private readonly progress?: FollowupProgressService,
   ) {}
 
   async create(
@@ -110,6 +114,9 @@ class FollowupDraftWorkflowService {
         salesContext,
       });
     const generatedBody: string = this.generateBody(draft);
+    const progressAssessment = this.assessProgress(
+      draft, salesContext, sourceText, command.now,
+    );
     const quality: FollowupQualityResult = this.quality.review(
       this.qualityInput(
         sourceText, generatedBody, draft, command.sourceType,
@@ -127,6 +134,7 @@ class FollowupDraftWorkflowService {
       draft,
       quality,
       salesContext,
+      progressAssessment,
       createdAt: command.now,
     });
     if (
@@ -163,6 +171,12 @@ class FollowupDraftWorkflowService {
       ),
       command.now,
     );
+    const progressAssessment = this.assessProgress(
+      command.draft,
+      current.version.salesContext,
+      current.version.sourceText,
+      command.now,
+    );
     const updated: FollowupDraftRecord | null =
       await this.repository.appendUserEdit({
         tenantId: command.tenantId,
@@ -173,6 +187,7 @@ class FollowupDraftWorkflowService {
         draft: command.draft,
         quality,
         createdAt: command.now,
+        progressAssessment,
       });
     if (updated === null) {
       throw new FollowupDraftConflictError();
@@ -249,18 +264,34 @@ class FollowupDraftWorkflowService {
     };
   }
 
+  private assessProgress(
+    draft: FollowupDraft,
+    salesContext: SalesContext | undefined,
+    sourceText: string,
+    now: Date,
+  ): FollowupProgressSnapshot {
+    const service: FollowupProgressService =
+      this.progress ?? new FollowupProgressService();
+    return service.assess({ draft, salesContext, sourceText, now });
+  }
+
   private withTaskCandidates(
     record: FollowupDraftRecord,
     now: Date,
   ): FollowupDraftRecord {
+    const progressAssessment: FollowupProgressSnapshot | undefined =
+      record.version.progressAssessment;
     const taskCandidates: FollowupTaskCandidate[] =
-      buildFollowupTaskCandidates({
+      progressAssessment !== undefined &&
+      progressAssessment.recommendation === null
+        ? []
+        : buildFollowupTaskCandidates({
         draftId: record.id,
         version: record.currentVersion,
         ownerMemberId: record.ownerMemberId,
         draft: record.version.draft,
         now,
-      });
+        });
     return {
       ...record,
       version: {
@@ -300,9 +331,9 @@ class FollowupDraftWorkflowService {
       communicationMethod: formValue('沟通方式'),
       communicationAt: formValue('沟通时间'),
       topic: formValue('主题') ?? draft.opportunityName,
-      agreements: [],
-      decisionChain: [],
-      competitors: [],
+      agreements: draft.agreements ?? [],
+      decisionChain: draft.decisionChain ?? [],
+      competitors: draft.competitors ?? [],
       nextActionOwner: null,
       nextActionParticipants: draft.nextActionParticipants ?? [],
       evidence,

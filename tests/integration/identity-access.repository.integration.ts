@@ -9,6 +9,7 @@ import {
 import { PostgresWebAuthStore } from '@server/modules/web-auth/postgres-web-auth.store';
 import { PostgresFollowupDraftRepository } from '@server/modules/sales-behavior/postgres-followup-draft.repository';
 import { FollowupQualityService } from '@server/modules/sales-behavior/followup-quality.service';
+import { FollowupProgressService } from '@server/modules/sales-behavior/followup-progress.service';
 import { PostgresControlStore } from '@server/modules/control-store/postgres-control.store';
 import type {
   SalesContext,
@@ -394,34 +395,56 @@ describe('PostgresIdentityAccessRepository', (): void => {
       warnings: ['task_context_unavailable'],
       readAt: '2026-09-25T02:00:00.000Z',
     };
+    const sourceText: string = '北辰制造客户认可试点方案。';
+    const progressAssessment = new FollowupProgressService().assess({
+      draft,
+      salesContext,
+      sourceText,
+      now: new Date(),
+    });
     const input = {
       tenantId: TENANT_A,
       ownerMemberId: MEMBER_A,
       sourceType: 'text' as const,
       idempotencyKey: 'integration-draft-1',
-      sourceText: '北辰制造客户认可试点方案。',
+      sourceText,
       generatedBody: '北辰制造客户认可试点方案。下一步发送实施计划。',
       draft,
       quality,
       salesContext,
+      progressAssessment,
       createdAt: new Date(),
     };
     const first = await repository.createGeneratedDraft(input);
     const repeated = await repository.createGeneratedDraft(input);
     expect(repeated.id).toBe(first.id);
     expect(first.version.salesContext).toEqual(salesContext);
+    expect(first.version.progressAssessment).toEqual(progressAssessment);
+    const editedDraft = {
+      ...draft,
+      nextAction: '发送实施计划并约张总复盘',
+    };
+    const editedProgressAssessment = new FollowupProgressService().assess({
+      draft: editedDraft,
+      salesContext,
+      sourceText,
+      now: new Date(),
+    });
     const edited = await repository.appendUserEdit({
       tenantId: TENANT_A,
       draftId: first.id,
       ownerMemberId: MEMBER_A,
       expectedVersion: 1,
       generatedBody: `${input.generatedBody} 已约张总复盘。`,
-      draft: { ...draft, nextAction: '发送实施计划并约张总复盘' },
+      draft: editedDraft,
       quality,
+      progressAssessment: editedProgressAssessment,
       createdAt: new Date(),
     });
     expect(edited).toMatchObject({ currentVersion: 2 });
     expect(edited?.version.salesContext).toEqual(salesContext);
+    expect(edited?.version.progressAssessment).toEqual(editedProgressAssessment);
+    expect(edited?.version.progressAssessment).not.toEqual(progressAssessment);
     await expect(repository.appendUserEdit({
       tenantId: TENANT_A,
       draftId: first.id,
@@ -430,6 +453,7 @@ describe('PostgresIdentityAccessRepository', (): void => {
       generatedBody: input.generatedBody,
       draft,
       quality,
+      progressAssessment,
       createdAt: new Date(),
     })).resolves.toBeNull();
     const versions = await sql`
@@ -455,6 +479,9 @@ describe('PostgresIdentityAccessRepository', (): void => {
       version: { version: 3, creationKind: 'confirmed' },
     });
     expect(confirmed?.version.salesContext).toEqual(salesContext);
+    expect(confirmed?.version.progressAssessment).toEqual(
+      editedProgressAssessment,
+    );
     await expect(repository.markConfirmed({
       tenantId: TENANT_A,
       draftId: first.id,
