@@ -741,7 +741,7 @@ describe('AgentWorkflowService', (): void => {
 
   it('routes a normal question through the model while a followup draft is collecting', async (): Promise<void> => {
     const harness: TestHarness = createHarness();
-    const receivedAt = new Date('2026-09-24T10:00:00+08:00');
+    const receivedAt: Date = new Date();
     await harness.store.saveCollectingSession({
       tenantId: harness.integrationA.tenantId,
       actorOpenId: 'ou_sales',
@@ -777,7 +777,7 @@ describe('AgentWorkflowService', (): void => {
 
   it('keeps a related supplement in the active followup flow after model routing', async (): Promise<void> => {
     const harness: TestHarness = createHarness();
-    const receivedAt = new Date('2026-09-24T10:00:00+08:00');
+    const receivedAt: Date = new Date();
     const sourceText = '北辰制造要求重新核对报价。';
     await harness.store.saveCollectingSession({
       tenantId: harness.integrationA.tenantId,
@@ -929,6 +929,26 @@ describe('AgentWorkflowService', (): void => {
       }));
   });
 
+  it('routes the screenshot-shaped followup command without clarification', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    const source: string =
+      '今天和华南科技张总通过飞书沟通，确认下周二上午10点线上演示，' +
+      '下一步发送报价，负责人李胜彬。';
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-screenshot-shaped-command'),
+      text: `帮我写跟进：${source}`,
+      receivedAt: new Date('2026-09-25T10:00:00+08:00'),
+    });
+
+    expect(harness.conversation.calls).toBe(0);
+    expect(harness.extractor.calls).toBe(1);
+    expect(harness.extractor.lastInput?.combinedText).toBe(source);
+    expect(harness.messenger.actions).toHaveLength(1);
+    expect(harness.messenger.actions[0].payload.interactionStage)
+      .toBe('draft');
+  });
+
   it('opens a followup input form for an explicit command without facts', async (): Promise<void> => {
     const harness: TestHarness = createHarness();
 
@@ -957,7 +977,7 @@ describe('AgentWorkflowService', (): void => {
 
   it('honors an explicit followup command during draft collection', async (): Promise<void> => {
     const harness: TestHarness = createHarness();
-    const receivedAt: Date = new Date('2026-09-24T10:00:00+08:00');
+    const receivedAt: Date = new Date();
     await harness.store.saveCollectingSession({
       tenantId: harness.integrationA.tenantId,
       actorOpenId: 'ou_sales',
