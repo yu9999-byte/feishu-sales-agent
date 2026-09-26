@@ -54,11 +54,18 @@ VALUES (
       "fields": {
         "opportunityName": "商机名称",
         "customerLink": "关联客户",
+        "status": "商机状态",
         "expectedAmount": "预计金额",
         "progress": "当前进展",
         "nextAction": "下一步",
         "dueAt": "截止时间",
         "ownerOpenId": "负责人"
+      },
+      "statusValues": {
+        "active": ["进行中"],
+        "won": ["已赢单"],
+        "lost": ["已丢单"],
+        "closed": ["已关闭"]
       }
     },
     "followups": {

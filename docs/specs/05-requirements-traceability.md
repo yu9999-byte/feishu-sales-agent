@@ -58,6 +58,12 @@ Agent/Web 构建及真实来源只读重放验证；最新飞书卡片/UI 仍待
 自由文本猜测；持久去重、调度和提醒仍未实现。全量 Agent `229/229`、Postgres 集成
 `8/8`、三套类型检查、ESLint 和 Agent/Web 构建通过。
 
+2026-09-26 后续切片已在真实商机表新增独立“商机状态”，配置进行中/已赢单/已丢单/已关闭
+四类值并同步运行时租户映射。没有猜测回填 5 条历史商机；真实只读扫描结果 `complete`，
+5 条均为 `unknown -> inactive`，候选、Task 查询和 warning 均为 0。新增安全跳过回归后
+全量 Agent `230/230`、Postgres 集成 `8/8`、三套类型检查、ESLint 和 Agent/Web 构建通过；
+持久去重、调度和提醒仍未实现。
+
 | 需求范围 | 阶段 | 规格状态 | 自动化证据 | UI 证据 |
 | --- | --- | --- | --- | --- |
 | `SIA-000..000D` 对话入口、意图与安全路由 | B0 | Implemented / UI partial, clean-state retest pending | LangGraph 主分类覆盖普通态、澄清态和补充态；明确跟进命令确定性直达，24 小时 checkpoint TTL 具备保留/删除回归；进入 168 项全量回归 | WebSocket 已收到并完成两条真实私聊工作流；卡片内容与补充态仍待干净状态重放 |
@@ -74,7 +80,7 @@ Agent/Web 构建及真实来源只读重放验证；最新飞书卡片/UI 仍待
 | `TSK-001..006` 任务预览、一次确认、状态建议/回收和提醒 | B6 | Partial / read permission verified / UI pending | 精确版本候选选择、空选择不建任务；Task 应用身份真实读取 `code=0`，分页上限 30 和不完整可见性 fail-closed 已回归；只有日期无钟点时不补造时间 | 用新草案复验任务候选 UI；状态回收和主动提醒仍待闭环 |
 | `CTX-001..012` 客户/商机/跟进/任务上下文读取、匹配与来源 | P1-CTX | Partial / UI pending | Base 富文本数组 Red/Green、本人范围商机回退、真实华南科技只读重放成功；Task 读取权限和真实本人范围已验证 | 原草案 UI 曾失败；最新卡片与 Web 多分支待验收 |
 | `PRG-001..012` 本次进展、缺口、风险、建议与确认动作 | P1-PROGRESS | Automated Green / UI pending | 风险和行动建议在 Task 缺权限时保留；任务候选 fail-closed；编辑重算、Postgres 回读及旧草案兼容；201 项 Agent 测试和真实来源只读重放 | 最新飞书/Web 四层展示、编辑和确认边界仍待 UI 对账 |
-| `S4-001` 商机 7 天未更新提醒 | P1 internal trigger | Partial / scan green / disabled / prerequisites open | 纯判定、逐商机汇总、本人商机/跟进/Task 全分页与扫描编排均有测试；默认关闭且只返回候选/跳过原因，来源不完整整轮 fail closed；Task 权限真实回归通过。真实商机表无显式生命周期状态，尚无持久去重、定时任务或提醒发送 | 增加并映射商机生命周期状态，处理历史可信时间；再做持久去重、默认关闭触发器、本人投递和真实验收 |
+| `S4-001` 商机 7 天未更新提醒 | P1 internal trigger | Partial / scan green / disabled / prerequisites open | 纯判定、逐商机汇总、本人商机/跟进/Task 全分页与扫描编排均有测试；默认关闭且只返回候选/跳过原因，来源不完整整轮 fail closed；Task 权限及独立生命周期字段/四类值映射均已真实回归。5 条历史商机保持空状态并安全跳过；尚无可信历史时间、持久去重、定时任务或提醒发送 | 明确既有商机状态和后续维护入口，处理历史可信时间；再做持久去重、默认关闭触发器、本人投递和真实验收 |
 | `REV-001` 个人日报 | B7 | Draft | 待报告快照测试 | 待个人日报验收 |
 | `COP-001..007` 客户商机决策 | C | Draft | 待查询/评分/权限/评测 | 待销售/主管页面验收 |
 | `SIA-001..006` 问答、RAG 和操作 | D | Draft | 待 ACL/RAG/工具测试 | 待问答与操作验收 |

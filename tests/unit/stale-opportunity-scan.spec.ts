@@ -259,4 +259,33 @@ describe('StaleOpportunityScanService', (): void => {
       reason: 'task_already_open',
     }]);
   });
+
+  it('skips an opportunity with an unknown lifecycle before Task reads', async (): Promise<void> => {
+    const records: StaleOpportunityRecordsReader = {
+      readStaleOpportunityPage: async (): Promise<StaleOpportunityPage> => ({
+        items: [{ ...opportunity(), status: 'unknown' }],
+        nextPageToken: null,
+      }),
+      readStaleOpportunityFollowupPage:
+        async (): Promise<StaleOpportunityFollowupPage> => ({
+          items: [followup()],
+          nextPageToken: null,
+        }),
+    };
+    const searchOwnedTasks = vi.fn(async () => ({ items: [] }));
+
+    const result = await new StaleOpportunityScanService(
+      records,
+      { searchOwnedTasks },
+    ).scan(input());
+
+    expect(result.status).toBe('complete');
+    expect(result.candidates).toEqual([]);
+    expect(result.skips).toEqual([{
+      opportunityRecordId: 'opportunity-1',
+      opportunityName: '北辰数字化项目',
+      reason: 'inactive',
+    }]);
+    expect(searchOwnedTasks).not.toHaveBeenCalled();
+  });
 });
