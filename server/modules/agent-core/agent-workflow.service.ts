@@ -19,6 +19,7 @@ import {
   CONVERSATION_ASSISTANT,
   FEISHU_MESSENGER,
   FOLLOWUP_EXTRACTOR,
+  SALES_RECORDS_GATEWAY,
   SALES_CONTEXT_READER,
 } from './agent.ports';
 import type {
@@ -26,6 +27,7 @@ import type {
   ConversationAssistant,
   FeishuMessenger,
   FollowupExtractor,
+  SalesRecordsGateway,
   SalesContextReader,
 } from './agent.ports';
 import {
@@ -44,6 +46,9 @@ import type {
   IncomingCardAction,
   IncomingMessage,
   PendingAction,
+  OpportunityLifecycleStatus,
+  OpportunityStatusMutation,
+  StaleOpportunityPage,
   SalesContextHints,
   TenantIntegration,
 } from './agent.types';
@@ -88,6 +93,8 @@ export class AgentWorkflowService {
     private readonly messenger: FeishuMessenger,
     private readonly executor: AgentActionExecutorService,
     private readonly chatDrafts: FollowupChatDraftService,
+    @Inject(SALES_RECORDS_GATEWAY)
+    private readonly records: SalesRecordsGateway,
     @Optional()
     @Inject(SALES_CONTEXT_READER)
     private readonly salesContext?: SalesContextReader,
@@ -364,6 +371,23 @@ export class AgentWorkflowService {
         return;
       }
       if (
+        decision.intent === 'opportunity_operation' &&
+        decision.confidence >= 0.55
+      ) {
+        await this.store.closeSession(
+          integration.tenantId,
+          message.senderOpenId,
+        );
+        await this.auditIntentClarificationResolved(
+          integration,
+          message,
+          session,
+          'topic_switched',
+        );
+        await this.handleOpportunityStatusOperation(integration, message);
+        return;
+      }
+      if (
         decision.confidence >= 0.55 && (
           decision.intent === 'followup_analyze' ||
           decision.intent === 'sales_qa' ||
@@ -479,6 +503,19 @@ export class AgentWorkflowService {
         await this.saveApprovedMemory(integration, message, waitingMessageId);
         return;
       }
+      if (
+        decision.intent === 'opportunity_operation' &&
+        decision.confidence >= 0.55
+      ) {
+        await this.finishConversationWaiting(
+          integration,
+          message,
+          waitingMessageId,
+          '已识别为商机状态维护，正在核对本人负责的商机。',
+        );
+        await this.handleOpportunityStatusOperation(integration, message);
+        return;
+      }
       await this.replyToConversation(integration, message, {
         context,
         decision,
@@ -564,6 +601,23 @@ export class AgentWorkflowService {
         message,
         waitingMessageId,
       );
+      return;
+    }
+    if (
+      decision.intent === 'opportunity_operation' &&
+      decision.confidence >= 0.55
+    ) {
+      await this.finishConversationWaiting(
+        integration,
+        message,
+        waitingMessageId,
+        '已识别为商机状态维护，正在核对本人负责的商机。',
+      );
+      await this.store.closeSession(
+        integration.tenantId,
+        message.senderOpenId,
+      );
+      await this.handleOpportunityStatusOperation(integration, message);
       return;
     }
     await this.store.closeSession(
@@ -663,6 +717,225 @@ export class AgentWorkflowService {
         missingFields: payload.quality?.missingItems ?? [],
       },
     });
+  }
+
+  private async handleOpportunityStatusOperation(
+    integration: TenantIntegration,
+    message: IncomingMessage,
+  ): Promise<void> {
+    const targetStatus: OpportunityStatusMutation | null =
+      this.extractOpportunityStatus(message.text);
+    if (targetStatus === null) {
+      await this.sendConversationText(
+        integration,
+        message,
+        '请明确要把哪条商机改为“进行中、已赢单、已丢单”或“已关闭”，并提供完整商机名称。',
+      );
+      return;
+    }
+
+    const pageReader = this.records.readStaleOpportunityPage;
+    if (!pageReader) {
+      await this.sendConversationText(
+        integration,
+        message,
+        '当前无法读取本人商机清单，尚未修改任何数据。',
+      );
+      return;
+    }
+
+    let opportunities: StaleOpportunityPage['items'];
+    try {
+      opportunities = await this.readOwnedOpportunities(
+        integration,
+        message.senderOpenId,
+      );
+    } catch (error: unknown) {
+      this.logger.warn(
+        `Opportunity status read failed: ${redactErrorMessage(
+          this.toError(error),
+        )}`,
+      );
+      await this.sendConversationText(
+        integration,
+        message,
+        '当前无法完整读取本人商机清单，尚未修改任何数据。',
+      );
+      return;
+    }
+
+    const messageText: string = this.normalizeOpportunityText(message.text);
+    const matches = opportunities.filter((opportunity): boolean =>
+      messageText.includes(
+        this.normalizeOpportunityText(opportunity.name),
+      ),
+    );
+    if (matches.length === 0) {
+      await this.sendConversationText(
+        integration,
+        message,
+        '没有在本人商机中找到明确匹配项，请提供完整的商机名称。',
+      );
+      return;
+    }
+    if (matches.length > 1) {
+      const names: string = matches
+        .map((opportunity): string => opportunity.name)
+        .join('、');
+      await this.sendConversationText(
+        integration,
+        message,
+        `匹配到多条商机（${names}），请补充唯一的完整商机名称。`,
+      );
+      return;
+    }
+
+    const opportunity = matches[0];
+    if (opportunity.status === targetStatus) {
+      await this.sendConversationText(
+        integration,
+        message,
+        `商机“${opportunity.name}”当前已经是“${this.statusLabel(
+          targetStatus,
+        )}”，本次无需修改。`,
+      );
+      return;
+    }
+
+    const actionId: string = randomUUID();
+    const payload: PendingAction['payload'] = {
+      version: 1,
+      actionKind: 'opportunity_status',
+      sourceMessageId: message.messageId,
+      rawText: message.text,
+      draft: this.createOpportunityStatusPlaceholder(opportunity.name),
+      opportunityStatusUpdate: {
+        recordId: opportunity.recordId,
+        opportunityName: opportunity.name,
+        recordUrl: opportunity.recordUrl,
+        expectedStatus: opportunity.status,
+        targetStatus,
+      },
+    };
+    const pending: PendingAction = await this.store.createPendingAction({
+      id: actionId,
+      tenantId: integration.tenantId,
+      actorOpenId: message.senderOpenId,
+      chatId: message.chatId,
+      payload,
+      expiresAt: new Date(message.receivedAt.getTime() + ACTION_TTL_MS),
+    });
+    const cardMessageId: string = await this.messenger.sendConfirmationCard(
+      integration,
+      message.chatId,
+      pending,
+    );
+    await this.store.setPendingCardMessage(
+      integration.tenantId,
+      pending.id,
+      cardMessageId,
+    );
+    await this.store.appendAudit({
+      tenantId: integration.tenantId,
+      traceId: message.messageId,
+      eventType: 'opportunity_status.pending_confirmation',
+      actorOpenId: message.senderOpenId,
+      entityId: pending.id,
+      outcome: 'succeeded',
+      details: {
+        opportunityRecordId: opportunity.recordId,
+        expectedStatus: opportunity.status,
+        targetStatus,
+        cardMessageId,
+      },
+    });
+  }
+
+  private async readOwnedOpportunities(
+    integration: TenantIntegration,
+    actorOpenId: string,
+  ): Promise<StaleOpportunityPage['items']> {
+    const pageReader = this.records.readStaleOpportunityPage;
+    if (!pageReader) {
+      throw new Error('Opportunity read capability is unavailable');
+    }
+    const items: StaleOpportunityPage['items'] = [];
+    const seenTokens: Set<string> = new Set();
+    let pageToken: string | undefined;
+    for (let page = 0; page < 100; page += 1) {
+      const result: StaleOpportunityPage = await pageReader.call(
+        this.records,
+        integration,
+        actorOpenId,
+        pageToken,
+      );
+      if (result.warning) {
+        throw new Error(result.warning);
+      }
+      items.push(...result.items);
+      if (!result.nextPageToken) return items;
+      if (seenTokens.has(result.nextPageToken)) {
+        throw new Error('opportunity_pagination_token_repeated');
+      }
+      seenTokens.add(result.nextPageToken);
+      pageToken = result.nextPageToken;
+    }
+    throw new Error('opportunity_pagination_limit_reached');
+  }
+
+  private extractOpportunityStatus(
+    text: string,
+  ): OpportunityStatusMutation | null {
+    const matches: OpportunityStatusMutation[] = [];
+    const patterns: Array<{
+      status: OpportunityStatusMutation;
+      pattern: RegExp;
+    }> = [
+      { status: 'won', pattern: /(?:已)?赢单/gu },
+      { status: 'lost', pattern: /(?:已)?丢单/gu },
+      { status: 'closed', pattern: /(?:已)?关闭/gu },
+      { status: 'active', pattern: /进行中/gu },
+    ];
+    patterns.forEach((candidate): void => {
+      if (candidate.pattern.test(text)) matches.push(candidate.status);
+      candidate.pattern.lastIndex = 0;
+    });
+    const unique: OpportunityStatusMutation[] = [...new Set(matches)];
+    return unique.length === 1 ? unique[0] : null;
+  }
+
+  private normalizeOpportunityText(value: string): string {
+    return value.normalize('NFKC').toLocaleLowerCase().replace(/\s+/gu, '');
+  }
+
+  private statusLabel(status: OpportunityLifecycleStatus): string {
+    const labels: Record<OpportunityLifecycleStatus, string> = {
+      active: '进行中',
+      won: '已赢单',
+      lost: '已丢单',
+      closed: '已关闭',
+      unknown: '未设置',
+    };
+    return labels[status];
+  }
+
+  private createOpportunityStatusPlaceholder(
+    opportunityName: string,
+  ): FollowupDraft {
+    return {
+      customerName: null,
+      contactName: null,
+      opportunityName,
+      summary: '商机状态维护',
+      customerNeeds: [],
+      objections: [],
+      risks: [],
+      progress: null,
+      expectedAmount: null,
+      nextAction: null,
+      dueAt: null,
+      evidenceQuotes: [],
+    };
   }
 
   private async replyToConversation(

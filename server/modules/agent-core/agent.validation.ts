@@ -8,6 +8,7 @@ import type {
   FollowupProgressSnapshot,
   FollowupTaskCandidate,
   JsonObject,
+  OpportunityStatusActionSnapshot,
   PendingActionPayload,
   SalesContext,
 } from '@shared/api.interface';
@@ -204,6 +205,7 @@ const parseProgressAssessment = (
 
 const pendingActionPayloadSchema = z.object({
   version: z.literal(1),
+  actionKind: z.enum(['followup', 'opportunity_status']).optional(),
   interactionStage: z.enum(['input', 'generating', 'draft']).optional(),
   sourceMessageId: z.string().trim().min(1),
   rawText: z.string(),
@@ -251,6 +253,15 @@ const pendingActionPayloadSchema = z.object({
   }).optional(),
   inputError: z.string().trim().min(1).optional(),
   salesContext: salesContextSchema.optional(),
+  opportunityStatusUpdate: z.object({
+    recordId: z.string().trim().min(1),
+    opportunityName: z.string().trim().min(1),
+    recordUrl: z.string().url().nullable().optional(),
+    expectedStatus: z.enum([
+      'active', 'won', 'lost', 'closed', 'unknown',
+    ]),
+    targetStatus: z.enum(['active', 'won', 'lost', 'closed']),
+  }).optional(),
   operationKind: z.enum(['create', 'update']).optional(),
   revisionOfActionId: z.string().uuid().optional(),
   executionTarget: z.object({
@@ -272,6 +283,13 @@ const agentExecutionResultSchema = z.object({
   customerRecordUrl: z.string().url().optional(),
   opportunityRecordId: z.string().optional(),
   opportunityRecordUrl: z.string().url().optional(),
+  opportunityStatus: z.object({
+    opportunityName: z.string().trim().min(1),
+    previousStatus: z.enum([
+      'active', 'won', 'lost', 'closed', 'unknown',
+    ]),
+    status: z.enum(['active', 'won', 'lost', 'closed']),
+  }).optional(),
   followupRecordId: z.string().optional(),
   followupRecordUrl: z.string().url().optional(),
   taskGuid: z.string().optional(),
@@ -458,6 +476,7 @@ const parsePendingActionPayload = (
     }));
   return {
     version: 1,
+    actionKind: parsed.actionKind,
     interactionStage: parsed.interactionStage,
     sourceMessageId: parsed.sourceMessageId,
     rawText: parsed.rawText,
@@ -476,6 +495,9 @@ const parsePendingActionPayload = (
     salesContext: parsed.salesContext === undefined
       ? undefined
       : parseSalesContext(parsed.salesContext),
+    opportunityStatusUpdate: parsed.opportunityStatusUpdate === undefined
+      ? undefined
+      : parsed.opportunityStatusUpdate as OpportunityStatusActionSnapshot,
     operationKind: parsed.operationKind,
     revisionOfActionId: parsed.revisionOfActionId,
     executionTarget: parsed.executionTarget,

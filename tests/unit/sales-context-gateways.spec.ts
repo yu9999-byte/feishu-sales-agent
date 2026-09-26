@@ -315,6 +315,7 @@ describe('sales context gateways', (): void => {
         status: 'active',
         ownerOpenId: 'ou_sales_a',
         sourceVersion: new Date(1790215200000).toISOString(),
+        recordUrl: null,
       }],
       nextPageToken: null,
     });

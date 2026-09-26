@@ -519,6 +519,7 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
           status: this.mapOpportunityStatus(rawStatus, table.statusValues),
           ownerOpenId: actorOpenId,
           sourceVersion: this.sourceVersion(item.last_modified_time),
+          recordUrl: item.record_url ?? null,
         }];
       },
     );

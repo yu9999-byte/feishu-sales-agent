@@ -281,6 +281,7 @@ export interface StaleOpportunityRecord {
   status: OpportunityLifecycleStatus;
   ownerOpenId: string;
   sourceVersion: string | null;
+  recordUrl: string | null;
 }
 
 export interface StaleOpportunityPage {

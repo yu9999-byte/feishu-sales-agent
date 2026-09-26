@@ -31,8 +31,11 @@ import type {
   FollowupExtractionInput,
   IncomingCardAction,
   IncomingMessage,
+  OpportunityStatusUpdateInput,
+  OpportunityStatusUpdateResult,
   PendingAction,
   SalesRecordResult,
+  StaleOpportunityPage,
   TaskCreationResult,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
@@ -319,6 +322,7 @@ class FakeRecords implements SalesRecordsGateway {
   opportunityCalls: number = 0;
   followupCalls: number = 0;
   followupUpdateCalls: number = 0;
+  opportunityStatusCalls: number = 0;
   failNextCustomer: boolean = false;
   failNextFollowup: boolean = false;
 
@@ -359,6 +363,35 @@ class FakeRecords implements SalesRecordsGateway {
     return {
       recordId: 'rec_followup',
       recordUrl: 'https://base.example/followups/rec_followup',
+    };
+  }
+
+  async readStaleOpportunityPage(): Promise<StaleOpportunityPage> {
+    return {
+      items: [{
+        recordId: 'rec_status_opportunity',
+        name: '产线看板试点（测试）',
+        status: 'unknown',
+        ownerOpenId: 'ou_sales',
+        sourceVersion: null,
+        recordUrl: 'https://feishu.cn/base/rec_status_opportunity',
+      }],
+      nextPageToken: null,
+    };
+  }
+
+  async updateOpportunityStatus(
+    _integration: TenantIntegration,
+    _actorOpenId: string,
+    input: OpportunityStatusUpdateInput,
+    _idempotencyKey: string,
+  ): Promise<OpportunityStatusUpdateResult> {
+    this.opportunityStatusCalls += 1;
+    return {
+      recordId: input.recordId,
+      recordUrl: 'https://feishu.cn/base/rec_status_opportunity',
+      previousStatus: input.expectedStatus,
+      status: input.status,
     };
   }
 }
@@ -462,6 +495,7 @@ const createHarness = (
     messenger,
     executor,
     chatDrafts,
+    records,
     salesContext,
   );
   return {
@@ -738,6 +772,80 @@ describe('AgentWorkflowService', (): void => {
       expect(harness.tasks.calls).toBe(0);
     },
   );
+
+  it('routes opportunity status intent to an explicit confirmation card', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'opportunity_operation',
+      confidence: 0.98,
+      reply: '我会先核对这条商机，再请你确认状态变更。',
+    };
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-opportunity-status'),
+      text: '把产线看板试点（测试）标记为已赢单',
+    });
+
+    expect(harness.messenger.actions).toHaveLength(1);
+    expect(harness.messenger.actions[0]?.payload).toMatchObject({
+      actionKind: 'opportunity_status',
+      opportunityStatusUpdate: {
+        recordId: 'rec_status_opportunity',
+        expectedStatus: 'unknown',
+        targetStatus: 'won',
+      },
+    });
+    expect(harness.records.opportunityStatusCalls).toBe(0);
+    expect(harness.store.getAudits(harness.integrationA.tenantId)
+      .some((event): boolean =>
+        event.eventType === 'opportunity_status.pending_confirmation'))
+      .toBe(true);
+  });
+
+  it('executes a confirmed opportunity status change without followup writes', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'opportunity_operation',
+      confidence: 0.98,
+      reply: '我会先核对这条商机，再请你确认状态变更。',
+    };
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-opportunity-status-confirm'),
+      text: '把产线看板试点（测试）标记为已赢单',
+    });
+    const pending: PendingAction = harness.messenger.actions[0];
+    const response: JsonObject = await harness.workflow.handleCardAction(
+      createCardAction(
+        'tenant-a',
+        pending.id,
+        'confirm',
+        'evt-opportunity-status-confirm',
+      ),
+    );
+
+    expect(response).toMatchObject({
+      header: { title: { content: '正在执行销售动作' } },
+    });
+    await new Promise<void>((resolve): void => setImmediate(resolve));
+    expect(harness.records.opportunityStatusCalls).toBe(1);
+    expect(harness.records.customerCalls).toBe(0);
+    expect(harness.records.followupCalls).toBe(0);
+    await expect(harness.store.getPendingAction(
+      harness.integrationA.tenantId,
+      pending.id,
+    )).resolves.toMatchObject({
+      status: 'succeeded',
+      result: {
+        opportunityStatus: {
+          opportunityName: '产线看板试点（测试）',
+          previousStatus: 'unknown',
+          status: 'won',
+        },
+      },
+    });
+  });
 
   it('clarifies a bare sales fact instead of silently recording it', async (): Promise<void> => {
     const harness: TestHarness = createHarness();

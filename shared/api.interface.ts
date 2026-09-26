@@ -50,6 +50,28 @@ export type PendingActionStatus =
 
 export type FollowupOperationKind = 'create' | 'update';
 
+export type PendingActionKind = 'followup' | 'opportunity_status';
+
+export type OpportunityStatusActionLifecycleStatus =
+  | 'active'
+  | 'won'
+  | 'lost'
+  | 'closed'
+  | 'unknown';
+
+export type OpportunityStatusActionTargetStatus = Exclude<
+  OpportunityStatusActionLifecycleStatus,
+  'unknown'
+>;
+
+export interface OpportunityStatusActionSnapshot {
+  recordId: string;
+  opportunityName: string;
+  recordUrl?: string | null;
+  expectedStatus: OpportunityStatusActionLifecycleStatus;
+  targetStatus: OpportunityStatusActionTargetStatus;
+}
+
 export interface ExecutionTarget {
   customerRecordId?: string;
   customerRecordUrl?: string;
@@ -63,6 +85,7 @@ export interface ExecutionTarget {
 
 export interface PendingActionPayload {
   version: 1;
+  actionKind?: PendingActionKind;
   interactionStage?: 'input' | 'generating' | 'draft';
   sourceMessageId: string;
   rawText: string;
@@ -77,6 +100,7 @@ export interface PendingActionPayload {
   inputForm?: FollowupCardFormInput;
   inputError?: string;
   salesContext?: SalesContext;
+  opportunityStatusUpdate?: OpportunityStatusActionSnapshot;
   operationKind?: FollowupOperationKind;
   revisionOfActionId?: string;
   executionTarget?: ExecutionTarget;
@@ -214,6 +238,11 @@ export interface AgentExecutionResult {
   customerRecordUrl?: string;
   opportunityRecordId?: string;
   opportunityRecordUrl?: string;
+  opportunityStatus?: {
+    opportunityName: string;
+    previousStatus: OpportunityStatusActionLifecycleStatus;
+    status: OpportunityStatusActionTargetStatus;
+  };
   followupRecordId?: string;
   followupRecordUrl?: string;
   taskGuid?: string;

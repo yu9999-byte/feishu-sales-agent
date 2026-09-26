@@ -638,7 +638,75 @@ const createDraftGenerationProcessingCard = (): JsonObject =>
     }],
   );
 
+const opportunityStatusLabels: Record<string, string> = {
+  active: '进行中',
+  won: '已赢单',
+  lost: '已丢单',
+  closed: '已关闭',
+  unknown: '未设置',
+};
+
+const createOpportunityStatusConfirmationCard = (
+  action: PendingAction,
+): JsonObject => {
+  const update = action.payload.opportunityStatusUpdate;
+  if (!update) {
+    return createBaseCard(
+      '商机状态确认失败',
+      '状态数据不完整，尚未修改业务数据',
+      'red',
+      '无法确认',
+      [{
+        tag: 'markdown',
+        content: '请重新发送包含完整商机名称和目标状态的请求。',
+      }],
+    );
+  }
+  const sourceLink: string = createSourceLink(
+    update.recordUrl ?? null,
+    '打开商机记录',
+  );
+  return createBaseCard(
+    '商机状态变更确认',
+    '确认后只修改商机状态字段',
+    'yellow',
+    '待确认',
+    [
+      {
+        tag: 'markdown',
+        content: `**商机：**${escapeMarkdown(update.opportunityName)}${sourceLink}\n` +
+          `**当前状态：**${opportunityStatusLabels[update.expectedStatus]}\n` +
+          `**变更为：**${opportunityStatusLabels[update.targetStatus]}\n\n` +
+          '确认后系统会再次核对负责人和当前状态，状态发生变化时将拒绝执行。',
+      },
+      {
+        tag: 'button',
+        text: { tag: 'plain_text', content: '确认变更商机状态' },
+        type: 'primary_filled',
+        width: 'fill',
+        behaviors: [{
+          type: 'callback',
+          value: { action: 'confirm', pendingActionId: action.id },
+        }],
+      },
+      {
+        tag: 'button',
+        text: { tag: 'plain_text', content: '取消本次变更' },
+        type: 'text',
+        width: 'fill',
+        behaviors: [{
+          type: 'callback',
+          value: { action: 'cancel', pendingActionId: action.id },
+        }],
+      },
+    ],
+  );
+};
+
 const createConfirmationCard = (action: PendingAction): JsonObject => {
+  if (action.payload.actionKind === 'opportunity_status') {
+    return createOpportunityStatusConfirmationCard(action);
+  }
   if (action.payload.interactionStage === 'input') {
     return createFollowupInputCard(action);
   }
@@ -863,6 +931,24 @@ const createCancelledCard = (): JsonObject =>
   );
 
 const createResultCard = (result: AgentExecutionResult): JsonObject => {
+  if (result.status === 'succeeded' && result.opportunityStatus) {
+    const statusResult = result.opportunityStatus;
+    const recordLink: string = result.opportunityRecordUrl
+      ? `[打开商机记录](${result.opportunityRecordUrl})`
+      : '商机记录已更新';
+    return createBaseCard(
+      '商机状态已更新',
+      '已完成一次确认后的状态变更',
+      'green',
+      '成功',
+      [{
+        tag: 'markdown',
+        content: `**${escapeMarkdown(statusResult.opportunityName)}**\n` +
+          `${opportunityStatusLabels[statusResult.previousStatus]} → ` +
+          `${opportunityStatusLabels[statusResult.status]}\n\n${recordLink}`,
+      }],
+    );
+  }
   if (result.status === 'succeeded') {
     const taskCreated: boolean = Boolean(result.taskGuid);
     const taskLink: string = result.taskAction === 'unchanged'

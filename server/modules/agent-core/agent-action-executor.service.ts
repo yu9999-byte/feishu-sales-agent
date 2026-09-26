@@ -260,6 +260,9 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
     initialResult: AgentExecutionResult,
   ): Promise<AgentExecutionResult> {
     const result: AgentExecutionResult = initialResult;
+    if (action.payload.actionKind === 'opportunity_status') {
+      return this.executeOpportunityStatusUpdate(integration, action, result);
+    }
     if (result.customerRecordId && !result.customerRecordUrl) {
       result.customerRecordUrl = this.fallbackRecordUrl(
         integration,
@@ -376,6 +379,42 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
     return result;
   }
 
+  private async executeOpportunityStatusUpdate(
+    integration: TenantIntegration,
+    action: PendingAction,
+    result: AgentExecutionResult,
+  ): Promise<AgentExecutionResult> {
+    const snapshot = action.payload.opportunityStatusUpdate;
+    const updateStatus = this.records.updateOpportunityStatus;
+    if (!snapshot || !updateStatus) {
+      throw new Error('Opportunity status action is not executable');
+    }
+    const updated = await updateStatus.call(
+      this.records,
+      integration,
+      action.actorOpenId,
+      {
+        recordId: snapshot.recordId,
+        status: snapshot.targetStatus,
+        expectedStatus: snapshot.expectedStatus,
+      },
+      `${action.id}:opportunity-status`,
+    );
+    result.opportunityRecordId = updated.recordId;
+    result.opportunityRecordUrl = this.recordUrl(
+      integration,
+      integration.base.opportunities.tableId,
+      updated,
+    );
+    result.opportunityStatus = {
+      opportunityName: snapshot.opportunityName,
+      previousStatus: updated.previousStatus,
+      status: updated.status,
+    };
+    await this.persistProgress(integration, action, result);
+    return result;
+  }
+
   private async saveFailure(
     integration: TenantIntegration,
     action: PendingAction,
@@ -481,6 +520,7 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
     action: PendingAction,
     traceId: string,
   ): Promise<void> {
+    if (action.payload.actionKind === 'opportunity_status') return;
     const insight: FollowupProjectRiskInsight | null =
       this.projectRisks.analyze(action, new Date());
     if (insight === null) return;

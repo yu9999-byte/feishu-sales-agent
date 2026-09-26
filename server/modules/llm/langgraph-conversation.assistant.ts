@@ -229,6 +229,8 @@ const INTENT_SYSTEM_PROMPT: string = [
   '你没有收到企业客户、商机、任务或知识库数据，绝不能声称已经查询到内部事实。',
   '只有用户明确要求记录、整理、沉淀或写跟进时才用 followup_capture。',
   '用户明确要求只分析、判断风险或评估影响时使用 followup_analyze；仅陈述客户事实时使用 ambiguous。',
+  '用户明确要求把某条商机改为进行中、已赢单、已丢单或已关闭时使用 opportunity_operation。',
+  '分类示例：把“华南科技 - 销售机会”标记为已赢单 -> opportunity_operation；关闭这条商机 -> opportunity_operation。',
   'sales_qa 只用于询问销售方法、知识或建议，不能用于客户事实陈述。',
   '分类示例：客户说预算下周批 -> ambiguous；怎样追问客户预算 -> sales_qa。',
   '分类示例：把刚才内容写成跟进 -> followup_capture；只分析这单风险 -> followup_analyze。',
