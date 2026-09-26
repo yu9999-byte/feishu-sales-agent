@@ -160,7 +160,7 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     }
 
     const customer = customers[0];
-    const opportunityConditions: SearchCondition[] = [
+    const opportunityScopeConditions: SearchCondition[] = [
       {
         field_name: opportunityTable.fields.customerLink,
         operator: 'is',
@@ -172,6 +172,9 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
         value: [actorOpenId],
       },
     ];
+    const opportunityConditions: SearchCondition[] = [
+      ...opportunityScopeConditions,
+    ];
     if (hints.opportunityName) {
       opportunityConditions.push({
         field_name: opportunityTable.fields.opportunityName,
@@ -179,21 +182,31 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
         value: [hints.opportunityName],
       });
     }
-    const opportunityItems: BaseContextRecord[] =
+    const opportunityFieldNames: Array<string | undefined> = [
+      opportunityTable.fields.opportunityName,
+      opportunityTable.fields.progress,
+      opportunityTable.fields.expectedAmount,
+      opportunityTable.fields.nextAction,
+      opportunityTable.fields.dueAt,
+      opportunityTable.fields.customerLink,
+    ];
+    let opportunityItems: BaseContextRecord[] =
       await this.searchContextRecords(
         integration,
         opportunityTable,
         opportunityConditions,
-        [
-          opportunityTable.fields.opportunityName,
-          opportunityTable.fields.progress,
-          opportunityTable.fields.expectedAmount,
-          opportunityTable.fields.nextAction,
-          opportunityTable.fields.dueAt,
-          opportunityTable.fields.customerLink,
-        ],
+        opportunityFieldNames,
         20,
       );
+    if (hints.opportunityName && opportunityItems.length === 0) {
+      opportunityItems = await this.searchContextRecords(
+        integration,
+        opportunityTable,
+        opportunityScopeConditions,
+        opportunityFieldNames,
+        20,
+      );
+    }
     const opportunities = opportunityItems.flatMap((item) => {
       const recordId: string | undefined = item.record_id;
       const name: string | null = this.readText(
@@ -243,6 +256,7 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
           followupTable.fields.summary,
           followupTable.fields.nextAction,
           followupTable.fields.dueAt,
+          followupTable.fields.communicationAt,
           followupTable.fields.opportunityLink,
         ],
         100,
@@ -271,6 +285,10 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
           followupTable.fields.nextAction,
         ),
         dueAt: this.readDate(item.fields, followupTable.fields.dueAt),
+        communicationAt: this.readDate(
+          item.fields,
+          followupTable.fields.communicationAt,
+        ),
         sourceVersion: this.sourceVersion(item.last_modified_time),
         recordUrl: item.record_url ?? null,
       }];
@@ -486,6 +504,11 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     this.setText(fields, table.fields.nextAction,
       action.payload.draft.nextAction);
     this.setDate(fields, table.fields.dueAt, action.payload.draft.dueAt);
+    this.setDate(
+      fields,
+      table.fields.communicationAt,
+      action.payload.draft.communicationAt ?? null,
+    );
     this.setUser(fields, table.fields.ownerOpenId, action.actorOpenId);
     return fields;
   }
@@ -574,13 +597,29 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     if (typeof value === 'string') return value;
     if (typeof value === 'number') return String(value);
     if (Array.isArray(value)) {
-      const names: string[] = value.flatMap((item: unknown): string[] => {
-        if (typeof item === 'string') return [item];
-        if (typeof item !== 'object' || item === null) return [];
-        const candidate: unknown = 'name' in item ? item.name : undefined;
-        return typeof candidate === 'string' ? [candidate] : [];
+      const textSegments: string[] = [];
+      const displayValues: string[] = [];
+      value.forEach((item: unknown): void => {
+        if (typeof item === 'string') {
+          displayValues.push(item);
+          return;
+        }
+        if (typeof item !== 'object' || item === null) return;
+        const text: unknown = 'text' in item ? item.text : undefined;
+        if (typeof text === 'string') {
+          textSegments.push(text);
+          return;
+        }
+        const name: unknown = 'name' in item ? item.name : undefined;
+        if (typeof name === 'string') {
+          displayValues.push(name);
+        }
       });
-      return names.length > 0 ? names.join('、') : null;
+      if (textSegments.length > 0 && displayValues.length === 0) {
+        return textSegments.join('');
+      }
+      const values: string[] = [...textSegments, ...displayValues];
+      return values.length > 0 ? values.join('、') : null;
     }
     if (typeof value === 'object' && value !== null && 'text' in value) {
       const text: unknown = value.text;

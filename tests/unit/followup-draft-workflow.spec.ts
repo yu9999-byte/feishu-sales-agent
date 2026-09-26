@@ -247,6 +247,30 @@ const service = (
 };
 
 describe('FollowupDraftWorkflowService', (): void => {
+  it('keeps Web advice but withholds task preview when owned tasks cannot be read', async (): Promise<void> => {
+    const repository = new MemoryDraftRepository();
+    const workflow = service(repository, {
+      ...readySalesContext(),
+      status: 'partial',
+      warnings: ['task_context_permission_denied'],
+    });
+
+    const created = await workflow.create({
+      tenantId: TENANT_ID,
+      ownerMemberId: MEMBER_ID,
+      ownerOpenId: 'ou_owner',
+      sourceType: 'text',
+      text: '北辰制造客户认可试点方案，下一步发送实施计划。',
+      idempotencyKey: 'task-permission-denied',
+      timezone: 'Asia/Shanghai',
+      now: new Date('2026-09-19T10:00:00+08:00'),
+    });
+
+    expect(created.version.progressAssessment?.recommendation?.action)
+      .toBe('发送实施计划');
+    expect(created.version.taskCandidates).toEqual([]);
+  });
+
   it('reads owner-scoped context before the visible Web draft and persists it', async (): Promise<void> => {
     const repository = new MemoryDraftRepository();
     const extractor = new RecordingExtractor();

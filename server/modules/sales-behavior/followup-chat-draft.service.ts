@@ -13,7 +13,10 @@ import type {
 } from '@shared/api.interface';
 import type { TenantIntegration } from '@server/modules/agent-core/agent.types';
 import { PlatformSessionService } from '@server/modules/platform-shell/platform-session.service';
-import { buildFollowupTaskCandidates } from './followup-task-preview';
+import {
+  buildFollowupTaskCandidates,
+  hasVerifiedTaskContext,
+} from './followup-task-preview';
 import { FollowupQualityService } from './followup-quality.service';
 import { FollowupProgressService } from './followup-progress.service';
 import type {
@@ -266,7 +269,8 @@ class FollowupChatDraftService {
       input.now,
     );
     const taskCandidates: FollowupTaskCandidate[] =
-      progressAssessment.recommendation === null
+      progressAssessment.recommendation === null ||
+      !hasVerifiedTaskContext(input.draft, input.salesContext)
         ? []
         : buildFollowupTaskCandidates({
           draftId: input.actionId,

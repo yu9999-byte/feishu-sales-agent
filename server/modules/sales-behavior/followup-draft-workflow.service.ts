@@ -37,6 +37,7 @@ import type {
 } from './sales-behavior.types';
 import {
   buildFollowupTaskCandidates,
+  hasVerifiedTaskContext,
 } from './followup-task-preview';
 
 interface CreateFollowupDraftCommand {
@@ -283,7 +284,11 @@ class FollowupDraftWorkflowService {
       record.version.progressAssessment;
     const taskCandidates: FollowupTaskCandidate[] =
       progressAssessment !== undefined &&
-      progressAssessment.recommendation === null
+      progressAssessment.recommendation === null ||
+      !hasVerifiedTaskContext(
+        record.version.draft,
+        record.version.salesContext,
+      )
         ? []
         : buildFollowupTaskCandidates({
         draftId: record.id,

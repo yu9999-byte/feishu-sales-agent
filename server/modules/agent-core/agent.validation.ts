@@ -156,6 +156,7 @@ const salesContextSchema = z.object({
     opportunityRecordId: z.string().nullable().default(null),
     nextAction: z.string().nullable(),
     dueAt: z.string().nullable(),
+    communicationAt: z.string().nullable().optional(),
     source: z.object({
       recordId: z.string(),
       recordUrl: z.string().url().nullable(),
@@ -318,6 +319,7 @@ const tenantBaseMappingSchema = z.object({
       risks: optionalFieldNameSchema,
       nextAction: optionalFieldNameSchema,
       dueAt: optionalFieldNameSchema,
+      communicationAt: optionalFieldNameSchema,
       ownerOpenId: optionalFieldNameSchema,
     }),
   }),

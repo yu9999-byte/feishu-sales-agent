@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { TenantIntegration } from '@server/modules/agent-core/agent.types';
+import type {
+  PendingAction,
+  TenantIntegration,
+} from '@server/modules/agent-core/agent.types';
 import { FeishuBaseGateway } from '@server/modules/integrations/base/feishu-base.gateway';
 import { FeishuTaskGateway } from '@server/modules/integrations/task/feishu-task.gateway';
 import type { FeishuClientFactory } from '@server/modules/feishu/feishu-client.factory';
@@ -50,6 +53,7 @@ const integration: TenantIntegration = {
         ownerOpenId: '负责人',
         nextAction: '下一步',
         dueAt: '截止',
+        communicationAt: '本次沟通发生时间',
       },
     },
   },
@@ -65,7 +69,11 @@ describe('sales context gateways', (): void => {
             record_id: 'customer-1',
             record_url: 'https://feishu.cn/customer-1',
             last_modified_time: 1790215200000,
-            fields: { 客户: '北辰制造', 联系人: '张总', 最近摘要: '认可方案' },
+            fields: {
+              客户: [{ text: '北辰制造', type: 'text' }],
+              联系人: [{ text: '张总', type: 'text' }],
+              最近摘要: [{ text: '认可方案', type: 'text' }],
+            },
           }],
         },
       })
@@ -77,10 +85,10 @@ describe('sales context gateways', (): void => {
             record_url: 'https://feishu.cn/opportunity-1',
             last_modified_time: 1790215200000,
             fields: {
-              商机: '北辰数字化项目',
-              进展: '方案已确认',
+              商机: [{ text: '北辰数字化项目', type: 'text' }],
+              进展: [{ text: '方案已确认', type: 'text' }],
               金额: 500000,
-              下一步: '提交实施方案',
+              下一步: [{ text: '提交实施方案', type: 'text' }],
             },
           }],
         },
@@ -93,8 +101,9 @@ describe('sales context gateways', (): void => {
             record_url: 'https://feishu.cn/followup-1',
             last_modified_time: 1790215200000,
         fields: {
-          摘要: '认可方案',
-          下一步: '提交实施方案',
+          摘要: [{ text: '认可方案', type: 'text' }],
+          下一步: [{ text: '提交实施方案', type: 'text' }],
+          本次沟通发生时间: 1790215200000,
           商机关联: [{ record_id: 'opportunity-1' }],
         },
           }],
@@ -117,6 +126,9 @@ describe('sales context gateways', (): void => {
     expect(result.opportunities[0]?.expectedAmount).toBe(500000);
     expect(result.followups[0]?.summary).toBe('认可方案');
     expect(result.followups[0]?.opportunityRecordId).toBe('opportunity-1');
+    expect(result.followups[0]?.communicationAt).toBe(
+      new Date(1790215200000).toISOString(),
+    );
     for (const call of search.mock.calls) {
       const request = call[0] as {
         data: { filter: { conditions: Array<{ field_name: string; value?: string[] }> } };
@@ -156,6 +168,54 @@ describe('sales context gateways', (): void => {
 
     expect(result.warnings).toContain('owner_scope_mapping_not_configured');
     expect(search).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the owner customer opportunities when a model hint does not match', async (): Promise<void> => {
+    const search = vi.fn()
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          items: [{
+            record_id: 'customer-1',
+            fields: { 客户: [{ text: '华南科技', type: 'text' }] },
+          }],
+        },
+      })
+      .mockResolvedValueOnce({ code: 0, data: { items: [] } })
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          items: [{
+            record_id: 'opportunity-1',
+            fields: {
+              商机: [{ text: '华南科技 - 销售机会', type: 'text' }],
+            },
+          }],
+        },
+      })
+      .mockResolvedValueOnce({ code: 0, data: { items: [] } });
+    const client = { bitable: { appTableRecord: { search } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    const result = await new FeishuBaseGateway(factory).readSalesContext(
+      integration,
+      'ou_sales_a',
+      { customerName: '华南科技', opportunityName: '报价方案' },
+    );
+
+    expect(result.opportunities[0]?.name).toBe('华南科技 - 销售机会');
+    const exactConditions = search.mock.calls[1]?.[0].data.filter.conditions;
+    const fallbackConditions = search.mock.calls[2]?.[0].data.filter.conditions;
+    expect(exactConditions).toContainEqual(expect.objectContaining({
+      field_name: '商机',
+      value: ['报价方案'],
+    }));
+    expect(fallbackConditions).not.toContainEqual(expect.objectContaining({
+      field_name: '商机',
+    }));
   });
 
   it('searches only open tasks assigned to the current actor and performs no writes', async (): Promise<void> => {
@@ -209,4 +269,132 @@ describe('sales context gateways', (): void => {
     expect(create).not.toHaveBeenCalled();
     expect(patch).not.toHaveBeenCalled();
   });
+
+  it('writes an explicit communication time when creating a followup', async (): Promise<void> => {
+    const search = vi.fn(async (): Promise<{
+      code: number;
+      data: { items: [] };
+    }> => ({ code: 0, data: { items: [] } }));
+    const request = vi.fn(async (): Promise<{
+      code: number;
+      data: { record: { record_id: string; record_url: string } };
+    }> => ({
+      code: 0,
+      data: {
+        record: {
+          record_id: 'followup-created',
+          record_url: 'https://feishu.cn/base/followup-created',
+        },
+      },
+    }));
+    const client = {
+      bitable: { appTableRecord: { search } },
+      request,
+    };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+    const action: PendingAction = createPendingAction({
+      communicationAt: '2026-09-24T02:00:00.000Z',
+    });
+
+    const result = await new FeishuBaseGateway(factory).createFollowup(
+      integration,
+      action,
+      'customer-1',
+      'opportunity-1',
+    );
+
+    expect(result.recordId).toBe('followup-created');
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          fields: expect.objectContaining({
+            本次沟通发生时间: Date.parse('2026-09-24T02:00:00.000Z'),
+          }),
+        },
+      }),
+      undefined,
+    );
+  });
+
+  it('does not invent a communication time when the draft has none', async (): Promise<void> => {
+    const search = vi.fn(async (): Promise<{
+      code: number;
+      data: { items: [] };
+    }> => ({ code: 0, data: { items: [] } }));
+    const request = vi.fn(async (): Promise<{
+      code: number;
+      data: { record: { record_id: string } };
+    }> => ({
+      code: 0,
+      data: { record: { record_id: 'followup-created' } },
+    }));
+    const client = {
+      bitable: { appTableRecord: { search } },
+      request,
+    };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+    const action: PendingAction = createPendingAction({});
+
+    await new FeishuBaseGateway(factory).createFollowup(
+      integration,
+      action,
+      'customer-1',
+      'opportunity-1',
+    );
+
+    const requestConfig = request.mock.calls[0]?.[0] as {
+      data: { fields: Record<string, unknown> };
+    };
+    expect(requestConfig.data.fields).not.toHaveProperty('本次沟通发生时间');
+  });
 });
+
+interface CommunicationTimeOverride {
+  communicationAt?: string;
+}
+
+function createPendingAction(
+  override: CommunicationTimeOverride,
+): PendingAction {
+  return {
+    id: 'action-followup-time',
+    tenantId: integration.tenantId,
+    actorOpenId: 'ou_sales_a',
+    chatId: 'oc_chat',
+    cardMessageId: null,
+    status: 'pendingConfirmation',
+    payload: {
+      version: 1,
+      sourceMessageId: 'message-followup-time',
+      rawText: '北辰制造客户认可方案。',
+      draft: {
+        customerName: '北辰制造',
+        contactName: '张总',
+        opportunityName: '北辰数字化项目',
+        communicationAt: override.communicationAt,
+        summary: '客户认可方案',
+        customerNeeds: [],
+        objections: [],
+        risks: [],
+        progress: '方案已确认',
+        expectedAmount: null,
+        nextAction: '提交实施方案',
+        dueAt: null,
+        evidenceQuotes: ['客户认可方案'],
+      },
+    },
+    result: {
+      pendingActionId: 'action-followup-time',
+      status: 'pendingConfirmation',
+    },
+    expiresAt: new Date('2026-10-01T00:00:00.000Z'),
+    createdAt: new Date('2026-09-24T03:00:00.000Z'),
+    updatedAt: new Date('2026-09-24T03:00:00.000Z'),
+  };
+}

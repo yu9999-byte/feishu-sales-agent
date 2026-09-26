@@ -39,6 +39,7 @@ export interface FollowupFieldMapping {
   risks?: string;
   nextAction?: string;
   dueAt?: string;
+  communicationAt?: string;
   ownerOpenId?: string;
 }
 
@@ -212,6 +213,7 @@ export interface SalesContextBaseResult {
     opportunityRecordId: string | null;
     nextAction: string | null;
     dueAt: string | null;
+    communicationAt?: string | null;
     sourceVersion: string | null;
     recordUrl: string | null;
   }>;

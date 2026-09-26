@@ -239,6 +239,30 @@ describe('SalesContextService', (): void => {
     expect(result.warnings).toContain('task_context_unavailable');
   });
 
+  it('identifies a missing Feishu task read scope without dropping Base context', async (): Promise<void> => {
+    const records: SalesRecordsGateway = {
+      readSalesContext: vi.fn(async (): Promise<SalesContextBaseResult> =>
+        structuredClone(baseResult)),
+    } as unknown as SalesRecordsGateway;
+    const tasks: TaskGateway = {
+      searchOwnedTasks: vi.fn(async (): Promise<never> => {
+        throw Object.assign(new Error('request failed'), {
+          response: { data: { code: 99991672 } },
+        });
+      }),
+    } as unknown as TaskGateway;
+
+    const result = await new SalesContextService(records, tasks).read(
+      integration,
+      'ou_sales_a',
+      { customerName: '北辰制造' },
+    );
+
+    expect(result.status).toBe('partial');
+    expect(result.customer?.name).toBe('北辰制造');
+    expect(result.warnings).toContain('task_context_permission_denied');
+  });
+
   it('preserves conflicting action facts and marks the newer source', async (): Promise<void> => {
     const conflictingResult: SalesContextBaseResult = {
       ...structuredClone(baseResult),

@@ -216,6 +216,28 @@ describe('FollowupProgressService', (): void => {
     expect(result.recommendation?.action).toBe('周五向张总确认审批结果');
   });
 
+  it('describes limited task visibility without claiming all data is missing', (): void => {
+    const result: FollowupProgressSnapshot = assess(draft(), context({
+      status: 'partial',
+      warnings: ['task_query_scope_limited'],
+    }));
+
+    expect(result.state).toBe('advanced');
+    expect(result.warnings).toContain('本人任务仅覆盖当前可见范围');
+    expect(result.recommendation?.action).toBe('周五向张总确认审批结果');
+  });
+
+  it('describes a missing task permission without blocking a message action', (): void => {
+    const result: FollowupProgressSnapshot = assess(draft(), context({
+      status: 'partial',
+      warnings: ['task_context_permission_denied'],
+    }));
+
+    expect(result.state).toBe('advanced');
+    expect(result.warnings).toContain('本人任务读取权限未开通');
+    expect(result.recommendation?.action).toBe('周五向张总确认审批结果');
+  });
+
   it('does not create a recommendation for an explicit no-action followup', (): void => {
     const result: FollowupProgressSnapshot = assess(draft({
       nextAction: '暂无下一步',

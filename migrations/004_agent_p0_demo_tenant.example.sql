@@ -75,6 +75,7 @@ VALUES (
         "risks": "风险",
         "nextAction": "下一步",
         "dueAt": "截止时间",
+        "communicationAt": "本次沟通发生时间",
         "ownerOpenId": "负责人"
       }
     }

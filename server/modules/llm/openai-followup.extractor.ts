@@ -91,16 +91,59 @@ const WEEKDAY_INDEX: Record<string, number> = {
   一: 1, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 日: 7, 天: 7,
 };
 
+const META_TEST_LABEL =
+  /^(?:P\d+|S\d+|B\d+)?\s*(?:回归|联调|验收|冒烟|功能)?测试(?:消息|用例)?$/iu;
+
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+
+const removeMetaOpportunityName = (
+  draft: FollowupDraft,
+  input: FollowupExtractionInput,
+): FollowupDraft => {
+  const opportunityName: string | null = draft.opportunityName?.trim() ?? null;
+  if (!opportunityName || !META_TEST_LABEL.test(opportunityName)) {
+    return draft;
+  }
+  const escapedName: string = escapeRegExp(opportunityName);
+  const explicitBusinessName = new RegExp(
+    `(?:商机(?:名称)?|项目(?:名称)?|主题)\\s*(?:是|为|[:：])?\\s*${escapedName}`,
+    'iu',
+  );
+  if (explicitBusinessName.test(input.combinedText)) {
+    return draft;
+  }
+  const metaAnnotation = new RegExp(
+    `(?:这是|仅供|用于|作为)\\s*${escapedName}(?:[。.!！]|$)`,
+    'iu',
+  );
+  return metaAnnotation.test(input.combinedText)
+    ? { ...draft, opportunityName: null }
+    : draft;
+};
+
 const correctNextWeekDueAt = (
   draft: FollowupDraft,
   input: FollowupExtractionInput,
 ): FollowupDraft => {
   if (!draft.dueAt || Number.isNaN(Date.parse(draft.dueAt))) return draft;
+  const nextStep: string = input.combinedText.match(
+    /下一步[：:\s]?([^。；;\n]+)/u,
+  )?.[1] ?? input.combinedText;
+  if (/下(?:周|星期)[一二三四五六日天]\s*(?:之前|前)/u.test(nextStep)) {
+    return { ...draft, dueAt: null };
+  }
   const mentions: RegExpMatchArray[] = [...input.combinedText.matchAll(
     NEXT_WEEKDAY,
   )];
-  if (mentions.length !== 1) return draft;
-  const weekday: number | undefined = WEEKDAY_INDEX[mentions[0][1]];
+  const mentionedWeekdays: number[] = Array.from(new Set(
+    mentions.flatMap((mention: RegExpMatchArray): number[] => {
+      const weekday: number | undefined = WEEKDAY_INDEX[mention[1]];
+      return weekday === undefined ? [] : [weekday];
+    }),
+  ));
+  if (mentionedWeekdays.length !== 1) return draft;
+  const weekday: number | undefined = mentionedWeekdays[0];
   if (weekday === undefined) return draft;
 
   const nowLocal: string = localIsoTime(input.now, input.timezone);
@@ -153,7 +196,7 @@ export class OpenAiFollowupExtractor implements FollowupExtractor {
           ),
         );
         const draft: FollowupDraft = correctNextWeekDueAt(
-          this.parseResponse(response.data),
+          removeMetaOpportunityName(this.parseResponse(response.data), input),
           input,
         );
         this.validateEvidence(input.combinedText, draft.evidenceQuotes);
@@ -219,8 +262,10 @@ export class OpenAiFollowupExtractor implements FollowupExtractor {
             'dueAt 必须是可解析的 ISO 8601 时间；相对时间按给定 nowLocal 和 timezone 解析，并保留业务时区的显式 UTC offset。',
             'communicationAt 表示本次已经发生的沟通时间，必须是可解析的 ISO 8601 时间；相对时间按给定 nowLocal 和 timezone 解析，并保留业务时区的显式 UTC offset。',
             '相对时间不得把本地钟点直接标成 Z；例如 Asia/Shanghai 的 10:00 必须写成 10:00:00+08:00。',
+            '“下周五前”等只给日期不含具体钟点的下一步截止时间，dueAt 输出 null；不得把当前消息时刻当作执行时间。',
             'communicationMethod 只表示本次已经发生的沟通方式；不得用下一步行动方式臆推。',
             'topic 只概括本次沟通中明确出现的主题；未知时输出 null。',
+            '不要把“这是P0测试”“回归测试”“测试消息”等测试标签、备注或元话语识别为商机名或主题。',
             'nextActionChannel 只表示下一步行动的地点或执行方式；不得用本次沟通方式臆推。',
             'nextActionParticipants 只记录来源中明确出现的下一步参与人；未知时输出空数组。',
             'evidenceQuotes 中每一项都必须是 combinedText 中逐字出现的连续原文。',

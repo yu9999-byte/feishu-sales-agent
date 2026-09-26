@@ -180,6 +180,48 @@ describe('FollowupChatDraftService', (): void => {
     ]);
   });
 
+  it('keeps a recommendation but offers no task when task reading is denied', async (): Promise<void> => {
+    const service = createService();
+    const payload = await service.createPayload({
+      integration,
+      actionId: '00000000-0000-4000-8000-000000000001',
+      actorOpenId: 'ou_owner',
+      sourceMessageId: 'om_source',
+      rawText: '北辰制造客户认可方案，下一步邮件发送实施计划给张总。',
+      draft,
+      salesContext: {
+        ...salesContext,
+        status: 'partial',
+        warnings: ['task_context_permission_denied'],
+      },
+      now: new Date('2026-09-20T10:00:00+08:00'),
+    });
+
+    expect(payload.progressAssessment?.recommendation?.action)
+      .toBe('发送实施计划');
+    expect(payload.taskCandidates).toEqual([]);
+    expect(payload.selectedTaskCandidateIds).toEqual([]);
+  });
+
+  it('does not offer a task for an unmatched opportunity', async (): Promise<void> => {
+    const service = createService();
+    const payload = await service.createPayload({
+      integration,
+      actionId: '00000000-0000-4000-8000-000000000001',
+      actorOpenId: 'ou_owner',
+      sourceMessageId: 'om_source',
+      rawText: '北辰制造客户认可方案，下一步邮件发送实施计划给张总。',
+      draft: { ...draft, opportunityName: '未核实的新项目' },
+      salesContext,
+      now: new Date('2026-09-20T10:00:00+08:00'),
+    });
+
+    expect(payload.progressAssessment?.recommendation?.action)
+      .toBe('发送实施计划');
+    expect(payload.taskCandidates).toEqual([]);
+    expect(payload.selectedTaskCandidateIds).toEqual([]);
+  });
+
   it('turns card edits into a new reviewed version and recomputes tasks', async (): Promise<void> => {
     const service = createService();
     const payload = await service.createPayload({

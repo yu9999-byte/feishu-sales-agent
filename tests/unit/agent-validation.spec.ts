@@ -413,6 +413,25 @@ describe('follow-up validation', (): void => {
     expect(visibleContent).toContain('查看来源');
   });
 
+  it('labels a withheld task preview without denying the recognized next step', (): void => {
+    const action: PendingAction = {
+      ...pendingAction,
+      payload: {
+        ...pendingAction.payload,
+        progressAssessment,
+        taskCandidates: [],
+        selectedTaskCandidateIds: [],
+      },
+    };
+    const visibleContent: string = collectVisibleContent(
+      createConfirmationCard(action) as JsonObject,
+    ).join('\n');
+
+    expect(visibleContent).toContain('下一步建议已保留');
+    expect(visibleContent).toContain('不创建待办');
+    expect(visibleContent).not.toContain('本次未识别到可创建的下一步待办');
+  });
+
   it('describes a successful save without claiming an uncreated task', (): void => {
     const serialized: string = JSON.stringify(createResultCard({
       pendingActionId: pendingAction.id,
@@ -521,6 +540,88 @@ describe('follow-up validation', (): void => {
 
     expect(result.dueAt).toBe('2026-09-29T10:00:00+08:00');
     expect(post).toHaveBeenCalledTimes(1);
+  });
+
+  it('corrects repeated mentions of the same next weekday', async (): Promise<void> => {
+    const http: HttpService = new HttpService();
+    vi.spyOn(http, 'post').mockReturnValue(of(createResponse({
+      ...validDraft,
+      dueAt: '2026-09-29T10:00:00+08:00',
+    })));
+    const extractor: OpenAiFollowupExtractor = new OpenAiFollowupExtractor(
+      http,
+      runtimeConfig,
+    );
+
+    const result: FollowupDraft = await extractor.extract({
+      ...extractionInput,
+      currentText: '客户认可方案，客户下周五10点反馈，下周五10点发送材料。',
+      combinedText: '客户认可方案，客户下周五10点反馈，下周五10点发送材料。',
+      now: new Date('2026-09-26T00:46:27+08:00'),
+    });
+
+    expect(result.dueAt).toBe('2026-10-02T10:00:00+08:00');
+  });
+
+  it('requires a clock when the next action says only before next Friday', async (): Promise<void> => {
+    const http: HttpService = new HttpService();
+    vi.spyOn(http, 'post').mockReturnValue(of(createResponse({
+      ...validDraft,
+      dueAt: '2026-09-29T00:46:27+08:00',
+    })));
+    const extractor: OpenAiFollowupExtractor = new OpenAiFollowupExtractor(
+      http,
+      runtimeConfig,
+    );
+
+    const result: FollowupDraft = await extractor.extract({
+      ...extractionInput,
+      currentText: '客户认可方案，下周五前发送材料。',
+      combinedText: '客户认可方案，下周五前发送材料。',
+      now: new Date('2026-09-26T00:46:27+08:00'),
+    });
+
+    expect(result.dueAt).toBeNull();
+  });
+
+  it('does not treat a test annotation as the opportunity name', async (): Promise<void> => {
+    const http: HttpService = new HttpService();
+    vi.spyOn(http, 'post').mockReturnValue(of(createResponse({
+      ...validDraft,
+      opportunityName: 'P0测试',
+    })));
+    const extractor: OpenAiFollowupExtractor = new OpenAiFollowupExtractor(
+      http,
+      runtimeConfig,
+    );
+
+    const result: FollowupDraft = await extractor.extract({
+      ...extractionInput,
+      currentText: '客户认可方案，今天与华南科技沟通，这是P0测试。',
+      combinedText: '客户认可方案，今天与华南科技沟通，这是P0测试。',
+    });
+
+    expect(result.opportunityName).toBeNull();
+  });
+
+  it('keeps an explicitly named test opportunity', async (): Promise<void> => {
+    const http: HttpService = new HttpService();
+    vi.spyOn(http, 'post').mockReturnValue(of(createResponse({
+      ...validDraft,
+      opportunityName: 'P0测试',
+    })));
+    const extractor: OpenAiFollowupExtractor = new OpenAiFollowupExtractor(
+      http,
+      runtimeConfig,
+    );
+
+    const result: FollowupDraft = await extractor.extract({
+      ...extractionInput,
+      currentText: '客户认可方案，商机名称：P0测试，客户已确认下一步。',
+      combinedText: '客户认可方案，商机名称：P0测试，客户已确认下一步。',
+    });
+
+    expect(result.opportunityName).toBe('P0测试');
   });
 
   it('does not infer a due date from a weekday when the model found none', async (): Promise<void> => {

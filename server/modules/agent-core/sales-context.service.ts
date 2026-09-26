@@ -20,6 +20,25 @@ import type {
   TenantIntegration,
 } from './agent.types';
 
+const upstreamErrorCode = (error: unknown): string | null => {
+  if (error instanceof FeishuApiError) return error.code;
+  if (typeof error !== 'object' || error === null || !('response' in error)) {
+    return null;
+  }
+  const response: unknown = error.response;
+  if (typeof response !== 'object' || response === null || !('data' in response)) {
+    return null;
+  }
+  const data: unknown = response.data;
+  if (typeof data !== 'object' || data === null || !('code' in data)) {
+    return null;
+  }
+  const code: unknown = data.code;
+  return typeof code === 'string' || typeof code === 'number'
+    ? String(code)
+    : null;
+};
+
 @Injectable()
 export class SalesContextService {
   constructor(
@@ -144,8 +163,13 @@ export class SalesContextService {
             actorOpenId,
             customer.name,
           );
-        } catch {
-          taskResult = { items: [], warning: 'task_context_unavailable' };
+        } catch (error: unknown) {
+          taskResult = {
+            items: [],
+            warning: upstreamErrorCode(error) === '99991672'
+              ? 'task_context_permission_denied'
+              : 'task_context_unavailable',
+          };
         }
       }
       const warnings: string[] = [...base.warnings];
@@ -185,6 +209,7 @@ export class SalesContextService {
       opportunityRecordId: item.opportunityRecordId,
       nextAction: item.nextAction,
       dueAt: item.dueAt,
+      communicationAt: item.communicationAt ?? null,
       source: {
         recordId: item.recordId,
         recordUrl: item.recordUrl,

@@ -2,6 +2,7 @@ import type {
   FollowupDraft,
   FollowupTaskCandidate,
   FollowupTaskMissingField,
+  SalesContext,
 } from '@shared/api.interface';
 
 interface BuildFollowupTaskCandidatesInput {
@@ -21,6 +22,22 @@ const normalizedText = (value: string | null | undefined): string | null => {
 
 const validDueAt = (value: string | null): boolean =>
   value !== null && !Number.isNaN(Date.parse(value));
+
+const hasVerifiedTaskContext = (
+  draft: FollowupDraft,
+  context: SalesContext | undefined,
+): boolean => {
+  if (
+    context?.status !== 'ready' ||
+    context.customer === null ||
+    context.opportunities.length !== 1
+  ) {
+    return false;
+  }
+  const opportunityName: string | null = normalizedText(draft.opportunityName);
+  return opportunityName === null ||
+    context.opportunities[0].name === opportunityName;
+};
 
 const buildFollowupTaskCandidates = (
   input: BuildFollowupTaskCandidatesInput,
@@ -61,6 +78,7 @@ const buildFollowupTaskCandidates = (
 
 export {
   buildFollowupTaskCandidates,
+  hasVerifiedTaskContext,
 };
 export type {
   BuildFollowupTaskCandidatesInput,

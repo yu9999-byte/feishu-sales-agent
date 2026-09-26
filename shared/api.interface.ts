@@ -178,6 +178,7 @@ export interface SalesContextFollowup {
   opportunityRecordId: string | null;
   nextAction: string | null;
   dueAt: string | null;
+  communicationAt?: string | null;
   source: SalesContextSource;
 }
 

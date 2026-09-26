@@ -27,6 +27,10 @@ const warningLabel = (warning: string): string => {
     business_context_not_configured: '业务资料尚未配置',
     business_context_unavailable: '业务资料暂时不可用',
     task_context_unavailable: '部分本人任务暂时不可用',
+    task_context_permission_denied: '本人任务读取权限未开通',
+    task_query_scope_limited: '本人任务仅覆盖当前可见范围',
+    customer_not_found: '未找到匹配的客户资料',
+    owner_scope_mapping_not_configured: '负责人范围尚未配置',
     sales_context_source_conflict: '商机与历史跟进存在冲突',
   };
   return labels[warning] ?? '部分业务资料未读取完整';

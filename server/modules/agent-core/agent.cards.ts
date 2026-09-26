@@ -424,9 +424,14 @@ const createTaskFormElements = (action: PendingAction): JsonValue[] => {
   const candidates: FollowupTaskCandidate[] =
     action.payload.taskCandidates ?? [];
   if (candidates.length === 0) {
+    const hasNextStep: boolean = Boolean(
+      action.payload.progressAssessment?.recommendation,
+    );
     return [{
       tag: 'markdown',
-      content: '**待办预览**\n本次未识别到可创建的下一步待办。',
+      content: hasNextStep
+        ? '**待办预览**\n下一步建议已保留；本次无法核对客户、商机或本人任务，不创建待办。'
+        : '**待办预览**\n本次未识别到可创建的下一步待办。',
     }];
   }
   const selected: Set<string> = new Set(
