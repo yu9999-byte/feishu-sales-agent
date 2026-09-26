@@ -181,7 +181,7 @@ export interface SalesRecordsGateway {
     action: PendingAction,
     customerRecordId: string,
   ): Promise<SalesRecordResult>;
-  updateOpportunityStatus(
+  updateOpportunityStatus?(
     integration: TenantIntegration,
     actorOpenId: string,
     input: OpportunityStatusUpdateInput,
