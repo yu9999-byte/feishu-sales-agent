@@ -12,6 +12,10 @@ import type {
   SalesContext,
 } from '@shared/api.interface';
 import type { TenantBaseMapping } from './agent.types';
+import type {
+  OpportunityLifecycleStatus,
+  OpportunityStatusUpdateInput,
+} from './agent.types';
 
 const nullableTrimmedStringSchema = z
   .string()
@@ -283,6 +287,25 @@ const opportunityStatusValuesSchema = z
   .min(1)
   .max(50);
 
+const opportunityStatusSchema = z.enum([
+  'active',
+  'won',
+  'lost',
+  'closed',
+]);
+
+const opportunityStatusUpdateSchema = z.object({
+  recordId: z.string().trim().min(1),
+  status: opportunityStatusSchema,
+  expectedStatus: z.enum([
+    'active',
+    'won',
+    'lost',
+    'closed',
+    'unknown',
+  ]),
+});
+
 const tenantBaseMappingSchema = z.object({
   appToken: z.string().trim().min(1),
   customers: z.object({
@@ -399,6 +422,18 @@ const parseConfirmationCardAction = (
 const parseTenantBaseMapping = (value: unknown): TenantBaseMapping =>
   tenantBaseMappingSchema.parse(value);
 
+const parseOpportunityStatusUpdate = (
+  value: unknown,
+): OpportunityStatusUpdateInput => {
+  const parsed = opportunityStatusUpdateSchema.parse(value);
+  const expectedStatus: OpportunityLifecycleStatus = parsed.expectedStatus;
+  return {
+    recordId: parsed.recordId,
+    status: parsed.status,
+    expectedStatus,
+  };
+};
+
 const parseJsonObject = (value: unknown): JsonObject =>
   jsonObjectSchema.parse(value) as JsonObject;
 
@@ -484,6 +519,8 @@ export {
   parseSalesContext,
   salesContextSchema,
   parseTenantBaseMapping,
+  opportunityStatusUpdateSchema,
+  parseOpportunityStatusUpdate,
   pendingActionPayloadSchema,
   tenantBaseMappingSchema,
 };

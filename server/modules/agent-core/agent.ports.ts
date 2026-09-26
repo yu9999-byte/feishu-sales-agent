@@ -12,6 +12,8 @@ import type {
   ConversationInput,
   CreatePendingActionInput,
   FollowupExtractionInput,
+  OpportunityStatusUpdateInput,
+  OpportunityStatusUpdateResult,
   PendingAction,
   SalesRecordResult,
   SaveCollectingSessionInput,
@@ -179,6 +181,12 @@ export interface SalesRecordsGateway {
     action: PendingAction,
     customerRecordId: string,
   ): Promise<SalesRecordResult>;
+  updateOpportunityStatus(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    input: OpportunityStatusUpdateInput,
+    idempotencyKey: string,
+  ): Promise<OpportunityStatusUpdateResult>;
   createFollowup(
     integration: TenantIntegration,
     action: PendingAction,

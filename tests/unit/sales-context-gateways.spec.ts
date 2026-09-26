@@ -723,6 +723,203 @@ describe('sales context gateways', (): void => {
     expect(requestConfig.data.fields).not.toHaveProperty('商机状态');
   });
 
+  it('updates only the explicitly confirmed opportunity status and verifies it', async (): Promise<void> => {
+    const request = vi.fn()
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          record: {
+            record_id: 'opportunity-status',
+            record_url: 'https://feishu.cn/base/opportunity-status',
+            fields: {
+              商机状态: null,
+              负责人: [{ id: 'ou_sales_a', name: '销售 A' }],
+            },
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          record: {
+            record_id: 'opportunity-status',
+            record_url: 'https://feishu.cn/base/opportunity-status',
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          record: {
+            record_id: 'opportunity-status',
+            record_url: 'https://feishu.cn/base/opportunity-status',
+            fields: {
+              商机状态: '已赢单',
+              负责人: [{ id: 'ou_sales_a', name: '销售 A' }],
+            },
+          },
+        },
+      });
+    const client = {
+      bitable: { appTableRecord: { search: vi.fn() } },
+      request,
+    };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    const result = await new FeishuBaseGateway(factory)
+      .updateOpportunityStatus(
+        integration,
+        'ou_sales_a',
+        {
+          recordId: 'opportunity-status',
+          status: 'won',
+          expectedStatus: 'unknown',
+        },
+        'status-action-1',
+      );
+
+    expect(result).toEqual({
+      recordId: 'opportunity-status',
+      recordUrl: 'https://feishu.cn/base/opportunity-status',
+      previousStatus: 'unknown',
+      status: 'won',
+    });
+    const updateConfig = request.mock.calls[1]?.[0] as {
+      method: string;
+      data: { fields: Record<string, unknown> };
+    };
+    expect(updateConfig.method).toBe('PUT');
+    expect(updateConfig.data.fields).toEqual({ 商机状态: '已赢单' });
+    expect(request).toHaveBeenCalledTimes(3);
+  });
+
+  it('refuses status changes for another owner', async (): Promise<void> => {
+    const request = vi.fn().mockResolvedValueOnce({
+      code: 0,
+      data: {
+        record: {
+          record_id: 'opportunity-other-owner',
+          fields: {
+            商机状态: '进行中',
+            负责人: [{ id: 'ou_other', name: '其他销售' }],
+          },
+        },
+      },
+    });
+    const client = {
+      bitable: { appTableRecord: { search: vi.fn() } },
+      request,
+    };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    await expect(new FeishuBaseGateway(factory).updateOpportunityStatus(
+      integration,
+      'ou_sales_a',
+      {
+        recordId: 'opportunity-other-owner',
+        status: 'won',
+        expectedStatus: 'active',
+      },
+      'status-action-2',
+    )).rejects.toThrow('not owned');
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses a status change when the confirmed old status is stale', async (): Promise<void> => {
+    const request = vi.fn().mockResolvedValueOnce({
+      code: 0,
+      data: {
+        record: {
+          record_id: 'opportunity-stale-status',
+          fields: {
+            商机状态: '进行中',
+            负责人: [{ id: 'ou_sales_a' }],
+          },
+        },
+      },
+    });
+    const client = {
+      bitable: { appTableRecord: { search: vi.fn() } },
+      request,
+    };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    await expect(new FeishuBaseGateway(factory).updateOpportunityStatus(
+      integration,
+      'ou_sales_a',
+      {
+        recordId: 'opportunity-stale-status',
+        status: 'won',
+        expectedStatus: 'unknown',
+      },
+      'status-action-3',
+    )).rejects.toThrow('changed after confirmation');
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed when the write cannot be verified', async (): Promise<void> => {
+    const request = vi.fn()
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          record: {
+            record_id: 'opportunity-unverified',
+            fields: {
+              商机状态: null,
+              负责人: [{ id: 'ou_sales_a' }],
+            },
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          record: { record_id: 'opportunity-unverified' },
+        },
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          record: {
+            record_id: 'opportunity-unverified',
+            fields: {
+              商机状态: '进行中',
+              负责人: [{ id: 'ou_sales_a' }],
+            },
+          },
+        },
+      });
+    const client = {
+      bitable: { appTableRecord: { search: vi.fn() } },
+      request,
+    };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    await expect(new FeishuBaseGateway(factory).updateOpportunityStatus(
+      integration,
+      'ou_sales_a',
+      {
+        recordId: 'opportunity-unverified',
+        status: 'won',
+        expectedStatus: 'unknown',
+      },
+      'status-action-4',
+    )).rejects.toThrow('could not be verified');
+    expect(request).toHaveBeenCalledTimes(3);
+  });
+
   it('writes an explicit communication time when creating a followup', async (): Promise<void> => {
     const search = vi.fn(async (): Promise<{
       code: number;

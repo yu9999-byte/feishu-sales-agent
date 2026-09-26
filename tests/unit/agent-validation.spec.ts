@@ -23,6 +23,7 @@ import {
   getMissingFields,
   parseFollowupDraft,
   parsePendingActionPayload,
+  parseOpportunityStatusUpdate,
   parseTenantBaseMapping,
 } from '@server/modules/agent-core/agent.validation';
 import type {
@@ -242,6 +243,23 @@ describe('follow-up validation', (): void => {
       active: ['进行中'],
       won: ['已赢单'],
     });
+  });
+
+  it('requires an explicit expected status for opportunity status changes', (): void => {
+    expect(parseOpportunityStatusUpdate({
+      recordId: 'opportunity-1',
+      status: 'won',
+      expectedStatus: 'unknown',
+    })).toEqual({
+      recordId: 'opportunity-1',
+      status: 'won',
+      expectedStatus: 'unknown',
+    });
+    expect(() => parseOpportunityStatusUpdate({
+      recordId: 'opportunity-1',
+      status: 'unknown',
+      expectedStatus: 'unknown',
+    })).toThrow();
   });
 
   it('round-trips a progress assessment while accepting legacy payloads', (): void => {

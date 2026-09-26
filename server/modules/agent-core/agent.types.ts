@@ -36,6 +36,17 @@ export type OpportunityLifecycleStatus =
   | 'closed'
   | 'unknown';
 
+export type OpportunityStatusMutation = Exclude<
+  OpportunityLifecycleStatus,
+  'unknown'
+>;
+
+export interface OpportunityStatusUpdateInput {
+  recordId: string;
+  status: OpportunityStatusMutation;
+  expectedStatus: OpportunityLifecycleStatus;
+}
+
 export interface OpportunityStatusValueMapping {
   active: string[];
   won?: string[];
@@ -312,6 +323,11 @@ export interface ConversationDecision {
 export interface SalesRecordResult {
   recordId: string;
   recordUrl?: string;
+}
+
+export interface OpportunityStatusUpdateResult extends SalesRecordResult {
+  previousStatus: OpportunityLifecycleStatus;
+  status: OpportunityStatusMutation;
 }
 
 export interface TaskCreationResult {

@@ -11,6 +11,8 @@ import type {
   SalesRecordResult,
   OpportunityLifecycleStatus,
   OpportunityStatusValueMapping,
+  OpportunityStatusUpdateInput,
+  OpportunityStatusUpdateResult,
   StaleOpportunityFollowupPage,
   StaleOpportunityPage,
   TenantIntegration,
@@ -45,6 +47,14 @@ interface BaseWriteResponse {
       record_id?: string;
       record_url?: string;
     };
+  };
+}
+
+interface BaseRecordReadResponse {
+  code?: number;
+  msg?: string;
+  data?: {
+    record?: BaseContextRecord;
   };
 }
 
@@ -657,6 +667,89 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     );
   }
 
+  async updateOpportunityStatus(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    input: OpportunityStatusUpdateInput,
+    idempotencyKey: string,
+  ): Promise<OpportunityStatusUpdateResult> {
+    if (!actorOpenId.trim()) {
+      throw new Error('Opportunity status update requires an actor');
+    }
+    if (!idempotencyKey.trim()) {
+      throw new Error('Opportunity status update requires an idempotency key');
+    }
+    const table = integration.base.opportunities;
+    if (!table.fields.status) {
+      throw new Error('Opportunity status mapping is not configured');
+    }
+    if (!table.fields.ownerOpenId) {
+      throw new Error('Opportunity owner mapping is not configured');
+    }
+    if (!table.statusValues?.active.length) {
+      throw new Error('Opportunity status values are not configured');
+    }
+    const current: BaseContextRecord = await this.readOpportunityRecord(
+      integration,
+      input.recordId,
+    );
+    const ownerIds: string[] = this.readUserIds(
+      current.fields,
+      table.fields.ownerOpenId,
+    );
+    if (!ownerIds.includes(actorOpenId)) {
+      throw new Error('Opportunity is not owned by the current actor');
+    }
+    const previousStatus: OpportunityLifecycleStatus =
+      this.mapOpportunityStatus(
+        this.readText(current.fields, table.fields.status),
+        table.statusValues,
+      );
+    if (previousStatus !== input.expectedStatus) {
+      throw new Error(
+        'Opportunity status changed after confirmation; refresh before updating',
+      );
+    }
+    const configuredValues: string[] =
+      table.statusValues?.[input.status] ?? [];
+    const targetValue: string | undefined = configuredValues[0]?.trim();
+    if (!targetValue) {
+      throw new Error(
+        `Opportunity status value is not configured: ${input.status}`,
+      );
+    }
+    const fields: Record<string, BaseCellValue> = {
+      [table.fields.status]: targetValue,
+    };
+    const updated: SalesRecordResult = await this.updateRecord(
+      integration,
+      table,
+      input.recordId,
+      fields,
+      idempotencyKey,
+    );
+    const verified: BaseContextRecord = await this.readOpportunityRecord(
+      integration,
+      input.recordId,
+    );
+    const verifiedStatus: OpportunityLifecycleStatus =
+      this.mapOpportunityStatus(
+        this.readText(verified.fields, table.fields.status),
+        table.statusValues,
+      );
+    if (verifiedStatus !== input.status) {
+      throw new Error(
+        'Opportunity status update could not be verified after writing',
+      );
+    }
+    return {
+      recordId: updated.recordId,
+      recordUrl: updated.recordUrl ?? verified.record_url,
+      previousStatus,
+      status: input.status,
+    };
+  }
+
   async createFollowup(
     integration: TenantIntegration,
     action: PendingAction,
@@ -789,6 +882,35 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     };
   }
 
+  private async readOpportunityRecord(
+    integration: TenantIntegration,
+    recordId: string,
+  ): Promise<BaseContextRecord> {
+    if (!recordId.trim()) {
+      throw new Error('Opportunity record ID is required');
+    }
+    const table = integration.base.opportunities;
+    const client = this.clients.getClient(integration);
+    const response: BaseRecordReadResponse =
+      await client.request<BaseRecordReadResponse>(
+        {
+          method: 'GET',
+          url: `${this.recordCollectionUrl(integration, table.tableId)}/` +
+            encodeURIComponent(recordId),
+          params: {
+            user_id_type: 'open_id',
+          },
+        },
+        this.clients.getRequestOptions(integration),
+      );
+    assertFeishuSuccess(response.code, response.msg, 'read opportunity');
+    const record: BaseContextRecord | undefined = response.data?.record;
+    if (!record || record.record_id !== recordId) {
+      throw new Error('Opportunity record could not be read consistently');
+    }
+    return record;
+  }
+
   private async searchContextRecords<TFields>(
     integration: TenantIntegration,
     table: BaseTableMapping<TFields>,
@@ -914,6 +1036,24 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
       }
     }
     return null;
+  }
+
+  private readUserIds(
+    fields: Record<string, unknown>,
+    fieldName: string | undefined,
+  ): string[] {
+    if (!fieldName || !Array.isArray(fields[fieldName])) return [];
+    const ids: string[] = [];
+    for (const item of fields[fieldName]) {
+      if (typeof item !== 'object' || item === null) continue;
+      const id: unknown = 'id' in item
+        ? item.id
+        : 'open_id' in item
+          ? item.open_id
+          : undefined;
+      if (typeof id === 'string' && id.trim()) ids.push(id.trim());
+    }
+    return ids;
   }
 
   private readNumber(
