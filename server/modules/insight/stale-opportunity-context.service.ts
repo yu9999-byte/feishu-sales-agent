@@ -1,9 +1,5 @@
-interface StaleOpportunityFollowupRecord {
-  recordId: string;
-  opportunityRecordId: string | null;
-  communicationAt: string | null;
-  sourceVersion: string | null;
-}
+import type { StaleOpportunityFollowupRecord } from
+  '@server/modules/agent-core/agent.types';
 
 interface LatestOpportunityFollowup {
   opportunityRecordId: string;

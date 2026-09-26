@@ -231,6 +231,19 @@ export interface SalesContextTaskResult {
   warning?: string;
 }
 
+export interface StaleOpportunityFollowupRecord {
+  recordId: string;
+  opportunityRecordId: string | null;
+  communicationAt: string | null;
+  sourceVersion: string | null;
+}
+
+export interface StaleOpportunityFollowupPage {
+  items: StaleOpportunityFollowupRecord[];
+  nextPageToken: string | null;
+  warning?: string;
+}
+
 export type ConversationIntent =
   | 'general_chat'
   | 'sales_qa'

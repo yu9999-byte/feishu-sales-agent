@@ -18,9 +18,12 @@
   使用的来源记录 ID、规范化时间和版本。
 - 该服务不读取真实 Base、不写入 Base/Task/控制库、不发送提醒，也不判断商机是否已经停滞；
   它只解决“逐商机最近有效沟通时间如何从跟进记录得到”的可测试边界。新增 4 项单测，
-  与 S4 判定层合计全量 Agent `215/215` 通过，服务端/测试类型检查和 ESLint 通过。
-- 真实分页读取、Task `task:task:read` 权限、定时/事件触发、持久去重和本人提醒仍未完成，
-  S4 继续保持 `Partial / disabled / prerequisites open`。
+  与 S4 判定层合计全量 Agent `219/219` 通过，服务端/测试类型检查和 ESLint 通过。
+- 新增 `FeishuBaseGateway.readStaleOpportunityFollowupPage` 只读分页接口：按当前销售负责人
+  过滤跟进表，单页最多 500 条，读取商机关联、明确沟通时间和修改版本，并返回下一页 token。
+  缺少负责人/必要字段映射或 API 分页不完整时显式返回 warning；不写 Base、Task 或控制库。
+- 该分页接口及跨页汇总测试已通过；Task `task:task:read` 权限、定时/事件触发、持久去重和
+  本人提醒仍未完成，S4 继续保持 `Partial / disabled / prerequisites open`。
 
 ## 2026-09-26 S4 本地判定层（未接入、未启用）
 

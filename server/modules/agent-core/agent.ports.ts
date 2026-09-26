@@ -19,6 +19,7 @@ import type {
   SalesContextBaseResult,
   SalesContextHints,
   SalesContextTaskResult,
+  StaleOpportunityFollowupPage,
   TaskCreationResult,
   TenantIntegration,
 } from './agent.types';
@@ -158,6 +159,11 @@ export interface SalesRecordsGateway {
     actorOpenId: string,
     hints: SalesContextHints,
   ): Promise<SalesContextBaseResult>;
+  readStaleOpportunityFollowupPage?(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    pageToken?: string,
+  ): Promise<StaleOpportunityFollowupPage>;
   upsertCustomer(
     integration: TenantIntegration,
     action: PendingAction,

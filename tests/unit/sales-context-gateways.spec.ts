@@ -5,6 +5,8 @@ import type {
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
 import { FeishuBaseGateway } from '@server/modules/integrations/base/feishu-base.gateway';
+import { StaleOpportunityContextService } from
+  '@server/modules/insight/stale-opportunity-context.service';
 import { FeishuTaskGateway } from '@server/modules/integrations/task/feishu-task.gateway';
 import type { FeishuClientFactory } from '@server/modules/feishu/feishu-client.factory';
 
@@ -216,6 +218,206 @@ describe('sales context gateways', (): void => {
     expect(fallbackConditions).not.toContainEqual(expect.objectContaining({
       field_name: '商机',
     }));
+  });
+
+  it('returns the first stale-followup page and its continuation token', async (): Promise<void> => {
+    const search = vi.fn(async (): Promise<{
+      code: number;
+      data: {
+        items: Array<Record<string, unknown>>;
+        has_more: boolean;
+        page_token: string;
+      };
+    }> => ({
+      code: 0,
+      data: {
+        items: [{
+          record_id: 'followup-page-1',
+          last_modified_time: 1790215200000,
+          fields: {
+            商机关联: [{ record_id: 'opportunity-1' }],
+            本次沟通发生时间: 1790128800000,
+          },
+        }],
+        has_more: true,
+        page_token: 'page-2',
+      },
+    }));
+    const client = { bitable: { appTableRecord: { search } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    const result = await new FeishuBaseGateway(factory)
+      .readStaleOpportunityFollowupPage(integration, 'ou_sales_a');
+
+    expect(result).toEqual({
+      items: [{
+        recordId: 'followup-page-1',
+        opportunityRecordId: 'opportunity-1',
+        communicationAt: new Date(1790128800000).toISOString(),
+        sourceVersion: new Date(1790215200000).toISOString(),
+      }],
+      nextPageToken: 'page-2',
+    });
+    expect(search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: {
+          page_size: 500,
+          user_id_type: 'open_id',
+        },
+      }),
+      undefined,
+    );
+    expect(search.mock.calls[0]?.[0].data.filter.conditions).toEqual([{
+      field_name: '负责人',
+      operator: 'is',
+      value: ['ou_sales_a'],
+    }]);
+  });
+
+  it('passes a continuation token and can summarize records across pages', async (): Promise<void> => {
+    const search = vi.fn()
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          items: [{
+            record_id: 'followup-page-1',
+            last_modified_time: 1790128800000,
+            fields: {
+              商机关联: [{ record_id: 'opportunity-1' }],
+              本次沟通发生时间: 1790042400000,
+            },
+          }],
+          has_more: true,
+          page_token: 'page-2',
+        },
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          items: [{
+            record_id: 'followup-page-2',
+            last_modified_time: 1790215200000,
+            fields: {
+              商机关联: [{ record_id: 'opportunity-1' }],
+              本次沟通发生时间: 1790128800000,
+            },
+          }],
+          has_more: false,
+        },
+      });
+    const client = { bitable: { appTableRecord: { search } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+    const gateway = new FeishuBaseGateway(factory);
+
+    const firstPage = await gateway.readStaleOpportunityFollowupPage(
+      integration,
+      'ou_sales_a',
+    );
+    const secondPage = await gateway.readStaleOpportunityFollowupPage(
+      integration,
+      'ou_sales_a',
+      firstPage.nextPageToken ?? undefined,
+    );
+    const summary = new StaleOpportunityContextService().summarize([
+      ...firstPage.items,
+      ...secondPage.items,
+    ]);
+
+    expect(search.mock.calls[1]?.[0].params).toEqual({
+      page_size: 500,
+      user_id_type: 'open_id',
+      page_token: 'page-2',
+    });
+    expect(secondPage.nextPageToken).toBeNull();
+    expect(summary).toEqual([{
+      opportunityRecordId: 'opportunity-1',
+      followupRecordId: 'followup-page-2',
+      lastEffectiveFollowupAt: new Date(1790128800000).toISOString(),
+      followupVersion: new Date(1790215200000).toISOString(),
+    }]);
+  });
+
+  it('fails closed when stale-followup owner or required field mappings are missing', async (): Promise<void> => {
+    const search = vi.fn();
+    const client = { bitable: { appTableRecord: { search } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+    const gateway = new FeishuBaseGateway(factory);
+
+    const ownerMissing = await gateway.readStaleOpportunityFollowupPage(
+      {
+        ...integration,
+        base: {
+          ...integration.base,
+          followups: {
+            ...integration.base.followups,
+            fields: { ...integration.base.followups.fields, ownerOpenId: undefined },
+          },
+        },
+      },
+      'ou_sales_a',
+    );
+    const opportunityMissing = await gateway.readStaleOpportunityFollowupPage(
+      {
+        ...integration,
+        base: {
+          ...integration.base,
+          followups: {
+            ...integration.base.followups,
+            fields: { ...integration.base.followups.fields, opportunityLink: '' },
+          },
+        },
+      },
+      'ou_sales_a',
+    );
+    const communicationTimeMissing = await gateway.readStaleOpportunityFollowupPage(
+      {
+        ...integration,
+        base: {
+          ...integration.base,
+          followups: {
+            ...integration.base.followups,
+            fields: { ...integration.base.followups.fields, communicationAt: undefined },
+          },
+        },
+      },
+      'ou_sales_a',
+    );
+
+    expect(ownerMissing.warning).toBe('owner_scope_mapping_not_configured');
+    expect(opportunityMissing.warning).toBe(
+      'stale_followup_opportunity_mapping_not_configured',
+    );
+    expect(communicationTimeMissing.warning).toBe(
+      'stale_followup_communication_time_mapping_not_configured',
+    );
+    expect(search).not.toHaveBeenCalled();
+  });
+
+  it('reports an incomplete page when the API omits the continuation token', async (): Promise<void> => {
+    const search = vi.fn(async () => ({
+      code: 0,
+      data: { items: [], has_more: true },
+    }));
+    const client = { bitable: { appTableRecord: { search } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    const result = await new FeishuBaseGateway(factory)
+      .readStaleOpportunityFollowupPage(integration, 'ou_sales_a');
+
+    expect(result.nextPageToken).toBeNull();
+    expect(result.warning).toBe('stale_followup_pagination_incomplete');
   });
 
   it('searches only open tasks assigned to the current actor and performs no writes', async (): Promise<void> => {

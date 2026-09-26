@@ -9,6 +9,7 @@ import type {
   SalesContextBaseResult,
   SalesContextHints,
   SalesRecordResult,
+  StaleOpportunityFollowupPage,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
 import { FeishuClientFactory } from '@server/modules/feishu/feishu-client.factory';
@@ -74,8 +75,12 @@ interface BaseContextSearchResponse {
   msg?: string;
   data?: {
     items?: BaseContextRecord[];
+    has_more?: boolean;
+    page_token?: string;
   };
 }
+
+const STALE_FOLLOWUP_PAGE_SIZE = 500;
 
 @Injectable()
 export class FeishuBaseGateway implements SalesRecordsGateway {
@@ -295,6 +300,112 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     });
 
     return { customers, opportunities, followups, warnings: [] };
+  }
+
+  async readStaleOpportunityFollowupPage(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    pageToken?: string,
+  ): Promise<StaleOpportunityFollowupPage> {
+    const table = integration.base.followups;
+    if (!table.fields.ownerOpenId) {
+      return {
+        items: [],
+        nextPageToken: null,
+        warning: 'owner_scope_mapping_not_configured',
+      };
+    }
+    if (!table.fields.opportunityLink) {
+      return {
+        items: [],
+        nextPageToken: null,
+        warning: 'stale_followup_opportunity_mapping_not_configured',
+      };
+    }
+    if (!table.fields.communicationAt) {
+      return {
+        items: [],
+        nextPageToken: null,
+        warning: 'stale_followup_communication_time_mapping_not_configured',
+      };
+    }
+
+    const client = this.clients.getClient(integration);
+    const params: {
+      page_size: number;
+      user_id_type: 'open_id';
+      page_token?: string;
+    } = {
+      page_size: STALE_FOLLOWUP_PAGE_SIZE,
+      user_id_type: 'open_id',
+    };
+    const normalizedPageToken: string = pageToken?.trim() ?? '';
+    if (normalizedPageToken) {
+      params.page_token = normalizedPageToken;
+    }
+
+    const response: BaseContextSearchResponse =
+      await client.bitable.appTableRecord.search(
+        {
+          path: {
+            app_token: integration.base.appToken,
+            table_id: table.tableId,
+          },
+          params,
+          data: {
+            field_names: [
+              table.fields.opportunityLink,
+              table.fields.communicationAt,
+            ],
+            filter: {
+              conjunction: 'and',
+              conditions: [
+                {
+                  field_name: table.fields.ownerOpenId,
+                  operator: 'is',
+                  value: [actorOpenId],
+                },
+              ],
+            },
+          },
+        },
+        this.clients.getRequestOptions(integration),
+      );
+    assertFeishuSuccess(response.code, response.msg, 'read stale followups');
+
+    const items: BaseContextRecord[] = response.data?.items ?? [];
+    const mappedItems: StaleOpportunityFollowupPage['items'] = items.flatMap(
+      (item: BaseContextRecord) => {
+        const recordId: string | undefined = item.record_id;
+        if (!recordId) return [];
+        return [{
+          recordId,
+          opportunityRecordId: this.readLinkedRecordId(
+            item.fields,
+            table.fields.opportunityLink,
+          ),
+          communicationAt: this.readDate(
+            item.fields,
+            table.fields.communicationAt,
+          ),
+          sourceVersion: this.sourceVersion(item.last_modified_time),
+        }];
+      },
+    );
+    const hasMore: boolean = response.data?.has_more === true;
+    const nextPageToken: string = response.data?.page_token?.trim() ?? '';
+    if (hasMore && !nextPageToken) {
+      return {
+        items: mappedItems,
+        nextPageToken: null,
+        warning: 'stale_followup_pagination_incomplete',
+      };
+    }
+
+    return {
+      items: mappedItems,
+      nextPageToken: nextPageToken || null,
+    };
   }
 
   async upsertCustomer(
