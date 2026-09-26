@@ -21,6 +21,17 @@ interface ResolvedTaskInput {
   participants: string[];
 }
 
+interface TaskSearchItem {
+  id: string;
+  meta_data?: {
+    app_link?: string;
+    description?: string;
+  };
+}
+
+const TASK_SEARCH_PAGE_SIZE = 30;
+const TASK_SEARCH_MAX_PAGES = 100;
+
 const resolveTaskInput = (action: PendingAction): ResolvedTaskInput => {
   const selectedIds: string[] | undefined =
     action.payload.selectedTaskCandidateIds;
@@ -66,25 +77,64 @@ class FeishuTaskGateway implements TaskGateway {
     customerName: string,
   ): Promise<SalesContextTaskResult> {
     const client = this.clients.getClient(integration);
-    const response = await client.task.v2.task.search(
-      {
-        data: {
-          query: customerName,
-          filter: {
-            assignee_ids: [actorOpenId],
-            is_completed: false,
+    const items: TaskSearchItem[] = [];
+    const itemIds: Set<string> = new Set();
+    const seenPageTokens: Set<string> = new Set();
+    let pageToken: string | undefined;
+    let warning: string | undefined;
+
+    for (let page: number = 0; page < TASK_SEARCH_MAX_PAGES; page += 1) {
+      const params: {
+        page_size: number;
+        user_id_type: 'open_id';
+        page_token?: string;
+      } = {
+        page_size: TASK_SEARCH_PAGE_SIZE,
+        user_id_type: 'open_id',
+      };
+      if (pageToken) params.page_token = pageToken;
+      const response = await client.task.v2.task.search(
+        {
+          data: {
+            query: customerName,
+            filter: {
+              assignee_ids: [actorOpenId],
+              is_completed: false,
+            },
           },
+          params,
         },
-        params: {
-          page_size: 10,
-          user_id_type: 'open_id',
-        },
-      },
-      this.clients.getRequestOptions(integration),
-    );
-    assertFeishuSuccess(response.code, response.msg, 'read Feishu tasks');
-    const items = response.data?.items ?? [];
-    const tasks = await Promise.all(items.map(async (item) => {
+        this.clients.getRequestOptions(integration),
+      );
+      assertFeishuSuccess(response.code, response.msg, 'read Feishu tasks');
+      const pageItems: TaskSearchItem[] = response.data?.items ?? [];
+      pageItems.forEach((item: TaskSearchItem): void => {
+        if (!itemIds.has(item.id)) {
+          itemIds.add(item.id);
+          items.push(item);
+        }
+      });
+
+      if (response.data?.notice) {
+        warning = 'task_query_scope_limited';
+        break;
+      }
+      if (response.data?.has_more !== true) break;
+
+      const nextPageToken: string =
+        response.data.page_token?.trim() ?? '';
+      if (!nextPageToken || seenPageTokens.has(nextPageToken)) {
+        warning = 'task_query_pagination_incomplete';
+        break;
+      }
+      seenPageTokens.add(nextPageToken);
+      pageToken = nextPageToken;
+      if (page === TASK_SEARCH_MAX_PAGES - 1) {
+        warning = 'task_query_pagination_limited';
+      }
+    }
+
+    const tasks = await Promise.all(items.map(async (item: TaskSearchItem) => {
       const detail = await client.task.v2.task.get(
         {
           path: { task_guid: item.id },
@@ -108,9 +158,7 @@ class FeishuTaskGateway implements TaskGateway {
     }));
     return {
       items: tasks.filter((task) => task !== null),
-      ...(response.data?.notice
-        ? { warning: 'task_query_scope_limited' }
-        : {}),
+      ...(warning ? { warning } : {}),
     };
   }
 

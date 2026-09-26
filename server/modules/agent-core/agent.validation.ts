@@ -278,6 +278,10 @@ const agentExecutionResultSchema = z.object({
 });
 
 const optionalFieldNameSchema = z.string().trim().min(1).optional();
+const opportunityStatusValuesSchema = z
+  .array(z.string().trim().min(1))
+  .min(1)
+  .max(50);
 
 const tenantBaseMappingSchema = z.object({
   appToken: z.string().trim().min(1),
@@ -298,12 +302,19 @@ const tenantBaseMappingSchema = z.object({
     fields: z.object({
       opportunityName: z.string().trim().min(1),
       customerLink: z.string().trim().min(1),
+      status: optionalFieldNameSchema,
       expectedAmount: optionalFieldNameSchema,
       progress: optionalFieldNameSchema,
       nextAction: optionalFieldNameSchema,
       dueAt: optionalFieldNameSchema,
       ownerOpenId: optionalFieldNameSchema,
     }),
+    statusValues: z.object({
+      active: opportunityStatusValuesSchema,
+      won: opportunityStatusValuesSchema.optional(),
+      lost: opportunityStatusValuesSchema.optional(),
+      closed: opportunityStatusValuesSchema.optional(),
+    }).optional(),
   }),
   followups: z.object({
     tableId: z.string().trim().min(1),

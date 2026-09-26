@@ -21,11 +21,26 @@ export interface CustomerFieldMapping {
 export interface OpportunityFieldMapping {
   opportunityName: string;
   customerLink: string;
+  status?: string;
   expectedAmount?: string;
   progress?: string;
   nextAction?: string;
   dueAt?: string;
   ownerOpenId?: string;
+}
+
+export type OpportunityLifecycleStatus =
+  | 'active'
+  | 'won'
+  | 'lost'
+  | 'closed'
+  | 'unknown';
+
+export interface OpportunityStatusValueMapping {
+  active: string[];
+  won?: string[];
+  lost?: string[];
+  closed?: string[];
 }
 
 export interface FollowupFieldMapping {
@@ -49,10 +64,15 @@ export interface BaseTableMapping<TFields> {
   fields: TFields;
 }
 
+export interface OpportunityTableMapping
+  extends BaseTableMapping<OpportunityFieldMapping> {
+  statusValues?: OpportunityStatusValueMapping;
+}
+
 export interface TenantBaseMapping {
   appToken: string;
   customers: BaseTableMapping<CustomerFieldMapping>;
-  opportunities: BaseTableMapping<OpportunityFieldMapping>;
+  opportunities: OpportunityTableMapping;
   followups: BaseTableMapping<FollowupFieldMapping>;
 }
 
@@ -240,6 +260,20 @@ export interface StaleOpportunityFollowupRecord {
 
 export interface StaleOpportunityFollowupPage {
   items: StaleOpportunityFollowupRecord[];
+  nextPageToken: string | null;
+  warning?: string;
+}
+
+export interface StaleOpportunityRecord {
+  recordId: string;
+  name: string;
+  status: OpportunityLifecycleStatus;
+  ownerOpenId: string;
+  sourceVersion: string | null;
+}
+
+export interface StaleOpportunityPage {
+  items: StaleOpportunityRecord[];
   nextPageToken: string | null;
   warning?: string;
 }

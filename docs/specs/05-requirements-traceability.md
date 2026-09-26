@@ -52,6 +52,12 @@ Agent/Web 构建及真实来源只读重放验证；最新飞书卡片/UI 仍待
 跨页 token 和不完整分页 warning 均有单测；该能力仍是只读适配器，不能替代 Task 权限、扫描、
 去重或提醒投递。
 
+2026-09-26 Task 应用权限已开通并真实验证 `code=0`、5 条未完成任务、无 notice。新增默认关闭的
+`StaleOpportunityScanService`，完整消费商机/跟进/Task 页并只输出候选与跳过原因；任一来源
+不完整时整轮无候选。真实商机表没有独立生命周期状态字段，扫描会明确停止，禁止从“当前进展”
+自由文本猜测；持久去重、调度和提醒仍未实现。全量 Agent `229/229`、Postgres 集成
+`8/8`、三套类型检查、ESLint 和 Agent/Web 构建通过。
+
 | 需求范围 | 阶段 | 规格状态 | 自动化证据 | UI 证据 |
 | --- | --- | --- | --- | --- |
 | `SIA-000..000D` 对话入口、意图与安全路由 | B0 | Implemented / UI partial, clean-state retest pending | LangGraph 主分类覆盖普通态、澄清态和补充态；明确跟进命令确定性直达，24 小时 checkpoint TTL 具备保留/删除回归；进入 168 项全量回归 | WebSocket 已收到并完成两条真实私聊工作流；卡片内容与补充态仍待干净状态重放 |
@@ -65,10 +71,10 @@ Agent/Web 构建及真实来源只读重放验证；最新飞书卡片/UI 仍待
 | `ING-005..007` 文档输入和失败恢复 | B5 | Draft | 待 Docs 权限/异常测试 | 待真实文档验收 |
 | `FUP-007..009` 写入、结果/项目质检卡、策略推送和幂等 | B6 | Implementing / regression fix | 三项 Base 后建任务、原卡唯一成功终态、原卡 patch 失败时补发、幂等、`followupRecordUrl` 持久化、成功卡记录链接，以及 `card.source_finalized`/补发 `card.result_sent` 审计均进入 137 项回归 | 历史双成功卡仅保留为 D-022 前的缺陷证据；本次唯一“跟进登记成功＋查看跟进记录”待真实复测 |
 | `FUP-010..011` 即时执行反馈、失败恢复和成功结果修订 | B6 | Automated Green / UI pending | 飞书卡与 Web 均先返回 `executing`；Web 自动轮询；超时回收、失败重试、N/N+1 候选映射、返回编辑和原 Base/Task 更新进入 158 项回归 | 待真实飞书观察执行中、成功/失败及编辑原结果；Web 执行中自动刷新待 UI 复验 |
-| `TSK-001..006` 任务预览、一次确认、状态建议/回收和提醒 | B6 | Partial / Task permission blocked | 精确版本候选选择、空选择不建任务；缺 Task 读取权限或未核实商机时不生成候选；只有日期无钟点时不补造时间。历史任务创建曾通过，当前读取返回 `99991672` | 新版预览和禁用状态待真实 UI 复验；权限开通前不能验证状态回收/主动提醒 |
-| `CTX-001..012` 客户/商机/跟进/任务上下文读取、匹配与来源 | P1-CTX | Partial / UI pending / Task permission blocked | Base 富文本数组 Red/Green、本人范围商机回退、真实华南科技只读重放成功；Task 来源错误明确为权限缺失，不吞掉 Base 事实 | 原草案 UI 曾失败；最新卡片与 Web 多分支待验收，Task 读权限待开通 |
+| `TSK-001..006` 任务预览、一次确认、状态建议/回收和提醒 | B6 | Partial / read permission verified / UI pending | 精确版本候选选择、空选择不建任务；Task 应用身份真实读取 `code=0`，分页上限 30 和不完整可见性 fail-closed 已回归；只有日期无钟点时不补造时间 | 用新草案复验任务候选 UI；状态回收和主动提醒仍待闭环 |
+| `CTX-001..012` 客户/商机/跟进/任务上下文读取、匹配与来源 | P1-CTX | Partial / UI pending | Base 富文本数组 Red/Green、本人范围商机回退、真实华南科技只读重放成功；Task 读取权限和真实本人范围已验证 | 原草案 UI 曾失败；最新卡片与 Web 多分支待验收 |
 | `PRG-001..012` 本次进展、缺口、风险、建议与确认动作 | P1-PROGRESS | Automated Green / UI pending | 风险和行动建议在 Task 缺权限时保留；任务候选 fail-closed；编辑重算、Postgres 回读及旧草案兼容；201 项 Agent 测试和真实来源只读重放 | 最新飞书/Web 四层展示、编辑和确认边界仍待 UI 对账 |
-| `S4-001` 商机 7 天未更新提醒 | P1 internal trigger | Partial / disabled / prerequisites open | 纯判定层 6 项测试覆盖可信时间、7 天边界、负责人、任务来源和免打扰；汇总服务 4 项测试覆盖按商机取最新及无效记录跳过；Base 分页适配器测试覆盖首/后续页、跨页汇总、映射缺失和分页不完整 warning；尚无真实扫描、持久去重、定时任务或提醒发送 | 先开通 Task 读权限并将分页读取接入扫描编排，再接入默认禁用的扫描/去重/本人投递与真实验收 |
+| `S4-001` 商机 7 天未更新提醒 | P1 internal trigger | Partial / scan green / disabled / prerequisites open | 纯判定、逐商机汇总、本人商机/跟进/Task 全分页与扫描编排均有测试；默认关闭且只返回候选/跳过原因，来源不完整整轮 fail closed；Task 权限真实回归通过。真实商机表无显式生命周期状态，尚无持久去重、定时任务或提醒发送 | 增加并映射商机生命周期状态，处理历史可信时间；再做持久去重、默认关闭触发器、本人投递和真实验收 |
 | `REV-001` 个人日报 | B7 | Draft | 待报告快照测试 | 待个人日报验收 |
 | `COP-001..007` 客户商机决策 | C | Draft | 待查询/评分/权限/评测 | 待销售/主管页面验收 |
 | `SIA-001..006` 问答、RAG 和操作 | D | Draft | 待 ACL/RAG/工具测试 | 待问答与操作验收 |

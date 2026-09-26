@@ -9,7 +9,10 @@ import type {
   SalesContextBaseResult,
   SalesContextHints,
   SalesRecordResult,
+  OpportunityLifecycleStatus,
+  OpportunityStatusValueMapping,
   StaleOpportunityFollowupPage,
+  StaleOpportunityPage,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
 import { FeishuClientFactory } from '@server/modules/feishu/feishu-client.factory';
@@ -81,6 +84,7 @@ interface BaseContextSearchResponse {
 }
 
 const STALE_FOLLOWUP_PAGE_SIZE = 500;
+const STALE_OPPORTUNITY_PAGE_SIZE = 500;
 
 @Injectable()
 export class FeishuBaseGateway implements SalesRecordsGateway {
@@ -399,6 +403,122 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
         items: mappedItems,
         nextPageToken: null,
         warning: 'stale_followup_pagination_incomplete',
+      };
+    }
+
+    return {
+      items: mappedItems,
+      nextPageToken: nextPageToken || null,
+    };
+  }
+
+  async readStaleOpportunityPage(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    pageToken?: string,
+  ): Promise<StaleOpportunityPage> {
+    const table = integration.base.opportunities;
+    if (!table.fields.ownerOpenId) {
+      return {
+        items: [],
+        nextPageToken: null,
+        warning: 'owner_scope_mapping_not_configured',
+      };
+    }
+    if (!table.fields.status) {
+      return {
+        items: [],
+        nextPageToken: null,
+        warning: 'opportunity_status_mapping_not_configured',
+      };
+    }
+    if (!table.statusValues?.active.length) {
+      return {
+        items: [],
+        nextPageToken: null,
+        warning: 'opportunity_status_values_not_configured',
+      };
+    }
+    if (!actorOpenId.trim()) {
+      return {
+        items: [],
+        nextPageToken: null,
+        warning: 'owner_scope_not_provided',
+      };
+    }
+
+    const client = this.clients.getClient(integration);
+    const params: {
+      page_size: number;
+      user_id_type: 'open_id';
+      page_token?: string;
+    } = {
+      page_size: STALE_OPPORTUNITY_PAGE_SIZE,
+      user_id_type: 'open_id',
+    };
+    const normalizedPageToken: string = pageToken?.trim() ?? '';
+    if (normalizedPageToken) {
+      params.page_token = normalizedPageToken;
+    }
+
+    const response: BaseContextSearchResponse =
+      await client.bitable.appTableRecord.search(
+        {
+          path: {
+            app_token: integration.base.appToken,
+            table_id: table.tableId,
+          },
+          params,
+          data: {
+            field_names: [
+              table.fields.opportunityName,
+              table.fields.status,
+            ],
+            filter: {
+              conjunction: 'and',
+              conditions: [
+                {
+                  field_name: table.fields.ownerOpenId,
+                  operator: 'is',
+                  value: [actorOpenId],
+                },
+              ],
+            },
+          },
+        },
+        this.clients.getRequestOptions(integration),
+      );
+    assertFeishuSuccess(response.code, response.msg, 'read stale opportunities');
+
+    const items: BaseContextRecord[] = response.data?.items ?? [];
+    const mappedItems: StaleOpportunityPage['items'] = items.flatMap(
+      (item: BaseContextRecord) => {
+        const recordId: string | undefined = item.record_id;
+        const name: string | null = this.readText(
+          item.fields,
+          table.fields.opportunityName,
+        );
+        if (!recordId || !name) return [];
+        const rawStatus: string | null = this.readText(
+          item.fields,
+          table.fields.status,
+        );
+        return [{
+          recordId,
+          name,
+          status: this.mapOpportunityStatus(rawStatus, table.statusValues),
+          ownerOpenId: actorOpenId,
+          sourceVersion: this.sourceVersion(item.last_modified_time),
+        }];
+      },
+    );
+    const hasMore: boolean = response.data?.has_more === true;
+    const nextPageToken: string = response.data?.page_token?.trim() ?? '';
+    if (hasMore && !nextPageToken) {
+      return {
+        items: mappedItems,
+        nextPageToken: null,
+        warning: 'stale_opportunity_pagination_incomplete',
       };
     }
 
@@ -737,6 +857,28 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
       return typeof text === 'string' ? text : null;
     }
     return null;
+  }
+
+  private mapOpportunityStatus(
+    rawStatus: string | null,
+    values: OpportunityStatusValueMapping,
+  ): OpportunityLifecycleStatus {
+    const normalized: string = this.normalizeStatusValue(rawStatus);
+    if (!normalized) return 'unknown';
+    const matches = (candidates: string[] | undefined): boolean =>
+      candidates?.some(
+        (candidate: string): boolean =>
+          this.normalizeStatusValue(candidate) === normalized,
+      ) ?? false;
+    if (matches(values.active)) return 'active';
+    if (matches(values.won)) return 'won';
+    if (matches(values.lost)) return 'lost';
+    if (matches(values.closed)) return 'closed';
+    return 'unknown';
+  }
+
+  private normalizeStatusValue(value: string | null): string {
+    return value?.normalize('NFKC').trim().toLocaleLowerCase() ?? '';
   }
 
   private readLinkedRecordId(

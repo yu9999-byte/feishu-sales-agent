@@ -14,9 +14,9 @@
 | `ISS-PRG-004` | 最新修复的飞书/Web 四层判断尚无真实视觉对账 | Open | 已发送一条真实飞书测试消息，旧卡出现错误；控制库和无写入重放可定位修复，未观察最新卡片 UI | 权限修复后重新发送受控测试消息，核对新卡并不点击业务确认 |
 | `ISS-CTX-005` | 真实 Base 文本单元格为富文本数组，客户存在却被误判未找到 | Resolved / UI pending | 真实草案为 `customer_not_found`；只读 Base 响应显示本人客户；富文本映射 Red/Green、同原文只读重放匹配客户和商机 | 最新卡片视觉回归，旧待确认卡不自动修复 |
 | `ISS-FUP-012` | 测试元备注可被误认商机，且“下周五前”被补造钟点 | Resolved / UI pending | 提取测试元备注正反例及重复相对日期；只读重放的 `dueAt=null`；错误时间的旧测试动作已取消并审计 | 最新卡片核对时间为空、需销售选择 |
-| `ISS-TASK-007` | 销售agent应用身份缺少 `task:task:read`，无法核对本人已有待办 | Open / external permission | Task v2 搜索返回 `99991672`；新代码明确提示并关闭任务预览，避免默认创建 | 在飞书开发者后台开通应用身份权限并发布应用后，重新测试本人任务搜索和草案候选 |
+| `ISS-TASK-007` | 销售agent应用身份缺少 `task:task:read`，无法核对本人已有待办 | Resolved / UI regression pending | 权限已开通；销售agent自身身份真实搜索返回 `code=0`、5 条未完成任务、无 notice；读取按真实上限 30 条完整分页，不完整时 fail closed | 保持权限/分页回归；用新草案复验任务候选 UI |
 | `ISS-AUTH-001` | 飞书机器人入口的成员/角色权限校验尚未完成 | Open / existing | 已在 `current-state.md` 保留，未纳入 Goal v3 修改 | 单独立项，不与 S4 混做 |
-| `ISS-S4-001` | “商机超过 7 天未更新”的主动提醒尚未形成闭环 | Partial / disabled / prerequisites open | 纯判定层和 6 项测试已实现；新增 `StaleOpportunityContextService` 和 4 项测试，按商机汇总最新可信沟通时间；`FeishuBaseGateway.readStaleOpportunityFollowupPage` 已接入按负责人过滤的 500 条游标分页只读读取，覆盖跨页 token、映射缺失和分页不完整 warning；真实跟进表已新增并验证“本次沟通发生时间”（`fld28D7L08`），未来确认跟进仅写入明确时间，历史记录不自动回填；Task 读取权限、扫描调度、持久去重、提醒和触发器仍未完成 | 开通应用身份 Task 读权限；将分页读取接入扫描编排，再接入默认关闭的扫描、持久去重与本人提醒 |
+| `ISS-S4-001` | “商机超过 7 天未更新”的主动提醒尚未形成闭环 | Partial / disabled / production prerequisites open | 默认关闭的只读 `StaleOpportunityScanService` 已串联商机、跟进、Task 全分页和保守判定；来源映射/分页/Task 任一不完整则整轮无候选。Task 权限真实回归通过；运行时沟通时间映射已补齐。真实商机表没有独立生命周期状态字段，代码拒绝从“当前进展”猜测；尚无持久去重、调度或提醒 | 在 Base 增加显式生命周期状态及状态值映射，处理历史可信时间；再实现持久去重、默认关闭触发器和本人提醒验收 |
 
 更新规则：发现问题时先补复现证据；修复后记录对应测试或运行证据；没有真实 UI 证据时不得把
 `Open` 改为 `Resolved`，也不得把 `Automated Green / UI pending` 写成 `UI Verified`。

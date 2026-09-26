@@ -36,11 +36,18 @@ const integration: TenantIntegration = {
       fields: {
         opportunityName: '商机',
         customerLink: '客户关联',
+        status: '商机状态',
         ownerOpenId: '负责人',
         progress: '进展',
         expectedAmount: '金额',
         nextAction: '下一步',
         dueAt: '截止',
+      },
+      statusValues: {
+        active: ['进行中'],
+        won: ['已赢单'],
+        lost: ['已丢单'],
+        closed: ['已关闭'],
       },
     },
     followups: {
@@ -277,6 +284,90 @@ describe('sales context gateways', (): void => {
     }]);
   });
 
+  it('reads owner-scoped opportunities only with explicit status semantics', async (): Promise<void> => {
+    const search = vi.fn(async () => ({
+      code: 0,
+      data: {
+        items: [{
+          record_id: 'opportunity-1',
+          last_modified_time: 1790215200000,
+          fields: {
+            商机: [{ text: '北辰数字化项目' }],
+            商机状态: '进行中',
+          },
+        }],
+        has_more: false,
+      },
+    }));
+    const client = { bitable: { appTableRecord: { search } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    const result = await new FeishuBaseGateway(factory)
+      .readStaleOpportunityPage(integration, 'ou_sales_a');
+
+    expect(result).toEqual({
+      items: [{
+        recordId: 'opportunity-1',
+        name: '北辰数字化项目',
+        status: 'active',
+        ownerOpenId: 'ou_sales_a',
+        sourceVersion: new Date(1790215200000).toISOString(),
+      }],
+      nextPageToken: null,
+    });
+    expect(search.mock.calls[0]?.[0].data.filter.conditions).toEqual([{
+      field_name: '负责人',
+      operator: 'is',
+      value: ['ou_sales_a'],
+    }]);
+  });
+
+  it('refuses opportunity scans without a lifecycle field and active values', async (): Promise<void> => {
+    const search = vi.fn();
+    const client = { bitable: { appTableRecord: { search } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+    const gateway = new FeishuBaseGateway(factory);
+    const statusMissing: TenantIntegration = {
+      ...integration,
+      base: {
+        ...integration.base,
+        opportunities: {
+          ...integration.base.opportunities,
+          fields: {
+            ...integration.base.opportunities.fields,
+            status: undefined,
+          },
+        },
+      },
+    };
+    const valuesMissing: TenantIntegration = {
+      ...integration,
+      base: {
+        ...integration.base,
+        opportunities: {
+          ...integration.base.opportunities,
+          statusValues: undefined,
+        },
+      },
+    };
+
+    expect((await gateway.readStaleOpportunityPage(
+      statusMissing,
+      'ou_sales_a',
+    )).warning).toBe('opportunity_status_mapping_not_configured');
+    expect((await gateway.readStaleOpportunityPage(
+      valuesMissing,
+      'ou_sales_a',
+    )).warning).toBe('opportunity_status_values_not_configured');
+    expect(search).not.toHaveBeenCalled();
+  });
+
   it('passes a continuation token and can summarize records across pages', async (): Promise<void> => {
     const search = vi.fn()
       .mockResolvedValueOnce({
@@ -465,11 +556,86 @@ describe('sales context gateways', (): void => {
           query: '北辰制造',
           filter: { assignee_ids: ['ou_sales_a'], is_completed: false },
         },
+        params: {
+          page_size: 30,
+          user_id_type: 'open_id',
+        },
       }),
       undefined,
     );
     expect(create).not.toHaveBeenCalled();
     expect(patch).not.toHaveBeenCalled();
+  });
+
+  it('consumes every Task search page before returning complete visibility', async (): Promise<void> => {
+    const search = vi.fn()
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          items: [{ id: 'task-1' }],
+          has_more: true,
+          page_token: 'task-page-2',
+        },
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        data: { items: [{ id: 'task-2' }], has_more: false },
+      });
+    const get = vi.fn(async (request: {
+      path: { task_guid: string };
+    }) => ({
+      code: 0,
+      data: {
+        task: {
+          guid: request.path.task_guid,
+          summary: request.path.task_guid,
+        },
+      },
+    }));
+    const client = { task: { v2: { task: { search, get } } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    const result = await new FeishuTaskGateway(factory).searchOwnedTasks(
+      integration,
+      'ou_sales_a',
+      '北辰数字化项目',
+    );
+
+    expect(result.warning).toBeUndefined();
+    expect(result.items.map((item) => item.guid)).toEqual(['task-1', 'task-2']);
+    expect(search.mock.calls[1]?.[0].params).toEqual({
+      page_size: 30,
+      user_id_type: 'open_id',
+      page_token: 'task-page-2',
+    });
+  });
+
+  it('marks Task visibility incomplete when continuation is missing', async (): Promise<void> => {
+    const search = vi.fn(async () => ({
+      code: 0,
+      data: { items: [], has_more: true },
+    }));
+    const get = vi.fn();
+    const client = { task: { v2: { task: { search, get } } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    const result = await new FeishuTaskGateway(factory).searchOwnedTasks(
+      integration,
+      'ou_sales_a',
+      '北辰数字化项目',
+    );
+
+    expect(result).toEqual({
+      items: [],
+      warning: 'task_query_pagination_incomplete',
+    });
+    expect(get).not.toHaveBeenCalled();
   });
 
   it('writes an explicit communication time when creating a followup', async (): Promise<void> => {

@@ -23,10 +23,12 @@ import {
   getMissingFields,
   parseFollowupDraft,
   parsePendingActionPayload,
+  parseTenantBaseMapping,
 } from '@server/modules/agent-core/agent.validation';
 import type {
   FollowupExtractionInput,
   PendingAction,
+  TenantBaseMapping,
 } from '@server/modules/agent-core/agent.types';
 import { OpenAiFollowupExtractor } from '@server/modules/llm/openai-followup.extractor';
 
@@ -199,6 +201,47 @@ describe('follow-up validation', (): void => {
     };
 
     expect((): FollowupDraft => parseFollowupDraft(invalid)).toThrow();
+  });
+
+  it('retains explicit opportunity lifecycle semantics in tenant mapping', (): void => {
+    const parsed: TenantBaseMapping = parseTenantBaseMapping({
+      appToken: 'base-a',
+      customers: {
+        tableId: 'customers',
+        primaryField: '客户名称',
+        fields: { customerName: '客户名称' },
+      },
+      opportunities: {
+        tableId: 'opportunities',
+        primaryField: '商机名称',
+        fields: {
+          opportunityName: '商机名称',
+          customerLink: '关联客户',
+          status: '商机状态',
+        },
+        statusValues: {
+          active: ['进行中'],
+          won: ['已赢单'],
+        },
+      },
+      followups: {
+        tableId: 'followups',
+        primaryField: '跟进标题',
+        fields: {
+          sourceMessageId: '来源消息ID',
+          customerLink: '关联客户',
+          opportunityLink: '关联商机',
+          rawText: '跟进原文',
+          summary: '跟进摘要',
+        },
+      },
+    });
+
+    expect(parsed.opportunities.fields.status).toBe('商机状态');
+    expect(parsed.opportunities.statusValues).toEqual({
+      active: ['进行中'],
+      won: ['已赢单'],
+    });
   });
 
   it('round-trips a progress assessment while accepting legacy payloads', (): void => {
