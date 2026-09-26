@@ -644,6 +644,11 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
         `${action.id}:opportunity:update`,
       );
     }
+    this.setText(
+      fields,
+      table.fields.status,
+      table.statusValues?.active[0]?.trim() || null,
+    );
     return this.createRecord(
       integration,
       table,

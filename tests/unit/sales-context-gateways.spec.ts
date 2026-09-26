@@ -638,6 +638,91 @@ describe('sales context gateways', (): void => {
     expect(get).not.toHaveBeenCalled();
   });
 
+  it('initializes a newly created opportunity with the configured active status', async (): Promise<void> => {
+    const search = vi.fn(async () => ({
+      code: 0,
+      data: { items: [] },
+    }));
+    const request = vi.fn(async () => ({
+      code: 0,
+      data: {
+        record: {
+          record_id: 'opportunity-created',
+          record_url: 'https://feishu.cn/base/opportunity-created',
+        },
+      },
+    }));
+    const client = {
+      bitable: { appTableRecord: { search } },
+      request,
+    };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    const result = await new FeishuBaseGateway(factory).upsertOpportunity(
+      integration,
+      createPendingAction({}),
+      'customer-1',
+    );
+
+    expect(result.recordId).toBe('opportunity-created');
+    expect(request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: 'POST',
+        data: {
+          fields: expect.objectContaining({
+            商机状态: '进行中',
+          }),
+        },
+      }),
+      undefined,
+    );
+  });
+
+  it('preserves lifecycle status when updating an existing opportunity', async (): Promise<void> => {
+    const search = vi.fn(async () => ({
+      code: 0,
+      data: {
+        items: [{
+          record_id: 'opportunity-existing',
+          record_url: 'https://feishu.cn/base/opportunity-existing',
+        }],
+      },
+    }));
+    const request = vi.fn(async () => ({
+      code: 0,
+      data: {
+        record: {
+          record_id: 'opportunity-existing',
+          record_url: 'https://feishu.cn/base/opportunity-existing',
+        },
+      },
+    }));
+    const client = {
+      bitable: { appTableRecord: { search } },
+      request,
+    };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    await new FeishuBaseGateway(factory).upsertOpportunity(
+      integration,
+      createPendingAction({}),
+      'customer-1',
+    );
+
+    const requestConfig = request.mock.calls[0]?.[0] as {
+      method: string;
+      data: { fields: Record<string, unknown> };
+    };
+    expect(requestConfig.method).toBe('PUT');
+    expect(requestConfig.data.fields).not.toHaveProperty('商机状态');
+  });
+
   it('writes an explicit communication time when creating a followup', async (): Promise<void> => {
     const search = vi.fn(async (): Promise<{
       code: number;

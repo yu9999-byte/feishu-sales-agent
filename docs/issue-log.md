@@ -16,7 +16,7 @@
 | `ISS-FUP-012` | 测试元备注可被误认商机，且“下周五前”被补造钟点 | Resolved / UI pending | 提取测试元备注正反例及重复相对日期；只读重放的 `dueAt=null`；错误时间的旧测试动作已取消并审计 | 最新卡片核对时间为空、需销售选择 |
 | `ISS-TASK-007` | 销售agent应用身份缺少 `task:task:read`，无法核对本人已有待办 | Resolved / UI regression pending | 权限已开通；销售agent自身身份真实搜索返回 `code=0`、5 条未完成任务、无 notice；读取按真实上限 30 条完整分页，不完整时 fail closed | 保持权限/分页回归；用新草案复验任务候选 UI |
 | `ISS-AUTH-001` | 飞书机器人入口的成员/角色权限校验尚未完成 | Open / existing | 已在 `current-state.md` 保留，未纳入 Goal v3 修改 | 单独立项，不与 S4 混做 |
-| `ISS-S4-001` | “商机超过 7 天未更新”的主动提醒尚未形成闭环 | Partial / disabled / production prerequisites open | 默认关闭的只读 `StaleOpportunityScanService` 已串联商机、跟进、Task 全分页和保守判定；Task 权限、沟通时间映射及独立商机状态字段/四类值映射均已补齐。真实只读扫描完整读取 5 条空状态商机，全部安全跳过，候选/Task 查询/警告均为 0；尚无状态治理、历史可信时间、持久去重、调度或提醒 | 明确既有商机状态和后续维护入口，处理历史可信时间；再实现持久去重、默认关闭触发器和本人提醒验收 |
+| `ISS-S4-001` | “商机超过 7 天未更新”的主动提醒尚未形成闭环 | Partial / disabled / production prerequisites open | 默认关闭的只读 `StaleOpportunityScanService` 已串联商机、跟进、Task 全分页和保守判定；Task 权限、沟通时间映射及独立商机状态字段/四类值映射均已补齐。新建商机在用户确认后按租户配置初始化为“进行中”，更新已有商机不触碰生命周期状态；真实只读扫描完整读取 5 条历史空状态商机并全部安全跳过。尚无历史状态分类、可信时间、持久去重、调度或提醒 | 由销售明确分类 5 条既有商机并处理历史可信时间；再实现持久去重、默认关闭触发器和本人提醒验收 |
 
 更新规则：发现问题时先补复现证据；修复后记录对应测试或运行证据；没有真实 UI 证据时不得把
 `Open` 改为 `Resolved`，也不得把 `Automated Green / UI pending` 写成 `UI Verified`。
