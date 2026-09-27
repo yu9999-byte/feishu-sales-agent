@@ -75,6 +75,7 @@ import {
     LONG_TERM_MEMORY,
     FEISHU_MESSENGER,
     AgentActionExecutorService,
+    SALES_RECORDS_GATEWAY,
     SALES_CONTEXT_READER,
   ],
 })
