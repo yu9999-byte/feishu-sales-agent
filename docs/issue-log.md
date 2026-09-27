@@ -18,7 +18,7 @@
 | `ISS-AUTH-001` | 飞书机器人入口的成员/角色权限校验尚未完成 | Open / existing | 已在 `current-state.md` 保留，未纳入 Goal v3 修改 | 单独立项，不与 S4 混做 |
 | `ISS-OPS-002` | 新增商机状态网关后独立 Agent 启动缺少依赖导出 | Resolved | `AgentExecutionModule` 已导出 `SALES_RECORDS_GATEWAY`；服务端类型检查、构建通过，3100 端口启动、路由注册和飞书长连接均已验证 | 保持根模块启动冒烟测试，避免只依赖单元测试 |
 | `ISS-S4-001` | “商机超过 7 天未更新”的主动提醒尚未形成闭环 | Partial / disabled / production prerequisites open | 默认关闭的只读 `StaleOpportunityScanService` 已串联商机、跟进、Task 全分页和保守判定；Task 权限、沟通时间映射及独立商机状态字段/四类值映射均已补齐。新建商机在用户确认后按租户配置初始化为“进行中”，更新已有商机不触碰生命周期状态；真实只读扫描完整读取 5 条历史空状态商机并全部安全跳过。尚无历史状态分类、可信时间、持久去重、调度或提醒 | 让销售逐条确认历史状态并处理历史可信时间；再实现持久去重、默认关闭触发器和本人提醒验收 |
-| `ISS-S4-002` | 既有商机生命周期状态缺少真实飞书端到端验收 | Automated Green / UI pending | `opportunity_operation` 已接入唯一匹配、状态澄清、一次确认卡、取消和重复确认；确认只调用 `updateOpportunityStatus`，并记录 `opportunity_status.pending_confirmation` 审计。工作流 57/57、网关 20/20、全量 Agent 239/239；网关校验负责人、确认时旧状态、显式四类目标值、只写状态字段和写后回读 | 在受控商机上发送真实飞书消息，核对确认/取消卡片、写后回读和审计；不批量猜测或回填 5 条历史记录 |
+| `ISS-S4-002` | 既有商机生命周期状态缺少真实飞书端到端验收 | Resolved / UI Verified | 受控商机“P0测试-销售系统采购”真实消息位置 94、确认卡位置 96；用户确认后原卡显示“未设置 → 进行中”，Base 回读记录 `recvvyZqewDQwe` 为“进行中”；审计为 `card.confirm` → `card.processing_sent` → `action.succeeded` → `card.source_finalized`，执行结果没有客户/跟进/任务写入 | 保持回归；其余 4 条历史商机继续逐条人工确认，不批量猜测或回填 |
 
 更新规则：发现问题时先补复现证据；修复后记录对应测试或运行证据；没有真实 UI 证据时不得把
 `Open` 改为 `Resolved`，也不得把 `Automated Green / UI pending` 写成 `UI Verified`。
