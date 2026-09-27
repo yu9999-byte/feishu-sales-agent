@@ -174,7 +174,45 @@ const collectVisibleContent = (value: JsonValue): string[] => {
   );
 };
 
+const findNamedComponent = (
+  value: JsonValue,
+  name: string,
+): JsonObject | null => {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const match: JsonObject | null = findNamedComponent(item, name);
+      if (match !== null) return match;
+    }
+    return null;
+  }
+  if (typeof value !== 'object' || value === null) return null;
+  if (value.name === name) return value;
+  for (const child of Object.values(value)) {
+    const match: JsonObject | null = findNamedComponent(child, name);
+    if (match !== null) return match;
+  }
+  return null;
+};
+
 describe('follow-up validation', (): void => {
+  it('keeps the intake card within Feishu input length limits', (): void => {
+    const card: JsonObject = createConfirmationCard({
+      ...pendingAction,
+      payload: {
+        ...pendingAction.payload,
+        interactionStage: 'input',
+        inputForm: {},
+      },
+    });
+    const communicationContent: JsonObject | null = findNamedComponent(
+      card,
+      'communicationContent',
+    );
+
+    expect(communicationContent).not.toBeNull();
+    expect(communicationContent?.max_length).toBe(1000);
+  });
+
   it('accepts a complete structured draft', (): void => {
     expect(parseFollowupDraft(validDraft)).toEqual(validDraft);
     expect(getMissingFields(validDraft)).toEqual([]);

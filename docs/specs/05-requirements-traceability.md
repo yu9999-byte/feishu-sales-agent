@@ -1,6 +1,6 @@
 # 需求追踪矩阵
 
-状态：`Approved / Goal v3 aligned / automated Green / UI pending 2026-09-26`
+状态：`Approved / Goal v3 aligned / automated Green / UI pending 2026-09-27`
 
 项目规划总入口见[销售 Agent 项目主计划](../project-master-plan.md)，后续 Codex 执行模板见
 [项目执行提示词](../project-operating-prompts.md)。本表是完成度唯一入口；主计划负责路线，
@@ -77,19 +77,43 @@ active 值“进行中”；匹配已有商机时，更新请求不包含生命�
 进行中”，Base 回读、无其他业务写入和完整审计链均已对账，因此该状态确认场景标记为
 `UI Verified`。其余 4 条历史商机仍为空，没有批量回填。
 
+2026-09-27 按 S1 重新执行当前版本质量门禁：Agent `239/239`、Postgres 集成 `8/8`、三套
+TypeScript、ESLint、Agent/Web 构建和 `git diff --check` 均通过；Agent 运行态在 3100 端口
+启动并建立飞书长连接。使用不接触用户桌面的隔离 Chromium 访问 Agent Web 返回 `200`，但
+因没有已认证的飞书会话停在身份验证页；没有发送验收消息或修改业务数据，因此普通问答、
+客户事实澄清、自然语言“帮我写跟进”、执行中/唯一终态/结果修订继续保持 `UI pending`。
+
+2026-09-27 14:28 在等待认证期间完成第二次门禁复跑：Agent `239/239`、Postgres 集成 `8/8`、
+三套 TypeScript、ESLint、Stylelint、Agent/Web 构建和 `git diff --check` 仍通过；GitHub
+publisher dry-run 通过但未发布 milestone。隔离 Chromium 已能打开飞书扫码页，仍无认证会话，
+故上述场景继续保持 `Automated Green / UI pending`，不以自动化结果替代真实 UI 证据。
+
+2026-09-27 14:35 对 S1 待验收范围做定向回归：6 个关键测试文件 `94/94` 通过，覆盖意图路由、
+普通/澄清/补充态、自然语言跟进、执行中反馈、失败恢复、唯一成功/失败终态和结果修订；这只
+增强自动化证据，不改变 UI pending 状态。14:36 连续三轮认证复核仍停在飞书扫码页，S1 真实
+UI 由 `pending` 明确标记为 `blocked`；唯一解锁动作是用户完成一次 Codex 隔离网页扫码。
+
+2026-09-28 按用户要求改为不依赖手工 UI 的 API E2E 复验：普通问答位置 97→98、客户事实澄清
+位置 99→100、自然语言“帮我写跟进”输入卡位置 104→106、带沟通原文的草案位置 107→109 均已
+在唯一“销售agent”私聊中成功完成。位置 101 首次复现 Card 2.0 输入长度超限导致的 400，已将
+`communicationContent` 的 `max_length` 从 5000 修正为 1000，定向测试 `81/81`、服务端类型检查、
+ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `pendingConfirmation`，没有确认回调、
+客户/商机/跟进/任务写入或执行审计；因此录入与草案生成标记为 `API E2E Verified / UI pending`，
+执行中、成功/失败终态和结果修订标记为 `API E2E Partial / UI pending`。
+
 | 需求范围 | 阶段 | 规格状态 | 自动化证据 | UI 证据 |
 | --- | --- | --- | --- | --- |
 | `SIA-000..000D` 对话入口、意图与安全路由 | B0 | Implemented / UI partial, clean-state retest pending | LangGraph 主分类覆盖普通态、澄清态和补充态；明确跟进命令确定性直达，24 小时 checkpoint TTL 具备保留/删除回归；进入 168 项全量回归 | WebSocket 已收到并完成两条真实私聊工作流；卡片内容与补充态仍待干净状态重放 |
 | `PLT-001..006` 多租户、身份、授权、审计 | A | Implemented | 51 项单测 + 5 项真实 Postgres 集成测试；包含租户范围 OAuth、RBAC、拒绝/允许审计追加 | 真实飞书 OAuth、管理员允许、销售直达管理页拒绝已通过；四真实账号/两真实租户待验收 |
 | `WEB-001..003` 页面授权、状态和飞书深链 | A | Implementing | OAuth 缺 state Cookie、不一致和重放均拒绝；Session/导航/页面 API 边界通过；深链签名尚未实现 | 桌面、390px 窄屏、角色导航及 forbidden 已通过；最新 OAuth 回归和卡片详情深链待验收 |
-| `ING-001..002` 表单与文本输入 | B1 | Implementing | Web 创建 API、同键并发与租户归属通过；“写跟进”原聊天表单、异步生成/失败恢复、非本人/空原文/重复提交、回调解析和旧 P0 兼容测试通过 | Web 与真实飞书原聊天文本/卡片录入、字段补充、生成和确认已通过；其他输入来源待验收 |
+| `ING-001..002` 表单与文本输入 | B1 | Implementing / API E2E verified / UI pending | Web 创建 API、同键并发与租户归属通过；最新真实 API E2E 已验证普通“帮我写跟进”输入卡、带原文跟进草案和确认前无写入 | 本轮不要求手工 UI；视觉和按钮点击仍未声明 UI Verified，其他输入来源待验收 |
 | `FUP-001..003` 提取、生成和证据 | B1 | Implemented / UI verified | 来源 quote、生成正文与版本通过；本次沟通方式/时间/主题、`nowLocal` 与显式 offset 契约已进入 126 项回归 | 真实飞书卡片已正确区分本次“飞书”与下一步“飞书会议”，时间为 `2026-09-21T10:15:00+08:00`，主题为“试点方案” |
 | `FUP-004..006` 保存前可用性、卡内编辑和检查修改 | B2 | Implementing / regression fix | 阻断/建议分离、无数字等级、中文化去重，以及“检查修改只更新、确认保存携编辑值一次执行” Red/Green 均已进入 137 项回归 | 无评分主视觉和取消终态已验收；本次确认按钮修复待真实复测 |
 | `ING-003` 语音输入 | B3 | Draft | 待飞书语音契约测试 | 待真实语音验收 |
 | `ING-004` 妙记/会议输入 | B4 | Draft | 待 Minutes/Note 契约测试 | 待真实妙记验收 |
 | `ING-005..007` 文档输入和失败恢复 | B5 | Draft | 待 Docs 权限/异常测试 | 待真实文档验收 |
 | `FUP-007..009` 写入、结果/项目质检卡、策略推送和幂等 | B6 | Implementing / regression fix | 三项 Base 后建任务、原卡唯一成功终态、原卡 patch 失败时补发、幂等、`followupRecordUrl` 持久化、成功卡记录链接，以及 `card.source_finalized`/补发 `card.result_sent` 审计均进入 137 项回归 | 历史双成功卡仅保留为 D-022 前的缺陷证据；本次唯一“跟进登记成功＋查看跟进记录”待真实复测 |
-| `FUP-010..011` 即时执行反馈、失败恢复和成功结果修订 | B6 | Automated Green / UI pending | 飞书卡与 Web 均先返回 `executing`；Web 自动轮询；超时回收、失败重试、N/N+1 候选映射、返回编辑和原 Base/Task 更新进入 158 项回归 | 待真实飞书观察执行中、成功/失败及编辑原结果；Web 执行中自动刷新待 UI 复验 |
+| `FUP-010..011` 即时执行反馈、失败恢复和成功结果修订 | B6 | Automated Green / API E2E partial / UI pending | 飞书卡与 Web 均先返回 `executing`；Web 自动轮询；超时回收、失败重试、N/N+1 候选映射、返回编辑和原 Base/Task 更新进入 158 项回归；本轮 API E2E 未触发确认回调 | 本轮不要求手工 UI；仍需受控 API 回调或后续 UI 证据观察执行中、成功/失败及编辑原结果 |
 | `TSK-001..006` 任务预览、一次确认、状态建议/回收和提醒 | B6 | Partial / read permission verified / UI pending | 精确版本候选选择、空选择不建任务；Task 应用身份真实读取 `code=0`，分页上限 30 和不完整可见性 fail-closed 已回归；只有日期无钟点时不补造时间 | 用新草案复验任务候选 UI；状态回收和主动提醒仍待闭环 |
 | `CTX-001..012` 客户/商机/跟进/任务上下文读取、匹配与来源 | P1-CTX | Partial / UI pending | Base 富文本数组 Red/Green、本人范围商机回退、真实华南科技只读重放成功；Task 读取权限和真实本人范围已验证 | 原草案 UI 曾失败；最新卡片与 Web 多分支待验收 |
 | `PRG-001..012` 本次进展、缺口、风险、建议与确认动作 | P1-PROGRESS | Automated Green / UI pending | 风险和行动建议在 Task 缺权限时保留；任务候选 fail-closed；编辑重算、Postgres 回读及旧草案兼容；201 项 Agent 测试和真实来源只读重放 | 最新飞书/Web 四层展示、编辑和确认边界仍待 UI 对账 |

@@ -565,7 +565,8 @@ const createFollowupInputCard = (action: PendingAction): JsonObject => {
           label: { tag: 'plain_text', content: '沟通原文' },
           input_type: 'multiline_text',
           rows: 5,
-          max_length: 5000,
+          // Feishu Card 2.0 input.max_length is capped at 1000.
+          max_length: 1000,
           required: true,
           default_value: form.communicationContent ?? '',
           width: 'fill',
