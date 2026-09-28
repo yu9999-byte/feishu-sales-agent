@@ -6,6 +6,10 @@ import type { SalesRecordsGateway } from '@server/modules/agent-core/agent.ports
 import type {
   BaseTableMapping,
   PendingAction,
+  DailyReportBaseResult,
+  DailyReportCustomerRecord,
+  DailyReportFollowupRecord,
+  DailyReportOpportunityRecord,
   SalesContextBaseResult,
   SalesContextHints,
   SalesRecordResult,
@@ -93,8 +97,38 @@ interface BaseContextSearchResponse {
   };
 }
 
+interface PagedBaseReadResult {
+  items: BaseContextRecord[];
+  warning?: string;
+}
+
 const STALE_FOLLOWUP_PAGE_SIZE = 500;
 const STALE_OPPORTUNITY_PAGE_SIZE = 500;
+const DAILY_REPORT_PAGE_SIZE = 500;
+const DAILY_REPORT_MAX_PAGES = 1_000;
+
+const localDateKey = (value: string, timezone: string): string | null => {
+  const timestamp: number = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return null;
+  try {
+    const parts: Intl.DateTimeFormatPart[] = new Intl.DateTimeFormat(
+      'en-CA',
+      {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      },
+    ).formatToParts(new Date(timestamp));
+    const partValue = (type: Intl.DateTimeFormatPartTypes): string =>
+      parts.find(
+        (part: Intl.DateTimeFormatPart): boolean => part.type === type,
+      )?.value ?? '';
+    return [partValue('year'), partValue('month'), partValue('day')].join('-');
+  } catch (_error: unknown) {
+    return null;
+  }
+};
 
 @Injectable()
 export class FeishuBaseGateway implements SalesRecordsGateway {
@@ -314,6 +348,174 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     });
 
     return { customers, opportunities, followups, warnings: [] };
+  }
+
+  async readDailyReport(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    reportDate: string,
+    timezone: string,
+  ): Promise<DailyReportBaseResult> {
+    const empty: DailyReportBaseResult = {
+      customers: [],
+      followups: [],
+      opportunities: [],
+      warnings: [],
+    };
+    if (!actorOpenId.trim()) {
+      return { ...empty, warnings: ['daily_report_actor_not_configured'] };
+    }
+    try {
+      Intl.DateTimeFormat('en-US', { timeZone: timezone });
+    } catch (_error: unknown) {
+      return { ...empty, warnings: ['daily_report_timezone_invalid'] };
+    }
+
+    const customerTable = integration.base.customers;
+    const opportunityTable = integration.base.opportunities;
+    const followupTable = integration.base.followups;
+    if (
+      !customerTable.fields.ownerOpenId ||
+      !opportunityTable.fields.ownerOpenId ||
+      !followupTable.fields.ownerOpenId
+    ) {
+      return { ...empty, warnings: ['daily_report_owner_mapping_missing'] };
+    }
+    if (!followupTable.fields.communicationAt) {
+      return {
+        ...empty,
+        warnings: ['daily_report_communication_time_mapping_missing'],
+      };
+    }
+
+    const ownerCondition = (fieldName: string): SearchCondition => ({
+      field_name: fieldName,
+      operator: 'is',
+      value: [actorOpenId],
+    });
+    const customerRead: PagedBaseReadResult =
+      await this.searchAllContextRecords(
+        integration,
+        customerTable,
+        [ownerCondition(customerTable.fields.ownerOpenId)],
+        [customerTable.fields.customerName],
+      );
+    const opportunityRead: PagedBaseReadResult =
+      await this.searchAllContextRecords(
+        integration,
+        opportunityTable,
+        [ownerCondition(opportunityTable.fields.ownerOpenId)],
+        [
+          opportunityTable.fields.opportunityName,
+          opportunityTable.fields.progress,
+          opportunityTable.fields.nextAction,
+          opportunityTable.fields.dueAt,
+        ],
+      );
+    const followupRead: PagedBaseReadResult =
+      await this.searchAllContextRecords(
+        integration,
+        followupTable,
+        [ownerCondition(followupTable.fields.ownerOpenId)],
+        [
+          followupTable.fields.customerLink,
+          followupTable.fields.opportunityLink,
+          followupTable.fields.summary,
+          followupTable.fields.communicationAt,
+          followupTable.fields.nextAction,
+          followupTable.fields.dueAt,
+        ],
+      );
+    const warnings: string[] = [
+      customerRead.warning,
+      opportunityRead.warning,
+      followupRead.warning,
+    ].filter(
+      (warning: string | undefined): warning is string => warning !== undefined,
+    );
+    if (warnings.length > 0) {
+      return { ...empty, warnings };
+    }
+
+    const customers: DailyReportCustomerRecord[] = customerRead.items.flatMap(
+      (item: BaseContextRecord): DailyReportCustomerRecord[] => {
+        const recordId: string | undefined = item.record_id;
+        const name: string | null = this.readText(
+          item.fields,
+          customerTable.fields.customerName,
+        );
+        if (!recordId || !name) return [];
+        return [{
+          recordId,
+          name,
+          sourceVersion: this.sourceVersion(item.last_modified_time),
+          recordUrl: item.record_url ?? null,
+        }];
+      },
+    );
+    const opportunities: DailyReportOpportunityRecord[] =
+      opportunityRead.items.flatMap(
+        (item: BaseContextRecord): DailyReportOpportunityRecord[] => {
+          const recordId: string | undefined = item.record_id;
+          const name: string | null = this.readText(
+            item.fields,
+            opportunityTable.fields.opportunityName,
+          );
+          if (!recordId || !name) return [];
+          return [{
+            recordId,
+            name,
+            progress: this.readText(item.fields, opportunityTable.fields.progress),
+            nextAction: this.readText(
+              item.fields,
+              opportunityTable.fields.nextAction,
+            ),
+            dueAt: this.readDate(item.fields, opportunityTable.fields.dueAt),
+            sourceVersion: this.sourceVersion(item.last_modified_time),
+            recordUrl: item.record_url ?? null,
+          }];
+        },
+      );
+    const followups: DailyReportFollowupRecord[] =
+      followupRead.items.flatMap(
+        (item: BaseContextRecord): DailyReportFollowupRecord[] => {
+          const recordId: string | undefined = item.record_id;
+          const summary: string | null = this.readText(
+            item.fields,
+            followupTable.fields.summary,
+          );
+          const communicationAt: string | null = this.readDate(
+            item.fields,
+            followupTable.fields.communicationAt,
+          );
+          if (
+            !recordId ||
+            !summary ||
+            !communicationAt ||
+            localDateKey(communicationAt, timezone) !== reportDate
+          ) {
+            return [];
+          }
+          return [{
+            recordId,
+            customerRecordId: this.readLinkedRecordId(
+              item.fields,
+              followupTable.fields.customerLink,
+            ),
+            opportunityRecordId: this.readLinkedRecordId(
+              item.fields,
+              followupTable.fields.opportunityLink,
+            ),
+            summary,
+            communicationAt,
+            nextAction: this.readText(item.fields, followupTable.fields.nextAction),
+            dueAt: this.readDate(item.fields, followupTable.fields.dueAt),
+            sourceVersion: this.sourceVersion(item.last_modified_time),
+            recordUrl: item.record_url ?? null,
+          }];
+        },
+      );
+    return { customers, followups, opportunities, warnings: [] };
   }
 
   async readStaleOpportunityFollowupPage(
@@ -945,6 +1147,59 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
       );
     assertFeishuSuccess(response.code, response.msg, 'read Base context');
     return response.data?.items ?? [];
+  }
+
+  private async searchAllContextRecords<TFields>(
+    integration: TenantIntegration,
+    table: BaseTableMapping<TFields>,
+    conditions: SearchCondition[],
+    fieldNames: Array<string | undefined>,
+  ): Promise<PagedBaseReadResult> {
+    const client = this.clients.getClient(integration);
+    const items: BaseContextRecord[] = [];
+    const seenTokens: Set<string> = new Set();
+    let pageToken: string | undefined;
+    for (let page: number = 0; page < DAILY_REPORT_MAX_PAGES; page += 1) {
+      const params: {
+        page_size: number;
+        user_id_type: 'open_id';
+        page_token?: string;
+      } = {
+        page_size: DAILY_REPORT_PAGE_SIZE,
+        user_id_type: 'open_id',
+      };
+      if (pageToken) params.page_token = pageToken;
+      const response: BaseContextSearchResponse =
+        await client.bitable.appTableRecord.search(
+          {
+            path: {
+              app_token: integration.base.appToken,
+              table_id: table.tableId,
+            },
+            params,
+            data: {
+              field_names: fieldNames.filter(
+                (name: string | undefined): name is string => name !== undefined,
+              ),
+              filter: {
+                conjunction: 'and',
+                conditions,
+              },
+            },
+          },
+          this.clients.getRequestOptions(integration),
+        );
+      assertFeishuSuccess(response.code, response.msg, 'read daily report');
+      items.push(...(response.data?.items ?? []));
+      if (response.data?.has_more !== true) return { items };
+      const nextPageToken: string = response.data?.page_token?.trim() ?? '';
+      if (!nextPageToken || seenTokens.has(nextPageToken)) {
+        return { items, warning: 'daily_report_pagination_incomplete' };
+      }
+      seenTokens.add(nextPageToken);
+      pageToken = nextPageToken;
+    }
+    return { items, warning: 'daily_report_pagination_limited' };
   }
 
   private readText(

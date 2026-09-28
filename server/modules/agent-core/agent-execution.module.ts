@@ -76,6 +76,7 @@ import {
     FEISHU_MESSENGER,
     AgentActionExecutorService,
     SALES_RECORDS_GATEWAY,
+    TASK_GATEWAY,
     SALES_CONTEXT_READER,
   ],
 })

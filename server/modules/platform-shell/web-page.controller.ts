@@ -7,6 +7,7 @@ import type { Response } from 'express';
 class WebPageController {
   @Get([
     '/',
+    'daily-report',
     'customers',
     'opportunities',
     'followups',

@@ -4,6 +4,7 @@ import {
   BookOpen,
   BriefcaseBusiness,
   ClipboardList,
+  FileText,
   House,
   Menu,
   ShieldCheck,
@@ -27,6 +28,7 @@ interface ProductLayoutContext {
 
 const iconByKey: Record<PlatformNavigationKey, React.ElementType> = {
   workspace: House,
+  'daily-report': FileText,
   customers: UsersRound,
   opportunities: BriefcaseBusiness,
   followups: ClipboardList,

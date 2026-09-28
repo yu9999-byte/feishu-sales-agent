@@ -4,6 +4,7 @@ import type {
   AgentExecutionResult,
   ConfirmFollowupDraftRequest,
   CreateFollowupDraftRequest,
+  DailySalesReportResponse,
   FollowupDraftResponse,
   UpdateFollowupDraftRequest,
   PlatformSectionKey,
@@ -69,6 +70,23 @@ const getWorkspace = async (): Promise<WorkspaceResponse> => {
   try {
     const response = await axios.get<WorkspaceResponse>(
       '/api/platform/workspace',
+      { withCredentials: true },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
+const getDailySalesReport = async (
+  reportDate?: string,
+): Promise<DailySalesReportResponse> => {
+  try {
+    const query: string = reportDate
+      ? `?date=${encodeURIComponent(reportDate)}`
+      : '';
+    const response = await axios.get<DailySalesReportResponse>(
+      `/api/platform/daily-report${query}`,
       { withCredentials: true },
     );
     return response.data;
@@ -171,6 +189,7 @@ export {
   createFollowupDraft,
   getFollowupDraft,
   getFollowupExecution,
+  getDailySalesReport,
   getPlatformSection,
   getPlatformSession,
   getWorkspace,

@@ -35,6 +35,12 @@ const NAVIGATION_DEFINITIONS: NavigationDefinition[] = [
     requiredPermission: 'workspace:view',
   },
   {
+    key: 'daily-report',
+    label: '销售日报',
+    path: '/daily-report',
+    requiredPermission: 'review:read-personal',
+  },
+  {
     key: 'customers',
     label: '客户',
     path: '/customers',

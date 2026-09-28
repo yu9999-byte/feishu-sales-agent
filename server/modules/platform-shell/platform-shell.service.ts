@@ -97,7 +97,7 @@ class PlatformShellService {
     };
   }
 
-  private async assertPermission(
+  async assertPermission(
     session: AuthenticatedWebSession,
     action: PlatformPermission,
   ): Promise<void> {

@@ -262,6 +262,55 @@ export interface SalesContextTaskResult {
   warning?: string;
 }
 
+export interface DailyReportFollowupRecord {
+  recordId: string;
+  customerRecordId: string | null;
+  opportunityRecordId: string | null;
+  summary: string;
+  communicationAt: string | null;
+  nextAction: string | null;
+  dueAt: string | null;
+  sourceVersion: string | null;
+  recordUrl: string | null;
+}
+
+export interface DailyReportCustomerRecord {
+  recordId: string;
+  name: string;
+  sourceVersion: string | null;
+  recordUrl: string | null;
+}
+
+export interface DailyReportOpportunityRecord {
+  recordId: string;
+  name: string;
+  progress: string | null;
+  nextAction: string | null;
+  dueAt: string | null;
+  sourceVersion: string | null;
+  recordUrl: string | null;
+}
+
+export interface DailyReportBaseResult {
+  customers: DailyReportCustomerRecord[];
+  followups: DailyReportFollowupRecord[];
+  opportunities: DailyReportOpportunityRecord[];
+  warnings: string[];
+}
+
+export interface DailyReportTaskRecord {
+  guid: string;
+  title: string;
+  status: string;
+  dueAt: string | null;
+  url: string | null;
+}
+
+export interface DailyReportTaskResult {
+  items: DailyReportTaskRecord[];
+  warning?: string;
+}
+
 export interface StaleOpportunityFollowupRecord {
   recordId: string;
   opportunityRecordId: string | null;

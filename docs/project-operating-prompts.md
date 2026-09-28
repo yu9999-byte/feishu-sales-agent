@@ -1,10 +1,12 @@
 # 销售 Agent 项目执行提示词
 
 这些提示词用于后续 Codex 会话。它们是执行模板，不替代产品主计划、需求规格或用户确认。
-当前唯一用户-facing 主线是“销售跟进 Agent：持续执行闭环”；主动任务跟进、商机推进和
-提醒是该主线的内部能力切片，不应被拆成相互竞争的产品。
+当前产品方向是“多 Agent、多场景销售助手”；销售跟进 Agent 是首个最完整场景，商机推进、
+任务履约、主动提醒、日报、团队 Review 和 Playbook 是共享底座上的后续场景 Agent。
+它们不应复制权限、上下文、确认、执行和审计底座。
 使用前先读取 `docs/project-master-plan.md`、`docs/specs/05-requirements-traceability.md`、
-`docs/current-state.md` 以及与当前切片相关的 SDD/TDD。
+`docs/current-state.md`、`docs/decisions/2026-09-28-multi-agent-sales-assistant.md` 以及与当前
+切片相关的 SDD/TDD。
 
 ## 1. 项目复查与规划提示词
 

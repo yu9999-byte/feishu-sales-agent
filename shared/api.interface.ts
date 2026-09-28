@@ -291,6 +291,7 @@ export type PlatformDataScope =
 
 export type PlatformNavigationKey =
   | 'workspace'
+  | 'daily-report'
   | 'customers'
   | 'opportunities'
   | 'followups'
@@ -344,6 +345,68 @@ export interface WorkspaceResponse {
   counters: WorkspaceCounters;
   updatedAt: string;
   unavailableSources: string[];
+}
+
+export type DailySalesReportStatus =
+  | 'ready'
+  | 'partial'
+  | 'empty'
+  | 'unavailable';
+
+export interface DailySalesReportSource {
+  recordId: string;
+  recordUrl: string | null;
+  sourceVersion: string | null;
+}
+
+export interface DailySalesReportFollowup {
+  recordId: string;
+  customerName: string | null;
+  opportunityName: string | null;
+  summary: string;
+  communicationAt: string;
+  nextAction: string | null;
+  dueAt: string | null;
+  source: DailySalesReportSource;
+}
+
+export interface DailySalesReportOpportunity {
+  recordId: string;
+  name: string;
+  progress: string | null;
+  nextAction: string | null;
+  dueAt: string | null;
+  source: DailySalesReportSource;
+}
+
+export interface DailySalesReportTask {
+  guid: string;
+  title: string;
+  status: string;
+  dueAt: string | null;
+  url: string | null;
+  overdue: boolean;
+}
+
+export interface DailySalesReportMetrics {
+  followupCount: number;
+  opportunityCount: number;
+  openTaskCount: number;
+  overdueTaskCount: number;
+}
+
+export interface DailySalesReportResponse {
+  reportDate: string;
+  timezone: string;
+  status: DailySalesReportStatus;
+  generatedAt: string;
+  metrics: DailySalesReportMetrics;
+  followups: DailySalesReportFollowup[];
+  opportunities: DailySalesReportOpportunity[];
+  tasks: DailySalesReportTask[];
+  highlights: string[];
+  nextActions: string[];
+  warnings: string[];
 }
 
 export type PlatformSectionKey =

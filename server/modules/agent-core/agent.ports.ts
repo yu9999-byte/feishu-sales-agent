@@ -21,6 +21,8 @@ import type {
   SalesContextBaseResult,
   SalesContextHints,
   SalesContextTaskResult,
+  DailyReportBaseResult,
+  DailyReportTaskResult,
   StaleOpportunityFollowupPage,
   StaleOpportunityPage,
   TaskCreationResult,
@@ -172,6 +174,12 @@ export interface SalesRecordsGateway {
     actorOpenId: string,
     pageToken?: string,
   ): Promise<StaleOpportunityPage>;
+  readDailyReport?(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    reportDate: string,
+    timezone: string,
+  ): Promise<DailyReportBaseResult>;
   upsertCustomer(
     integration: TenantIntegration,
     action: PendingAction,
@@ -208,6 +216,10 @@ export interface TaskGateway {
     actorOpenId: string,
     customerName: string,
   ): Promise<SalesContextTaskResult>;
+  listOwnedTasks?(
+    integration: TenantIntegration,
+    actorOpenId: string,
+  ): Promise<DailyReportTaskResult>;
   createTask(
     integration: TenantIntegration,
     action: PendingAction,

@@ -2,6 +2,11 @@
 
 状态：`Approved / Goal v3 aligned / automated Green / UI pending 2026-09-27`
 
+2026-09-29 产品方向确认：本项目建设为多 Agent、多场景销售助手。销售跟进、商机推进、
+任务履约、商机停滞提醒、销售日报、团队 Review 和 Playbook 优化共享同一权限、上下文、
+确认、执行和审计底座；本矩阵继续分别记录每个 Agent/场景的自动化与 UI 证据。详见
+[多 Agent 销售助手产品方向](../decisions/2026-09-28-multi-agent-sales-assistant.md)。
+
 项目规划总入口见[销售 Agent 项目主计划](../project-master-plan.md)，后续 Codex 执行模板见
 [项目执行提示词](../project-operating-prompts.md)。本表是完成度唯一入口；主计划负责路线，
 本表负责证据。
@@ -125,7 +130,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | `CTX-001..012` 客户/商机/跟进/任务上下文读取、匹配与来源 | P1-CTX | Partial / UI pending | Base 富文本数组 Red/Green、本人范围商机回退、真实华南科技只读重放成功；Task 读取权限和真实本人范围已验证 | 原草案 UI 曾失败；最新卡片与 Web 多分支待验收 |
 | `PRG-001..012` 本次进展、缺口、风险、建议与确认动作 | P1-PROGRESS | Automated Green / UI pending | 风险和行动建议在 Task 缺权限时保留；任务候选 fail-closed；编辑重算、Postgres 回读及旧草案兼容；201 项 Agent 测试和真实来源只读重放 | 最新飞书/Web 四层展示、编辑和确认边界仍待 UI 对账 |
 | `S4-001` 商机 7 天未更新提醒 | P1 internal trigger | Partial / scan green / disabled / prerequisites open | 纯判定、逐商机汇总、本人商机/跟进/Task 全分页与扫描编排均有测试；默认关闭且只返回候选/跳过原因，来源不完整整轮 fail closed；Task 权限及独立生命周期字段/四类值映射均已真实回归。状态聊天确认闭环已自动化并在受控商机上 `UI Verified`；全表回读为 1 条进行中、4 条空状态，未批量回填。尚无历史可信时间、持久去重、定时任务或提醒发送 | 逐条完成剩余历史状态确认并处理历史可信时间；再做持久去重、默认关闭触发器、本人投递和真实验收 |
-| `REV-001` 个人日报 | B7 | Draft | 待报告快照测试 | 待个人日报验收 |
+| `REV-001` 个人日报 | B7 | Automated Green / API contract ready / UI pending | 日报聚合快照 3/3；Agent 全量 `245/245`、Postgres `8/8`、服务端/客户端/测试 TypeScript、ESLint、Agent/Web 构建通过；`GET /api/platform/daily-report` 已实现登录、租户、销售范围和 `review:read-personal` 权限边界，来源不可用/分页不完整安全降级 | 尚未在真实登录态回读日报内容，也未完成真实 Web/飞书 UI 验收 |
 | `COP-001..007` 客户商机决策 | C | Draft | 待查询/评分/权限/评测 | 待销售/主管页面验收 |
 | `SIA-001..006` 问答、RAG 和操作 | D | Draft | 待 ACL/RAG/工具测试 | 待问答与操作验收 |
 | `REV-002..006` 团队 Review 和经营分析 | E | Draft | 待聚合/调度/幂等测试 | 待主管/高管验收 |

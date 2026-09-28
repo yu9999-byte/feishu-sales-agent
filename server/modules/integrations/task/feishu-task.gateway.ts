@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import type { TaskGateway } from '@server/modules/agent-core/agent.ports';
 import type {
+  DailyReportTaskResult,
   PendingAction,
   SalesContextTaskResult,
   TaskCreationResult,
@@ -160,6 +161,13 @@ class FeishuTaskGateway implements TaskGateway {
       items: tasks.filter((task) => task !== null),
       ...(warning ? { warning } : {}),
     };
+  }
+
+  async listOwnedTasks(
+    integration: TenantIntegration,
+    actorOpenId: string,
+  ): Promise<DailyReportTaskResult> {
+    return this.searchOwnedTasks(integration, actorOpenId, '');
   }
 
   async createTask(

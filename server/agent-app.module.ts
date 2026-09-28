@@ -9,6 +9,7 @@ import { AgentControlModule } from './modules/control-store/agent-control.module
 import { WebAuthModule } from './modules/web-auth/web-auth.module';
 import { PlatformShellModule } from './modules/platform-shell/platform-shell.module';
 import { SalesBehaviorModule } from './modules/sales-behavior/sales-behavior.module';
+import { DailyReportModule } from './modules/insight/daily-report.module';
 import { FeishuWebhookBridge } from './modules/feishu/feishu-webhook.bridge';
 import { FeishuWebhookController } from './modules/feishu/feishu-webhook.controller';
 
@@ -19,6 +20,7 @@ import { FeishuWebhookController } from './modules/feishu/feishu-webhook.control
     WebAuthModule,
     PlatformShellModule,
     SalesBehaviorModule,
+    DailyReportModule,
   ],
   controllers: [FeishuWebhookController],
   providers: [
