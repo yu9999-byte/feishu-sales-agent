@@ -170,6 +170,14 @@ new pendingConfirmation revision action
 
 当前阶段：`Green verified / runtime UI pending`。
 
+2026-09-28 补充隔离回调跨层回放：`tests/unit/agent-workflow.spec.ts` 通过
+SDK EventDispatcher 的 `card.action.trigger` 进入真实 Bridge、Workflow、
+Executor 和 MemoryStore。EXE-002..008 的核心执行/修订路径及失败重试在
+FeishuMessenger、Base、Task 测试替身下通过；原卡执行中与唯一终态的消息 ID、
+审计和 create/update 调用次数均有断言。全量 Agent `242/242`、Postgres
+`8/8` 及类型、Lint、构建通过。EXE-012 仍为真实 UI pending，本轮不要求
+用户手工 UI 测试，也未确认真实草案或写入真实业务记录。
+
 自动化证据（2026-09-23）：21 个测试文件、150 项通过；Vitest 使用固定的 `threads` pool；
 `npm run type:check:server`、`npm run type:check:test`、`npm run eslint`、
 `npm run build:agent`、`npm run build:web` 和 `git diff --check` 均通过。EXE-012 尚未标记完成，

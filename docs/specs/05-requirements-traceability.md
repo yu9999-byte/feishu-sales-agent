@@ -93,6 +93,13 @@ publisher dry-run 通过但未发布 milestone。隔离 Chromium 已能打开飞
 增强自动化证据，不改变 UI pending 状态。14:36 连续三轮认证复核仍停在飞书扫码页，S1 真实
 UI 由 `pending` 明确标记为 `blocked`；唯一解锁动作是用户完成一次 Codex 隔离网页扫码。
 
+2026-09-28 补充隔离回调端到端回放：通过 SDK EventDispatcher 的
+`card.action.trigger` 进入真实 Bridge、Workflow、Executor 和 MemoryStore，覆盖确认回调、
+执行中、同卡唯一成功/失败终态、失败重试、终态返回编辑及修订原跟进/任务。外部消息、Base
+和 Task 网关全部为测试替身；全量 Agent `242/242`、Postgres `8/8`，类型、Lint 和构建
+通过。此项状态为 `Isolated callback E2E Verified`，不改变真实 UI pending，
+也不表示真实客户/商机/跟进/任务发生写入。
+
 2026-09-28 按用户要求改为不依赖手工 UI 的 API E2E 复验：普通问答位置 97→98、客户事实澄清
 位置 99→100、自然语言“帮我写跟进”输入卡位置 104→106、带沟通原文的草案位置 107→109 均已
 在唯一“销售agent”私聊中成功完成。位置 101 首次复现 Card 2.0 输入长度超限导致的 400，已将
@@ -113,7 +120,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | `ING-004` 妙记/会议输入 | B4 | Draft | 待 Minutes/Note 契约测试 | 待真实妙记验收 |
 | `ING-005..007` 文档输入和失败恢复 | B5 | Draft | 待 Docs 权限/异常测试 | 待真实文档验收 |
 | `FUP-007..009` 写入、结果/项目质检卡、策略推送和幂等 | B6 | Implementing / regression fix | 三项 Base 后建任务、原卡唯一成功终态、原卡 patch 失败时补发、幂等、`followupRecordUrl` 持久化、成功卡记录链接，以及 `card.source_finalized`/补发 `card.result_sent` 审计均进入 137 项回归 | 历史双成功卡仅保留为 D-022 前的缺陷证据；本次唯一“跟进登记成功＋查看跟进记录”待真实复测 |
-| `FUP-010..011` 即时执行反馈、失败恢复和成功结果修订 | B6 | Automated Green / API E2E partial / UI pending | 飞书卡与 Web 均先返回 `executing`；Web 自动轮询；超时回收、失败重试、N/N+1 候选映射、返回编辑和原 Base/Task 更新进入 158 项回归；本轮 API E2E 未触发确认回调 | 本轮不要求手工 UI；仍需受控 API 回调或后续 UI 证据观察执行中、成功/失败及编辑原结果 |
+| `FUP-010..011` 即时执行反馈、失败恢复和成功结果修订 | B6 | Isolated callback E2E Verified / real UI pending | 飞书 SDK 回调入口贯通真实 Bridge/Workflow/Executor/MemoryStore；测试替身验证同卡执行中、唯一成功/失败终态、重试及修订原跟进/任务；真实机器人 API E2E 仍只到待确认卡，无真实业务确认 | 本轮不要求手工 UI；真实飞书点击、业务写入和 Base/Task 回读仍待独立验收 |
 | `TSK-001..006` 任务预览、一次确认、状态建议/回收和提醒 | B6 | Partial / read permission verified / UI pending | 精确版本候选选择、空选择不建任务；Task 应用身份真实读取 `code=0`，分页上限 30 和不完整可见性 fail-closed 已回归；只有日期无钟点时不补造时间 | 用新草案复验任务候选 UI；状态回收和主动提醒仍待闭环 |
 | `CTX-001..012` 客户/商机/跟进/任务上下文读取、匹配与来源 | P1-CTX | Partial / UI pending | Base 富文本数组 Red/Green、本人范围商机回退、真实华南科技只读重放成功；Task 读取权限和真实本人范围已验证 | 原草案 UI 曾失败；最新卡片与 Web 多分支待验收 |
 | `PRG-001..012` 本次进展、缺口、风险、建议与确认动作 | P1-PROGRESS | Automated Green / UI pending | 风险和行动建议在 Task 缺权限时保留；任务候选 fail-closed；编辑重算、Postgres 回读及旧草案兼容；201 项 Agent 测试和真实来源只读重放 | 最新飞书/Web 四层展示、编辑和确认边界仍待 UI 对账 |

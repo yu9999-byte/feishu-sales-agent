@@ -1,5 +1,23 @@
 # 当前工程说明
 
+## 2026-09-28 S1 隔离飞书回调执行链路
+
+- 新增真实 `FeishuWebhookBridge` SDK EventDispatcher 回调入口与真实
+  `AgentWorkflowService → AgentActionExecutorService → MemoryControlStore`
+  的跨层回放；FeishuMessenger、SalesRecordsGateway、TaskGateway 均使用测试替身，
+  没有向真实客户、商机、跟进或任务写入。
+- 成功路径验证确认回调即时返回执行中、同一消息先 patch 执行中再 patch 唯一成功终态；
+  结果卡返回编辑后产生新 revision，再次确认只更新原跟进记录和原任务，不重复创建。
+- 失败路径注入首次客户写入失败，验证同卡失败终态包含“返回编辑”“重试未完成步骤”，
+  随后重试恢复成功；审计覆盖确认、执行中、成功/失败和原卡终态。
+- `tests/unit/agent-workflow.spec.ts` 新增 2 项隔离回调场景；Agent 全量
+  `242/242`、Postgres 集成 `8/8`、三套 TypeScript、ESLint、Stylelint、
+  Agent/Web 构建和 `git diff --check` 均通过。PID `62032` 仍监听 3100；
+  当前进程未找到可定位的当日日志文件，故不宣称完成运行日志回读。
+- 状态为 `Isolated callback E2E Verified / real UI pending`。此前真实机器人 API
+  验证仅到待确认卡，本轮不触发真实业务确认，也不把替身回放称作真实 UI 或
+  真实 Base/Task 写入验收。
+
 ## 2026-09-28 S1 API E2E 复验与跟进输入卡修复
 
 - 按用户要求，本轮不要求手工 UI 测试；只通过唯一私聊机器人“销售agent”做 API 端到端复验，

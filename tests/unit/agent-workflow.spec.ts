@@ -1,3 +1,4 @@
+import * as lark from '@larksuiteoapi/node-sdk';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -11,6 +12,8 @@ import { AgentWorkflowService } from '@server/modules/agent-core/agent-workflow.
 import { AgentActionExecutorService } from '@server/modules/agent-core/agent-action-executor.service';
 import { createConfirmationCard } from '@server/modules/agent-core/agent.cards';
 import { MemoryControlStore } from '@server/modules/agent-core/memory-control.store';
+import type { AgentRuntimeConfig } from '@server/config/agent.config';
+import { FeishuWebhookBridge } from '@server/modules/feishu/feishu-webhook.bridge';
 import { FollowupChatDraftService } from '@server/modules/sales-behavior/followup-chat-draft.service';
 import { FollowupQualityService } from '@server/modules/sales-behavior/followup-quality.service';
 import {
@@ -660,6 +663,78 @@ const waitForAudit = async (
     });
   }
   throw new Error(`Expected audit event ${eventType}`);
+};
+
+const isolatedCallbackConfig: AgentRuntimeConfig = {
+  host: '127.0.0.1',
+  port: 3100,
+  databaseUrl: 'postgres://test',
+  llm: { baseUrl: 'https://example.com', apiKey: 'test', model: 'test' },
+  feishu: {
+    verificationToken: 'test-token',
+    encryptKey: undefined,
+    receiveMode: 'websocket',
+    appId: 'cli_isolated_callback',
+    appSecret: 'test-secret',
+  },
+};
+
+const invokeIsolatedCallback = async (
+  dispatcher: lark.EventDispatcher,
+  action: IncomingCardAction,
+): Promise<JsonObject> => {
+  const result: unknown = await dispatcher.invoke({
+    schema: '2.0',
+    header: {
+      event_type: 'card.action.trigger',
+      tenant_key: action.feishuTenantKey,
+      event_id: action.eventId,
+    },
+    event: {
+      token: action.callbackToken,
+      create_time: String(action.receivedAt.getTime()),
+      operator: { open_id: action.operatorOpenId },
+      context: {
+        open_message_id: action.cardMessageId,
+        open_chat_id: action.chatId,
+      },
+      action: {
+        tag: 'button',
+        ...(action.actionName ? { name: action.actionName } : {}),
+        value: JSON.stringify(action.value),
+        form_value: JSON.stringify(action.formValue),
+      },
+    },
+  }, { needCheck: false });
+  return result as JsonObject;
+};
+
+const withIsolatedDispatcher = async (
+  workflow: AgentWorkflowService,
+  run: (dispatcher: lark.EventDispatcher) => Promise<void>,
+): Promise<void> => {
+  let dispatcher: lark.EventDispatcher | undefined;
+  const start = vi.spyOn(lark.WSClient.prototype, 'start')
+    .mockImplementation(async (
+      params: { eventDispatcher: lark.EventDispatcher },
+    ): Promise<void> => {
+      dispatcher = params.eventDispatcher;
+    });
+  const close = vi.spyOn(lark.WSClient.prototype, 'close')
+    .mockImplementation((): void => undefined);
+  const bridge: FeishuWebhookBridge = new FeishuWebhookBridge(
+    workflow,
+    isolatedCallbackConfig,
+  );
+  try {
+    await bridge.onModuleInit();
+    if (!dispatcher) throw new Error('Missing isolated event dispatcher');
+    await run(dispatcher);
+  } finally {
+    bridge.onModuleDestroy();
+    start.mockRestore();
+    close.mockRestore();
+  }
 };
 
 describe('AgentWorkflowService', (): void => {
@@ -2131,4 +2206,145 @@ describe('AgentWorkflowService', (): void => {
     expect(harness.records.customerCalls).toBe(0);
     expect(harness.tasks.calls).toBe(0);
   });
+
+  it('replays Feishu callback through success and revision without new records',
+    async (): Promise<void> => {
+      const harness: TestHarness = createHarness(
+        completeDraft,
+        createReadySalesContextReader(),
+      );
+      await harness.workflow.handleMessage(createMessage());
+      const original: PendingAction = harness.messenger.actions[0];
+
+      await withIsolatedDispatcher(harness.workflow,
+        async (dispatcher: lark.EventDispatcher): Promise<void> => {
+          const processing: JsonObject = await invokeIsolatedCallback(
+            dispatcher,
+            createCardAction('tenant-a', original.id, 'confirm', 'evt-e2e-confirm'),
+          );
+          expect(JSON.stringify(processing)).toContain('正在执行销售动作');
+          await waitForStatus(
+            harness.store, harness.integrationA.tenantId, original.id, 'succeeded',
+          );
+          await waitForUpdates(harness.messenger, 2);
+          expect(harness.messenger.updateMessageIds).toEqual([
+            'om_card_1', 'om_card_1',
+          ]);
+          expect(JSON.stringify(harness.messenger.updates[0]))
+            .toContain('正在执行销售动作');
+          expect(JSON.stringify(harness.messenger.updates[1]))
+            .toContain('跟进登记成功');
+          expect(harness.messenger.results).toHaveLength(0);
+          expect(harness.store.getAudits(harness.integrationA.tenantId)
+            .map((event): string => event.eventType))
+            .toEqual(expect.arrayContaining([
+              'card.confirm',
+              'card.processing_sent',
+              'action.succeeded',
+              'card.source_finalized',
+            ]));
+
+          const editCard: JsonObject = await invokeIsolatedCallback(
+            dispatcher,
+            createCardAction('tenant-a', original.id, 'edit', 'evt-e2e-edit'),
+          );
+          expect(JSON.stringify(editCard)).toContain('确认保存');
+          const revision: PendingAction | null =
+            await harness.store.getPendingActionByCardMessage(
+              harness.integrationA.tenantId,
+              'om_card_1',
+            );
+          if (!revision) throw new Error('Expected editable revision');
+          expect(revision.id).not.toBe(original.id);
+          expect(revision.payload.operationKind).toBe('update');
+
+          const revisedProcessing: JsonObject = await invokeIsolatedCallback(
+            dispatcher,
+            createDraftFormAction(revision, 1, 'evt-e2e-revision', {
+              generatedBody: '修订后的跟进正文',
+            }),
+          );
+          expect(JSON.stringify(revisedProcessing))
+            .toContain('正在执行销售动作');
+          await waitForStatus(
+            harness.store, harness.integrationA.tenantId, revision.id, 'succeeded',
+          );
+          await waitForUpdates(harness.messenger, 5);
+          expect(harness.messenger.updateMessageIds).toEqual([
+            'om_card_1', 'om_card_1', 'om_card_1', 'om_card_1',
+            'om_card_1',
+          ]);
+          expect(JSON.stringify(harness.messenger.updates[4]))
+            .toContain('跟进登记成功');
+          const audits: string[] = harness.store
+            .getAudits(harness.integrationA.tenantId)
+            .map((event): string => event.eventType);
+          expect(audits.filter((event: string): boolean =>
+            event === 'card.source_finalized')).toHaveLength(2);
+          expect(audits).toContain('followup.version.confirmed.v1');
+          expect(harness.records.followupCalls).toBe(1);
+          expect(harness.records.followupUpdateCalls).toBe(1);
+          expect(harness.tasks.calls).toBe(1);
+          expect(harness.tasks.updateCalls).toBe(1);
+          expect(harness.messenger.results).toHaveLength(0);
+        });
+    });
+
+  it('replays Feishu callback through failure and safe retry',
+    async (): Promise<void> => {
+      const harness: TestHarness = createHarness(
+        completeDraft,
+        createReadySalesContextReader(),
+      );
+      harness.records.failNextCustomer = true;
+      await harness.workflow.handleMessage(createMessage());
+      const original: PendingAction = harness.messenger.actions[0];
+
+      await withIsolatedDispatcher(harness.workflow,
+        async (dispatcher: lark.EventDispatcher): Promise<void> => {
+          const processing: JsonObject = await invokeIsolatedCallback(
+            dispatcher,
+            createCardAction('tenant-a', original.id, 'confirm', 'evt-e2e-fail'),
+          );
+          expect(JSON.stringify(processing)).toContain('正在执行销售动作');
+          await waitForStatus(
+            harness.store, harness.integrationA.tenantId, original.id, 'failed',
+          );
+          await waitForUpdates(harness.messenger, 2);
+          const failedCard: string = JSON.stringify(harness.messenger.updates[1]);
+          expect(failedCard).toContain('返回编辑');
+          expect(failedCard).toContain('重试未完成步骤');
+          expect(harness.messenger.updateMessageIds).toEqual([
+            'om_card_1', 'om_card_1',
+          ]);
+          expect(harness.messenger.results).toHaveLength(0);
+          expect(harness.store.getAudits(harness.integrationA.tenantId)
+            .map((event): string => event.eventType))
+            .toEqual(expect.arrayContaining([
+              'card.confirm',
+              'card.processing_sent',
+              'action.failed',
+              'card.source_finalized',
+            ]));
+
+          const retry: JsonObject = await invokeIsolatedCallback(
+            dispatcher,
+            createCardAction('tenant-a', original.id, 'retry', 'evt-e2e-retry'),
+          );
+          expect(JSON.stringify(retry)).toContain('正在执行销售动作');
+          await waitForStatus(
+            harness.store, harness.integrationA.tenantId, original.id, 'succeeded',
+          );
+          await waitForUpdates(harness.messenger, 4);
+          expect(JSON.stringify(harness.messenger.updates[3]))
+            .toContain('跟进登记成功');
+          expect(harness.records.customerCalls).toBe(2);
+          expect(harness.records.followupCalls).toBe(1);
+          expect(harness.tasks.calls).toBe(1);
+          expect(harness.messenger.results).toHaveLength(0);
+          expect(harness.store.getAudits(harness.integrationA.tenantId)
+            .map((event): string => event.eventType))
+            .toContain('action.succeeded');
+        });
+    });
 });
