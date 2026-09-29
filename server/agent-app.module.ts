@@ -10,6 +10,8 @@ import { WebAuthModule } from './modules/web-auth/web-auth.module';
 import { PlatformShellModule } from './modules/platform-shell/platform-shell.module';
 import { SalesBehaviorModule } from './modules/sales-behavior/sales-behavior.module';
 import { DailyReportModule } from './modules/insight/daily-report.module';
+import { StaleOpportunityReadinessModule } from
+  './modules/insight/stale-opportunity-readiness.module';
 import { FeishuWebhookBridge } from './modules/feishu/feishu-webhook.bridge';
 import { FeishuWebhookController } from './modules/feishu/feishu-webhook.controller';
 
@@ -21,6 +23,7 @@ import { FeishuWebhookController } from './modules/feishu/feishu-webhook.control
     PlatformShellModule,
     SalesBehaviorModule,
     DailyReportModule,
+    StaleOpportunityReadinessModule,
   ],
   controllers: [FeishuWebhookController],
   providers: [

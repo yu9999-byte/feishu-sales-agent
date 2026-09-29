@@ -409,6 +409,42 @@ export interface DailySalesReportResponse {
   warnings: string[];
 }
 
+export type StaleOpportunityReadinessStatus =
+  | 'ready'
+  | 'incomplete'
+  | 'unavailable';
+
+export type StaleOpportunityReadinessBlocker =
+  | 'status_unconfirmed'
+  | 'followup_time_missing';
+
+export interface StaleOpportunityReadinessItem {
+  recordId: string;
+  name: string;
+  status: 'active' | 'won' | 'lost' | 'closed' | 'unknown';
+  lastEffectiveFollowupAt: string | null;
+  followupRecordId: string | null;
+  blockers: StaleOpportunityReadinessBlocker[];
+  recordUrl: string | null;
+}
+
+export interface StaleOpportunityReadinessSummary {
+  opportunityCount: number;
+  statusConfirmedCount: number;
+  statusNeedsConfirmationCount: number;
+  followupTimeConfirmedCount: number;
+  followupTimeNeedsConfirmationCount: number;
+  readyForScanCount: number;
+}
+
+export interface StaleOpportunityReadinessResponse {
+  generatedAt: string;
+  status: StaleOpportunityReadinessStatus;
+  summary: StaleOpportunityReadinessSummary;
+  items: StaleOpportunityReadinessItem[];
+  warnings: string[];
+}
+
 export type PlatformSectionKey =
   | 'customers'
   | 'opportunities'
