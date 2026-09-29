@@ -3,23 +3,48 @@ import {
   AlertCircle,
   AlertTriangle,
   ArrowUpRight,
+  CalendarDays,
   CheckCircle2,
   CircleHelp,
   Clock3,
   Radar,
   RefreshCw,
+  ShieldAlert,
 } from 'lucide-react';
 
 import type {
+  StaleOpportunityGovernanceStatus,
   StaleOpportunityReadinessBlocker,
   StaleOpportunityReadinessItem,
   StaleOpportunityReadinessResponse,
   StaleOpportunityReadinessStatus,
 } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   getStaleOpportunityReadiness,
+  submitStaleOpportunityGovernance,
   type ProductApiError,
 } from '../../api';
 
@@ -42,6 +67,13 @@ const blockerLabel: Record<StaleOpportunityReadinessBlocker, string> = {
   followup_time_missing: '可信跟进时间缺失',
 };
 
+const GOVERNANCE_STATUSES: StaleOpportunityGovernanceStatus[] = [
+  'active',
+  'won',
+  'lost',
+  'closed',
+];
+
 const formatDateTime = (value: string | null): string => {
   if (value === null) return '未读取到可信跟进时间';
   const timestamp: number = Date.parse(value);
@@ -50,6 +82,12 @@ const formatDateTime = (value: string | null): string => {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(new Date(timestamp));
+};
+
+const toDate = (value: string | null): Date | undefined => {
+  if (value === null) return undefined;
+  const timestamp: number = Date.parse(value);
+  return Number.isFinite(timestamp) ? new Date(timestamp) : undefined;
 };
 
 const StaleOpportunityReadinessPage: React.FC = () => {
@@ -73,13 +111,13 @@ const StaleOpportunityReadinessPage: React.FC = () => {
   if (loading) {
     return (
       <div className="mx-auto max-w-6xl space-y-6" aria-busy="true">
-        <Skeleton className="h-28 w-full rounded-xl" />
+        <div className="h-28 w-full animate-pulse rounded-xl bg-muted" />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {[1, 2, 3, 4, 5].map((item: number): React.ReactNode => (
-            <Skeleton key={item} className="h-28 rounded-xl" />
+            <div key={item} className="h-28 animate-pulse rounded-xl bg-muted" />
           ))}
         </div>
-        <Skeleton className="h-72 w-full rounded-xl" />
+        <div className="h-72 w-full animate-pulse rounded-xl bg-muted" />
         <span className="sr-only">正在加载商机提醒准备度</span>
       </div>
     );
@@ -114,9 +152,9 @@ const StaleOpportunityReadinessPage: React.FC = () => {
             <Radar aria-hidden="true" className="size-4" />
             商机提醒准备度
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">先把数据准备好</h1>
+          <h1 className="mt-2 text-3xl font-semibold tracking-tight">逐条确认历史商机</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            逐条确认商机状态和可信跟进时间，确认后才具备进入“超过 7 天未更新”扫描的条件。
+            由你确认商机状态和已有跟进的可信时间。确认完成后，记录才具备进入未更新扫描的条件。
           </p>
         </div>
         <Button variant="outline" onClick={refresh} disabled={loading}>
@@ -127,9 +165,9 @@ const StaleOpportunityReadinessPage: React.FC = () => {
       <section className="flex items-start gap-3 rounded-xl border border-sky-300/60 bg-sky-50 px-5 py-4 text-sky-950" role="note">
         <CircleHelp aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
         <div>
-          <h2 className="text-sm font-semibold">这是只读的数据治理清单</h2>
+          <h2 className="text-sm font-semibold">每次只处理一条记录</h2>
           <p className="mt-1 text-sm leading-6">
-            当前页面不会自动修改商机、补写跟进或发送飞书提醒；它只展示哪些记录已经准备好、哪些记录还需要人工确认。
+            页面不会批量猜测、自动创建跟进、发送提醒或启动定时扫描。提交前会再次确认目标 Base 记录。
           </p>
         </div>
       </section>
@@ -175,7 +213,7 @@ const StaleOpportunityReadinessPage: React.FC = () => {
       ) : (
         <section className="space-y-3" aria-label="商机准备度明细">
           {report.items.map((item: StaleOpportunityReadinessItem): React.ReactNode => (
-            <OpportunityItem key={item.recordId} item={item} />
+            <OpportunityItem key={item.recordId} item={item} onSaved={refresh} />
           ))}
         </section>
       )}
@@ -208,8 +246,58 @@ const Metric: React.FC<MetricProps> = ({ label, value, tone = 'default' }) => (
   </div>
 );
 
-const OpportunityItem: React.FC<{ item: StaleOpportunityReadinessItem }> = ({ item }) => {
+interface OpportunityItemProps {
+  item: StaleOpportunityReadinessItem;
+  onSaved: () => void;
+}
+
+const OpportunityItem: React.FC<OpportunityItemProps> = ({ item, onSaved }) => {
+  const [status, setStatus] = useState<StaleOpportunityGovernanceStatus | ''>(
+    item.status === 'unknown' ? '' : item.status,
+  );
+  const [communicationDate, setCommunicationDate] = useState<Date | undefined>(
+    toDate(item.lastEffectiveFollowupAt),
+  );
+  const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [error, setError] = useState<ProductApiError | null>(null);
   const ready: boolean = item.blockers.length === 0;
+  const canSetCommunicationDate: boolean = item.followupRecordId !== null;
+  const dateText: string = communicationDate
+    ? new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium' }).format(communicationDate)
+    : '未选择';
+
+  const submit = (): void => {
+    if (status === '') return;
+    setSaving(true);
+    setError(null);
+    const communicationAt: string | undefined = communicationDate
+      ? new Date(
+        communicationDate.getFullYear(),
+        communicationDate.getMonth(),
+        communicationDate.getDate(),
+        12,
+        0,
+        0,
+      ).toISOString()
+      : undefined;
+    void submitStaleOpportunityGovernance({
+      recordId: item.recordId,
+      status,
+      expectedStatus: item.status,
+      expectedSourceVersion: item.sourceVersion,
+      followupRecordId: item.followupRecordId,
+      expectedFollowupSourceVersion: item.followupSourceVersion,
+      communicationAt,
+    })
+      .then((): void => {
+        setDialogOpen(false);
+        onSaved();
+      })
+      .catch((failure: ProductApiError): void => setError(failure))
+      .finally((): void => setSaving(false));
+  };
+
   return (
     <article className="rounded-xl border border-border bg-card p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -218,23 +306,61 @@ const OpportunityItem: React.FC<{ item: StaleOpportunityReadinessItem }> = ({ it
           <p className="mt-1 text-xs text-muted-foreground">记录 ID：{item.recordId}</p>
         </div>
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-          ready
-            ? 'bg-emerald-50 text-emerald-700'
-            : 'bg-amber-50 text-amber-800'
+          ready ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'
         }`}>
           {ready ? <CheckCircle2 aria-hidden="true" className="size-3.5" /> : <Clock3 aria-hidden="true" className="size-3.5" />}
           {ready ? '可以进入扫描' : '需要人工确认'}
         </span>
       </div>
 
-      <div className="mt-5 grid gap-4 text-sm sm:grid-cols-2">
+      <div className="mt-5 grid gap-4 text-sm md:grid-cols-2">
         <div>
           <p className="text-xs text-muted-foreground">商机状态</p>
-          <p className="mt-1 font-medium">{opportunityStatusLabel[item.status]}</p>
+          <Select value={status} onValueChange={(value: string): void => setStatus(value as StaleOpportunityGovernanceStatus)}>
+            <SelectTrigger className="mt-2 w-full max-w-xs" aria-label="选择商机状态">
+              <SelectValue placeholder="请选择状态" />
+            </SelectTrigger>
+            <SelectContent>
+              {GOVERNANCE_STATUSES.map((value: StaleOpportunityGovernanceStatus): React.ReactNode => (
+                <SelectItem key={value} value={value}>{opportunityStatusLabel[value]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="mt-2 text-xs text-muted-foreground">
+            当前读取值：{opportunityStatusLabel[item.status]}
+          </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">最新可信跟进时间</p>
-          <p className="mt-1 font-medium">{formatDateTime(item.lastEffectiveFollowupAt)}</p>
+          <p className="text-xs text-muted-foreground">已有跟进的可信沟通日期</p>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                className="mt-2 w-full max-w-xs justify-start"
+                variant="outline"
+                disabled={!canSetCommunicationDate}
+              >
+                <CalendarDays aria-hidden="true" />{dateText}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={communicationDate}
+                onSelect={setCommunicationDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          {!canSetCommunicationDate && (
+            <p className="mt-2 text-xs text-amber-700">
+              当前没有已有跟进记录，不能用日期伪造历史跟进。
+            </p>
+          )}
+          {canSetCommunicationDate && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              读取值：{formatDateTime(item.lastEffectiveFollowupAt)}
+            </p>
+          )}
         </div>
       </div>
 
@@ -249,7 +375,44 @@ const OpportunityItem: React.FC<{ item: StaleOpportunityReadinessItem }> = ({ it
         </div>
       )}
 
+      {error !== null && (
+        <div className="mt-4 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm" role="alert">
+          {error.code === 'CONFLICT' ? <ShieldAlert className="mt-0.5 size-4 shrink-0 text-destructive" /> : <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" />}
+          <div>
+            <p>{error.message}</p>
+            {error.traceId && <p className="mt-1 text-xs text-muted-foreground">追踪号：{error.traceId}</p>}
+          </div>
+        </div>
+      )}
+
       <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-border pt-4 text-sm">
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button disabled={status === '' || saving}>
+              <CheckCircle2 aria-hidden="true" />确认这条记录
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>确认写入这条商机</DialogTitle>
+              <DialogDescription>
+                将只修改商机状态，以及你选择的已有跟进沟通日期。系统会先校验负责人和读取版本，再写入并回读验证。
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4 text-sm">
+              <p><span className="text-muted-foreground">商机：</span>{item.name}</p>
+              <p><span className="text-muted-foreground">状态：</span>{status === '' ? '未选择' : opportunityStatusLabel[status]}</p>
+              <p><span className="text-muted-foreground">沟通日期：</span>{canSetCommunicationDate ? dateText : '不修改'}</p>
+              <p className="text-xs text-muted-foreground">目标记录：{item.recordId}</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={(): void => setDialogOpen(false)} disabled={saving}>取消</Button>
+              <Button onClick={submit} disabled={saving || status === ''}>
+                {saving ? '正在校验并写入…' : '确认写入'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         {item.followupRecordId && (
           <span className="text-muted-foreground">跟进记录：{item.followupRecordId}</span>
         )}

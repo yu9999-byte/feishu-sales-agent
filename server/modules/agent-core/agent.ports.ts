@@ -24,7 +24,11 @@ import type {
   DailyReportBaseResult,
   DailyReportTaskResult,
   StaleOpportunityFollowupPage,
+  StaleOpportunityFollowupRecord,
+  StaleOpportunityFollowupUpdateInput,
+  StaleOpportunityFollowupUpdateResult,
   StaleOpportunityPage,
+  StaleOpportunityRecord,
   TaskCreationResult,
   TenantIntegration,
 } from './agent.types';
@@ -174,6 +178,23 @@ export interface SalesRecordsGateway {
     actorOpenId: string,
     pageToken?: string,
   ): Promise<StaleOpportunityPage>;
+  readStaleOpportunity?(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    recordId: string,
+  ): Promise<StaleOpportunityRecord>;
+  readStaleOpportunityFollowup?(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    opportunityRecordId: string,
+    followupRecordId: string,
+  ): Promise<StaleOpportunityFollowupRecord>;
+  updateStaleOpportunityFollowupCommunicationAt?(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    input: StaleOpportunityFollowupUpdateInput,
+    idempotencyKey: string,
+  ): Promise<StaleOpportunityFollowupUpdateResult>;
   readDailyReport?(
     integration: TenantIntegration,
     actorOpenId: string,

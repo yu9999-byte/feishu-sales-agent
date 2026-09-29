@@ -10,6 +10,8 @@ import type {
   PlatformSectionKey,
   PlatformSectionResponse,
   PlatformSessionResponse,
+  StaleOpportunityGovernanceRequest,
+  StaleOpportunityGovernanceResponse,
   StaleOpportunityReadinessResponse,
   WorkspaceResponse,
 } from '@shared/api.interface';
@@ -18,34 +20,76 @@ interface ProductApiError {
   status: number;
   message: string;
   retryable: boolean;
+  code?: string;
+  traceId?: string;
 }
 
 const normalizeError = (error: unknown): ProductApiError => {
   if (axios.isAxiosError(error)) {
     const status: number = error.response?.status ?? 0;
+    const body: unknown = error.response?.data;
+    const apiBody: {
+      code?: unknown;
+      message?: unknown;
+      traceId?: unknown;
+    } = typeof body === 'object' && body !== null
+      ? body as {
+        code?: unknown;
+        message?: unknown;
+        traceId?: unknown;
+      }
+      : {};
+    const bodyMessage: string | undefined =
+      typeof apiBody.message === 'string' ? apiBody.message : undefined;
+    const bodyCode: string | undefined =
+      typeof apiBody.code === 'string' ? apiBody.code : undefined;
+    const bodyTraceId: string | undefined =
+      typeof apiBody.traceId === 'string' ? apiBody.traceId : undefined;
     if (status === 401) {
       return { status, message: '请先通过飞书登录', retryable: false };
     }
     if (status === 403) {
-      return { status, message: '无权访问当前工作区', retryable: false };
+      return {
+        status,
+        message: bodyMessage ?? '无权访问当前工作区',
+        retryable: false,
+        code: bodyCode,
+        traceId: bodyTraceId,
+      };
     }
     if (status === 409) {
-      return { status, message: '版本已变化，请刷新后再试', retryable: false };
+      return {
+        status,
+        message: bodyMessage ?? '版本已变化，请刷新后再试',
+        retryable: false,
+        code: bodyCode,
+        traceId: bodyTraceId,
+      };
     }
     if (status === 422) {
-      return { status, message: '请补全客户、下一步、截止时间并修复证据问题', retryable: false };
+      return {
+        status,
+        message: bodyMessage ?? '请补全确认信息后再提交',
+        retryable: false,
+        code: bodyCode,
+        traceId: bodyTraceId,
+      };
     }
     if (status === 503) {
       return {
         status,
-        message: '模型当前繁忙，草案未生成；请稍后重试，业务数据尚未写入',
+        message: bodyMessage ?? '数据源暂时不可用，请稍后重试',
         retryable: true,
+        code: bodyCode,
+        traceId: bodyTraceId,
       };
     }
     return {
       status,
-      message: '暂时无法加载数据，请稍后重试',
+      message: bodyMessage ?? '暂时无法加载数据，请稍后重试',
       retryable: true,
+      code: bodyCode,
+      traceId: bodyTraceId,
     };
   }
   return {
@@ -100,6 +144,27 @@ const getStaleOpportunityReadiness = async (): Promise<StaleOpportunityReadiness
   try {
     const response = await axios.get<StaleOpportunityReadinessResponse>(
       '/api/platform/stale-opportunity-readiness',
+      { withCredentials: true },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
+const submitStaleOpportunityGovernance = async (
+  input: Omit<StaleOpportunityGovernanceRequest, 'idempotencyKey'> & {
+    idempotencyKey?: string;
+  },
+): Promise<StaleOpportunityGovernanceResponse> => {
+  try {
+    const payload: StaleOpportunityGovernanceRequest = {
+      ...input,
+      idempotencyKey: input.idempotencyKey ?? crypto.randomUUID(),
+    };
+    const response = await axios.post<StaleOpportunityGovernanceResponse>(
+      '/api/platform/stale-opportunity-readiness/govern',
+      payload,
       { withCredentials: true },
     );
     return response.data;
@@ -204,6 +269,7 @@ export {
   getFollowupExecution,
   getDailySalesReport,
   getStaleOpportunityReadiness,
+  submitStaleOpportunityGovernance,
   getPlatformSection,
   getPlatformSession,
   getWorkspace,

@@ -315,7 +315,9 @@ export interface StaleOpportunityFollowupRecord {
   recordId: string;
   opportunityRecordId: string | null;
   communicationAt: string | null;
+  ownerOpenId?: string;
   sourceVersion: string | null;
+  recordUrl?: string | null;
 }
 
 export interface StaleOpportunityFollowupPage {
@@ -329,6 +331,26 @@ export interface StaleOpportunityRecord {
   name: string;
   status: OpportunityLifecycleStatus;
   ownerOpenId: string;
+  sourceVersion: string | null;
+  recordUrl: string | null;
+}
+
+export interface StaleOpportunityGovernanceContext {
+  opportunity: StaleOpportunityRecord;
+  followup: StaleOpportunityFollowupRecord | null;
+}
+
+export interface StaleOpportunityFollowupUpdateInput {
+  recordId: string;
+  opportunityRecordId: string;
+  communicationAt: string;
+  expectedSourceVersion: string | null;
+}
+
+export interface StaleOpportunityFollowupUpdateResult {
+  recordId: string;
+  opportunityRecordId: string;
+  communicationAt: string;
   sourceVersion: string | null;
   recordUrl: string | null;
 }

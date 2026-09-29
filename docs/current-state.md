@@ -1,5 +1,13 @@
 # 当前工程说明
 
+## 2026-09-30 S4 历史商机逐条治理第一切片
+
+- 在只读准备度报告基础上新增 `POST /api/platform/stale-opportunity-readiness/govern`，每次只处理一条本人商机；请求必须携带读取时的商机状态/版本、跟进记录/版本和幂等键。
+- 写入前重新读取并校验当前负责人、状态、版本；商机状态只写生命周期字段；沟通时间只更新已有跟进记录的 `communicationAt`，禁止用 `last_modified_time` 推断或创建伪造历史跟进。
+- 写入后重新读取验证，并记录 `accepted`、`succeeded`、`failed` 审计与 `traceId`。权限不足、版本冲突、参数缺失、数据源不可用和写后验证失败均映射为明确错误状态。
+- Web 工作台已改为逐条状态选择、已有跟进日期选择和 Dialog 二次确认；成功后刷新，冲突和权限/依赖错误显示追踪号。没有批量确认、定时扫描、提醒发送或自动建任务。
+- 自动化定向测试覆盖成功闭环、版本冲突、无已有跟进时拒绝伪造写入、审计；类型检查、ESLint、Stylelint 和 `git diff --check` 已通过。真实飞书/Web UI 验收仍为 `UI pending`，因此不执行 milestone checkpoint，直到完整质量门禁通过。
+
 ## 2026-09-29 商机提醒数据准备度报告（只读）
 
 - 新增 `GET /api/platform/stale-opportunity-readiness`，沿用当前 Web 会话、租户和销售范围，

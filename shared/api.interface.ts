@@ -423,8 +423,10 @@ export interface StaleOpportunityReadinessItem {
   recordId: string;
   name: string;
   status: 'active' | 'won' | 'lost' | 'closed' | 'unknown';
+  sourceVersion: string | null;
   lastEffectiveFollowupAt: string | null;
   followupRecordId: string | null;
+  followupSourceVersion: string | null;
   blockers: StaleOpportunityReadinessBlocker[];
   recordUrl: string | null;
 }
@@ -444,6 +446,33 @@ export interface StaleOpportunityReadinessResponse {
   summary: StaleOpportunityReadinessSummary;
   items: StaleOpportunityReadinessItem[];
   warnings: string[];
+}
+
+export type StaleOpportunityGovernanceStatus = Exclude<
+  StaleOpportunityReadinessItem['status'],
+  'unknown'
+>;
+
+export interface StaleOpportunityGovernanceRequest {
+  recordId: string;
+  status: StaleOpportunityGovernanceStatus;
+  expectedStatus: StaleOpportunityReadinessItem['status'];
+  expectedSourceVersion: string | null;
+  followupRecordId: string | null;
+  expectedFollowupSourceVersion: string | null;
+  communicationAt?: string | null;
+  idempotencyKey: string;
+}
+
+export interface StaleOpportunityGovernanceResponse {
+  traceId: string;
+  recordId: string;
+  previousStatus: StaleOpportunityReadinessItem['status'];
+  status: StaleOpportunityGovernanceStatus;
+  followupRecordId: string | null;
+  communicationAt: string | null;
+  sourceVersion: string | null;
+  followupSourceVersion: string | null;
 }
 
 export type PlatformSectionKey =

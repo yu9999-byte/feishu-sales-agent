@@ -18,7 +18,11 @@ import type {
   OpportunityStatusUpdateInput,
   OpportunityStatusUpdateResult,
   StaleOpportunityFollowupPage,
+  StaleOpportunityFollowupRecord,
+  StaleOpportunityFollowupUpdateInput,
+  StaleOpportunityFollowupUpdateResult,
   StaleOpportunityPage,
+  StaleOpportunityRecord,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
 import { FeishuClientFactory } from '@server/modules/feishu/feishu-client.factory';
@@ -719,7 +723,10 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
           recordId,
           name,
           status: this.mapOpportunityStatus(rawStatus, table.statusValues),
-          ownerOpenId: actorOpenId,
+          ownerOpenId: this.readUserIds(
+            item.fields,
+            table.fields.ownerOpenId,
+          )[0] ?? actorOpenId,
           sourceVersion: this.sourceVersion(item.last_modified_time),
           recordUrl: item.record_url ?? null,
         }];
@@ -738,6 +745,153 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     return {
       items: mappedItems,
       nextPageToken: nextPageToken || null,
+    };
+  }
+
+  async readStaleOpportunity(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    recordId: string,
+  ): Promise<StaleOpportunityRecord> {
+    const table = integration.base.opportunities;
+    if (!table.fields.ownerOpenId || !table.fields.status) {
+      throw new Error('Opportunity governance mapping is not configured');
+    }
+    if (!actorOpenId.trim() || !recordId.trim()) {
+      throw new Error('Opportunity governance identity is required');
+    }
+    const record: BaseContextRecord = await this.readOpportunityRecord(
+      integration,
+      recordId,
+    );
+    const ownerOpenId: string | undefined = this.readUserIds(
+      record.fields,
+      table.fields.ownerOpenId,
+    )[0];
+    if (ownerOpenId !== actorOpenId) {
+      throw new Error('Opportunity is not owned by the current actor');
+    }
+    const name: string | null = this.readText(
+      record.fields,
+      table.fields.opportunityName,
+    );
+    if (!name) throw new Error('Opportunity name is missing');
+    return {
+      recordId,
+      name,
+      status: this.mapOpportunityStatus(
+        this.readText(record.fields, table.fields.status),
+        table.statusValues ?? { active: [] },
+      ),
+      ownerOpenId,
+      sourceVersion: this.sourceVersion(record.last_modified_time),
+      recordUrl: record.record_url ?? null,
+    };
+  }
+
+  async readStaleOpportunityFollowup(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    opportunityRecordId: string,
+    followupRecordId: string,
+  ): Promise<StaleOpportunityFollowupRecord> {
+    const table = integration.base.followups;
+    if (
+      !table.fields.ownerOpenId ||
+      !table.fields.opportunityLink ||
+      !table.fields.communicationAt
+    ) {
+      throw new Error('Followup governance mapping is not configured');
+    }
+    const record: BaseContextRecord = await this.readFollowupRecord(
+      integration,
+      followupRecordId,
+    );
+    const ownerOpenId: string | undefined = this.readUserIds(
+      record.fields,
+      table.fields.ownerOpenId,
+    )[0];
+    const linkedOpportunityId: string | null = this.readLinkedRecordId(
+      record.fields,
+      table.fields.opportunityLink,
+    );
+    if (ownerOpenId !== actorOpenId) {
+      throw new Error('Followup is not owned by the current actor');
+    }
+    if (linkedOpportunityId !== opportunityRecordId) {
+      throw new Error('Followup is not linked to the opportunity');
+    }
+    return {
+      recordId: followupRecordId,
+      opportunityRecordId,
+      communicationAt: this.readDate(
+        record.fields,
+        table.fields.communicationAt,
+      ),
+      ownerOpenId,
+      sourceVersion: this.sourceVersion(record.last_modified_time),
+      recordUrl: record.record_url ?? null,
+    };
+  }
+
+  async updateStaleOpportunityFollowupCommunicationAt(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    input: StaleOpportunityFollowupUpdateInput,
+    idempotencyKey: string,
+  ): Promise<StaleOpportunityFollowupUpdateResult> {
+    if (!actorOpenId.trim() || !idempotencyKey.trim()) {
+      throw new Error('Followup governance identity is required');
+    }
+    const current: StaleOpportunityFollowupRecord =
+      await this.readStaleOpportunityFollowup(
+        integration,
+        actorOpenId,
+        input.opportunityRecordId,
+        input.recordId,
+      );
+    if (current.sourceVersion !== input.expectedSourceVersion) {
+      throw new Error(
+        'Followup changed after confirmation; refresh before updating',
+      );
+    }
+    const timestamp: number = Date.parse(input.communicationAt);
+    if (!Number.isFinite(timestamp)) {
+      throw new Error('Communication time must be a valid ISO date');
+    }
+    const table = integration.base.followups;
+    if (!table.fields.communicationAt) {
+      throw new Error('Followup communication time mapping is not configured');
+    }
+    const fields: Record<string, BaseCellValue> = {};
+    this.setDate(fields, table.fields.communicationAt, input.communicationAt);
+    const updated: SalesRecordResult = await this.updateRecord(
+      integration,
+      table,
+      input.recordId,
+      fields,
+      idempotencyKey,
+    );
+    const verified: StaleOpportunityFollowupRecord =
+      await this.readStaleOpportunityFollowup(
+        integration,
+        actorOpenId,
+        input.opportunityRecordId,
+        input.recordId,
+      );
+    const verifiedAt: string | null = verified.communicationAt;
+    const expectedAt: string = new Date(timestamp).toISOString();
+    if (verifiedAt !== expectedAt) {
+      throw new Error(
+        'Followup communication time could not be verified after writing',
+      );
+    }
+    return {
+      recordId: updated.recordId,
+      opportunityRecordId: input.opportunityRecordId,
+      communicationAt: verifiedAt,
+      sourceVersion: verified.sourceVersion,
+      recordUrl: updated.recordUrl ?? verified.recordUrl,
     };
   }
 
@@ -1110,6 +1264,35 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     const record: BaseContextRecord | undefined = response.data?.record;
     if (!record || record.record_id !== recordId) {
       throw new Error('Opportunity record could not be read consistently');
+    }
+    return record;
+  }
+
+  private async readFollowupRecord(
+    integration: TenantIntegration,
+    recordId: string,
+  ): Promise<BaseContextRecord> {
+    if (!recordId.trim()) {
+      throw new Error('Followup record ID is required');
+    }
+    const table = integration.base.followups;
+    const client = this.clients.getClient(integration);
+    const response: BaseRecordReadResponse =
+      await client.request<BaseRecordReadResponse>(
+        {
+          method: 'GET',
+          url: `${this.recordCollectionUrl(integration, table.tableId)}/` +
+            encodeURIComponent(recordId),
+          params: {
+            user_id_type: 'open_id',
+          },
+        },
+        this.clients.getRequestOptions(integration),
+      );
+    assertFeishuSuccess(response.code, response.msg, 'read followup');
+    const record: BaseContextRecord | undefined = response.data?.record;
+    if (!record || record.record_id !== recordId) {
+      throw new Error('Followup record could not be read consistently');
     }
     return record;
   }

@@ -5,7 +5,10 @@ import type {
   StaleOpportunityPage,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
-import { StaleOpportunityReadinessService } from
+import {
+  StaleOpportunityGovernanceError,
+  StaleOpportunityReadinessService,
+} from
   '@server/modules/insight/stale-opportunity-readiness.service';
 
 const NOW = new Date('2026-09-29T02:00:00.000Z');
@@ -186,5 +189,142 @@ describe('StaleOpportunityReadinessService', (): void => {
 
     expect(result.status).toBe('unavailable');
     expect(records.readStaleOpportunityPage).not.toHaveBeenCalled();
+  });
+
+  it('governs one opportunity with version checks, write verification, and audit', async (): Promise<void> => {
+    let currentOpportunity = opportunity('unknown');
+    let currentFollowup = {
+      ...followup('opportunity-unknown', '2026-09-20T02:00:00.000Z'),
+      sourceVersion: 'followup-v1',
+    };
+    const audit = vi.fn(async (): Promise<void> => undefined);
+    const records = {
+      readStaleOpportunity: vi.fn(async (): Promise<typeof currentOpportunity> =>
+        currentOpportunity),
+      readStaleOpportunityFollowup: vi.fn(
+        async (): Promise<typeof currentFollowup> => currentFollowup,
+      ),
+      updateOpportunityStatus: vi.fn(async (_integration: TenantIntegration,
+        _actorOpenId: string,
+        input: {
+          status: 'active' | 'won' | 'lost' | 'closed';
+          expectedStatus: 'active' | 'won' | 'lost' | 'closed' | 'unknown';
+        }): Promise<{
+        previousStatus: typeof input.expectedStatus;
+        status: typeof input.status;
+      }> => {
+        const previousStatus = currentOpportunity.status;
+        currentOpportunity = {
+          ...currentOpportunity,
+          status: input.status,
+          sourceVersion: 'opportunity-v2',
+        };
+        return { previousStatus, status: input.status };
+      }),
+      updateStaleOpportunityFollowupCommunicationAt: vi.fn(
+        async (_integration: TenantIntegration, _actorOpenId: string,
+          input: { communicationAt: string }): Promise<{
+          communicationAt: string;
+          sourceVersion: string;
+          recordUrl: string | null;
+        }> => {
+          currentFollowup = {
+            ...currentFollowup,
+            communicationAt: new Date(input.communicationAt).toISOString(),
+            sourceVersion: 'followup-v2',
+          };
+          return {
+            communicationAt: currentFollowup.communicationAt,
+            sourceVersion: currentFollowup.sourceVersion,
+            recordUrl: null,
+          };
+        },
+      ),
+    };
+    const service = new StaleOpportunityReadinessService(
+      records,
+      undefined,
+      { appendAudit: audit } as never,
+    );
+
+    const result = await service.govern({
+      integration,
+      actorOpenId: 'ou_sales_a',
+      request: {
+        recordId: 'opportunity-unknown',
+        status: 'active',
+        expectedStatus: 'unknown',
+        expectedSourceVersion: currentOpportunity.sourceVersion,
+        followupRecordId: currentFollowup.recordId,
+        expectedFollowupSourceVersion: currentFollowup.sourceVersion,
+        communicationAt: '2026-09-23T02:00:00.000Z',
+        idempotencyKey: 'governance-1',
+      },
+    });
+
+    expect(result).toMatchObject({
+      status: 'active',
+      communicationAt: '2026-09-23T02:00:00.000Z',
+      sourceVersion: 'opportunity-v2',
+      followupSourceVersion: 'followup-v2',
+    });
+    expect(audit).toHaveBeenCalledTimes(2);
+    expect(audit.mock.calls.map((call) => call[0].outcome)).toEqual([
+      'accepted',
+      'succeeded',
+    ]);
+  });
+
+  it('rejects stale versions before any write', async (): Promise<void> => {
+    const records = {
+      readStaleOpportunity: vi.fn(async () => opportunity('active')),
+      updateOpportunityStatus: vi.fn(),
+    };
+    const service = new StaleOpportunityReadinessService(records);
+
+    await expect(service.govern({
+      integration,
+      actorOpenId: 'ou_sales_a',
+      request: {
+        recordId: 'opportunity-1',
+        status: 'won',
+        expectedStatus: 'active',
+        expectedSourceVersion: 'stale-version',
+        followupRecordId: null,
+        expectedFollowupSourceVersion: null,
+        idempotencyKey: 'governance-2',
+      },
+    })).rejects.toMatchObject<Partial<StaleOpportunityGovernanceError>>({
+      code: 'CONFLICT',
+    });
+    expect(records.updateOpportunityStatus).not.toHaveBeenCalled();
+  });
+
+  it('never creates a historical followup when no existing record exists', async (): Promise<void> => {
+    const updateStatus = vi.fn();
+    const records = {
+      readStaleOpportunity: vi.fn(async () => opportunity('active')),
+      updateOpportunityStatus: updateStatus,
+      updateStaleOpportunityFollowupCommunicationAt: vi.fn(),
+    };
+    const service = new StaleOpportunityReadinessService(records);
+
+    await expect(service.govern({
+      integration,
+      actorOpenId: 'ou_sales_a',
+      request: {
+        recordId: 'opportunity-1',
+        status: 'active',
+        expectedStatus: 'active',
+        expectedSourceVersion: '2026-09-28T02:00:00.000Z',
+        followupRecordId: null,
+        expectedFollowupSourceVersion: null,
+        communicationAt: '2026-09-23T02:00:00.000Z',
+        idempotencyKey: 'governance-3',
+      },
+    })).rejects.toMatchObject<Partial<StaleOpportunityGovernanceError>>({
+      code: 'VALIDATION_FAILED',
+    });
+    expect(updateStatus).not.toHaveBeenCalled();
   });
 });
