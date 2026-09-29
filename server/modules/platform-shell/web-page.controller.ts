@@ -8,6 +8,7 @@ class WebPageController {
   @Get([
     '/',
     'daily-report',
+    'stale-opportunity-readiness',
     'customers',
     'opportunities',
     'followups',

@@ -41,6 +41,12 @@ const NAVIGATION_DEFINITIONS: NavigationDefinition[] = [
     requiredPermission: 'review:read-personal',
   },
   {
+    key: 'stale-opportunity-readiness',
+    label: '商机提醒准备度',
+    path: '/stale-opportunity-readiness',
+    requiredPermission: 'review:read-personal',
+  },
+  {
     key: 'customers',
     label: '客户',
     path: '/customers',

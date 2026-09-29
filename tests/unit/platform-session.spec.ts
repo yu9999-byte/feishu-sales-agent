@@ -171,6 +171,7 @@ describe('PlatformSessionService', (): void => {
     expect(navigationKeys(session)).toEqual([
       'workspace',
       'daily-report',
+      'stale-opportunity-readiness',
       'customers',
       'opportunities',
       'followups',

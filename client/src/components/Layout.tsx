@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   UsersRound,
   X,
+  Radar,
 } from 'lucide-react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 
@@ -29,6 +30,7 @@ interface ProductLayoutContext {
 const iconByKey: Record<PlatformNavigationKey, React.ElementType> = {
   workspace: House,
   'daily-report': FileText,
+  'stale-opportunity-readiness': Radar,
   customers: UsersRound,
   opportunities: BriefcaseBusiness,
   followups: ClipboardList,

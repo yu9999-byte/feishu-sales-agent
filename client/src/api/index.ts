@@ -10,6 +10,7 @@ import type {
   PlatformSectionKey,
   PlatformSectionResponse,
   PlatformSessionResponse,
+  StaleOpportunityReadinessResponse,
   WorkspaceResponse,
 } from '@shared/api.interface';
 
@@ -87,6 +88,18 @@ const getDailySalesReport = async (
       : '';
     const response = await axios.get<DailySalesReportResponse>(
       `/api/platform/daily-report${query}`,
+      { withCredentials: true },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
+const getStaleOpportunityReadiness = async (): Promise<StaleOpportunityReadinessResponse> => {
+  try {
+    const response = await axios.get<StaleOpportunityReadinessResponse>(
+      '/api/platform/stale-opportunity-readiness',
       { withCredentials: true },
     );
     return response.data;
@@ -190,6 +203,7 @@ export {
   getFollowupDraft,
   getFollowupExecution,
   getDailySalesReport,
+  getStaleOpportunityReadiness,
   getPlatformSection,
   getPlatformSession,
   getWorkspace,

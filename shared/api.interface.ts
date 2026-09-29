@@ -292,6 +292,7 @@ export type PlatformDataScope =
 export type PlatformNavigationKey =
   | 'workspace'
   | 'daily-report'
+  | 'stale-opportunity-readiness'
   | 'customers'
   | 'opportunities'
   | 'followups'

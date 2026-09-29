@@ -8,12 +8,14 @@ import SectionPage from './pages/SectionPage/SectionPage';
 import FollowupCreatePage from './pages/FollowupCreatePage/FollowupCreatePage';
 import FollowupDraftPage from './pages/FollowupDraftPage/FollowupDraftPage';
 import DailyReportPage from './pages/DailyReportPage/DailyReportPage';
+import StaleOpportunityReadinessPage from './pages/StaleOpportunityReadinessPage/StaleOpportunityReadinessPage';
 
 const RoutesComponent: React.FC = () => (
   <Routes>
     <Route element={<Layout />}>
       <Route index element={<HomePage />} />
       <Route path="daily-report" element={<DailyReportPage />} />
+      <Route path="stale-opportunity-readiness" element={<StaleOpportunityReadinessPage />} />
       <Route path="customers" element={<SectionPage sectionKey="customers" />} />
       <Route path="opportunities" element={<SectionPage sectionKey="opportunities" />} />
       <Route path="followups" element={<SectionPage sectionKey="followups" />} />
