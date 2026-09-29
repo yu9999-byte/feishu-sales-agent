@@ -267,6 +267,17 @@ const OpportunityItem: React.FC<OpportunityItemProps> = ({ item, onSaved }) => {
     ? new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium' }).format(communicationDate)
     : '未选择';
 
+  useEffect((): void => {
+    setStatus(item.status === 'unknown' ? '' : item.status);
+    setCommunicationDate(toDate(item.lastEffectiveFollowupAt));
+  }, [
+    item.recordId,
+    item.sourceVersion,
+    item.followupSourceVersion,
+    item.status,
+    item.lastEffectiveFollowupAt,
+  ]);
+
   const submit = (): void => {
     if (status === '') return;
     setSaving(true);

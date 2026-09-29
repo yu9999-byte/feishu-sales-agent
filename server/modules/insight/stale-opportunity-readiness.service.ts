@@ -252,6 +252,16 @@ class StaleOpportunityReadinessService {
           input.actorOpenId,
           request.recordId,
         );
+      if (
+        opportunity.sourceVersion === null ||
+        request.expectedSourceVersion === null
+      ) {
+        throw new StaleOpportunityGovernanceError(
+          'VALIDATION_FAILED',
+          '商机版本不可用，无法安全确认',
+          traceId,
+        );
+      }
       if (opportunity.sourceVersion !== request.expectedSourceVersion) {
         throw new StaleOpportunityGovernanceError(
           'CONFLICT',
@@ -283,6 +293,16 @@ class StaleOpportunityReadinessService {
           request.recordId,
           request.followupRecordId,
         );
+        if (
+          followup.sourceVersion === null ||
+          request.expectedFollowupSourceVersion === null
+        ) {
+          throw new StaleOpportunityGovernanceError(
+            'VALIDATION_FAILED',
+            '跟进版本不可用，无法安全确认',
+            traceId,
+          );
+        }
         if (followup.sourceVersion !== request.expectedFollowupSourceVersion) {
           throw new StaleOpportunityGovernanceError(
             'CONFLICT',
@@ -480,6 +500,13 @@ class StaleOpportunityReadinessService {
       return new StaleOpportunityGovernanceError(
         'CONFLICT',
         '记录已变化，请刷新后再确认',
+        traceId,
+      );
+    }
+    if (message.includes('could not be verified')) {
+      return new StaleOpportunityGovernanceError(
+        'INTERNAL_ERROR',
+        '写入后校验失败，请查看追踪号并稍后重试',
         traceId,
       );
     }
