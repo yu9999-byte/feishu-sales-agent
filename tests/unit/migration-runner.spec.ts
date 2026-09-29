@@ -21,6 +21,8 @@ describe('Agent migration runner', (): void => {
       '008_conversation_memory.sql',
       '009_followup_context_snapshot.sql',
       '010_followup_progress_assessment.sql',
+      '011_stale_opportunity_reminders.sql',
+      '012_stale_opportunity_delivery_state.sql',
     ]);
     expect(result.stdout).not.toContain('004_agent_p0_demo_tenant');
   });
