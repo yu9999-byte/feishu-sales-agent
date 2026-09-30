@@ -74,7 +74,7 @@
 | 销售日报 Agent v1 | `Automated Green / API contract ready / UI pending` | `GET /api/platform/daily-report` 已按当前销售和租户权限只读汇总当天跟进、商机、未完成/逾期任务；单测、全量 Agent 回归、类型、Lint、构建通过；真实登录态内容和 Web/飞书 UI 尚未验收 |
 | 商机提醒准备度工作台 | `Automated Green / API contract ready / UI pending` | `/stale-opportunity-readiness` 复用 `review:read-personal`，只读展示商机状态、可信跟进时间、阻断原因和 Base 来源；页面不写业务数据、不发送提醒；真实登录态内容和视觉验收仍待浏览器控制句柄 |
 | 商机推进 | `Automated Green / UI pending`（当前跟进切片） | 已基于本次沟通与业务上下文生成版本化的变化、缺口、风险和行动建议；既有商机状态已具备聊天确认执行入口，主动停滞扫描仍属于 S4 |
-| 管理 Review | `Draft` | 需求和阶段定义存在，尚无团队聚合、管理动作和追踪闭环 |
+| 管理 Review | `Automated Green / API contract ready / UI pending` | `/api/platform/team-review` 已按主管/高管权限聚合个人日报、团队风险和管理建议；只读自动化第一切片已完成，真实主管 UI、管理动作执行和调度仍未验收 |
 | Playbook 优化 | `Draft` | 依赖足够赢单/丢单与阶段数据，尚未开始 |
 
 权威细节见[需求追踪矩阵](specs/05-requirements-traceability.md)和[当前工程说明](current-state.md)。

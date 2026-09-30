@@ -12,6 +12,7 @@ import { SalesBehaviorModule } from './modules/sales-behavior/sales-behavior.mod
 import { DailyReportModule } from './modules/insight/daily-report.module';
 import { StaleOpportunityReadinessModule } from
   './modules/insight/stale-opportunity-readiness.module';
+import { TeamReviewModule } from './modules/insight/team-review.module';
 import { FeishuWebhookBridge } from './modules/feishu/feishu-webhook.bridge';
 import { FeishuWebhookController } from './modules/feishu/feishu-webhook.controller';
 
@@ -24,6 +25,7 @@ import { FeishuWebhookController } from './modules/feishu/feishu-webhook.control
     SalesBehaviorModule,
     DailyReportModule,
     StaleOpportunityReadinessModule,
+    TeamReviewModule,
   ],
   controllers: [FeishuWebhookController],
   providers: [

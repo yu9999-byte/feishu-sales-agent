@@ -410,6 +410,54 @@ export interface DailySalesReportResponse {
   warnings: string[];
 }
 
+export type TeamReviewStatus =
+  | 'ready'
+  | 'partial'
+  | 'empty'
+  | 'unavailable';
+
+export type TeamReviewAttentionSeverity = 'high' | 'medium';
+
+export interface TeamReviewMemberSummary {
+  memberId: string;
+  displayName: string;
+  status: DailySalesReportStatus;
+  metrics: DailySalesReportMetrics;
+  highlights: string[];
+  nextActions: string[];
+  warnings: string[];
+}
+
+export interface TeamReviewAttention {
+  memberId: string;
+  displayName: string;
+  severity: TeamReviewAttentionSeverity;
+  reasons: string[];
+}
+
+export interface TeamReviewMetrics {
+  memberCount: number;
+  activeMemberCount: number;
+  followupCount: number;
+  opportunityCount: number;
+  openTaskCount: number;
+  overdueTaskCount: number;
+  attentionMemberCount: number;
+}
+
+export interface TeamReviewResponse {
+  reviewDate: string;
+  timezone: string;
+  status: TeamReviewStatus;
+  generatedAt: string;
+  metrics: TeamReviewMetrics;
+  members: TeamReviewMemberSummary[];
+  attentions: TeamReviewAttention[];
+  highlights: string[];
+  managerActions: string[];
+  warnings: string[];
+}
+
 export type StaleOpportunityReadinessStatus =
   | 'ready'
   | 'incomplete'

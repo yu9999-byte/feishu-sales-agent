@@ -1,5 +1,50 @@
 # 当前工程说明
 
+## 2026-09-30 团队 Review Agent 自动化第一切片（UI 暂不验收）
+
+- 新增只读 `GET /api/platform/team-review`，要求当前 Web 会话具备 `review:read-team`；服务端
+  从会话读取租户、成员、角色和时区，不接受前端传入业务身份。
+- `TeamReviewService` 复用个人日报聚合：主管只能看到本人和递归下属，高管/管理员看到租户内
+  有效成员；禁用成员、跨租户成员和无效汇报关系会被过滤。
+- 输出确定性团队指标、成员日报状态、逾期任务/无跟进/缺少下一步的关注项和管理建议。任一成员
+  来源不完整时整体降级为 `partial`；全部不可用时为 `unavailable`；服务只读，不创建任务、
+  不发送消息、不修改 Base/Task 或控制库业务记录。
+- 新增 3 项单测覆盖主管递归范围、高管聚合与逾期风险、无效成员 fail-closed。服务端类型检查、
+  ESLint、Agent 构建和定向测试通过。真实主管 Web/飞书 UI 仍保持 `UI pending`，本轮按要求不进入 UI 验收。
+
+
+## 2026-09-30 S1 最新运行态复核（UI 仍阻塞）
+
+- 本轮沿用当前版本完成质量证据复核：Agent 测试 `260/260` 通过，Postgres 集成测试
+  `11/11` 通过；服务端、客户端、测试 TypeScript，ESLint，Agent 构建和 Web 构建均通过。
+  测试输出中的 timeout、模型忙和注入失败日志属于既有失败路径断言，没有导致测试失败。
+- 本地 Agent 运行态健康：PID `72384` 仍监听 `3100`，访问 `http://127.0.0.1:3100/`
+  返回 `200`。这只证明本地服务可用，不等于飞书真实 UI 已验收。
+- 当前 `.env.local` 的 `WEB_PUBLIC_URL` 仍指向已失效的 Tunnelmole 临时域名
+  `https://djorw5-ip-183-23-144-230.tunnelmole.net`；公网请求返回 `No matching tunnelmole domain`，
+  因而飞书 OAuth 无法回调当前 Agent。
+- 本轮早期检查时 Codex 内置浏览器只暴露 ambient URL，独立 tab/page 输入句柄尚未恢复；随后控制
+  句柄恢复，但只读检查显示目标会话和输入框不可用。CDP proxy `localhost:3456` 仍不可用。本轮
+  没有操作用户本地 Chrome，没有用 API 代替 UI 验收，也没有向“销售agent”发送冒充 UI 的消息。
+- 因此 S1 的普通问答、客户事实澄清、自然语言“帮我写跟进”、执行中反馈、唯一成功/失败终态和
+  结果修订继续保持 `Automated Green / UI pending / blocked`；销售日报 Web UI、S4 工作台 UI
+  同样保持 `UI pending`。不发布 GitHub milestone，下一解锁条件是恢复 Codex 浏览器控制句柄并
+  确认唯一会话为“销售agent”。
+
+## 2026-09-30 Codex 浏览器控制恢复后的只读检查
+
+- Codex 内置浏览器控制句柄现已可用，且浏览器实例明确为 `Codex In-app Browser`；本轮未连接或
+  操作用户本地 Chrome。
+- 飞书标签 `https://ldkj.feishu.cn/next/messenger/` 可读取，但当前标题为“消息 - 轮动”，
+  页面只展示轮动空白首页和“今天也辛苦啦，轮动陪你一起努力”，没有“销售agent”会话、消息列表
+  或输入框，因此无法确认目标机器人身份。
+- 只读刷新、等待数据加载和无障碍树回读均未出现目标会话。点击搜索入口后没有出现可输入控件，
+  页面 DevTools 日志记录 `dispatchSearchSetInputEvent not impl on web`；未发送消息、未点击业务卡片、
+  未写入客户/商机/跟进/任务。
+- 本证据将 `ISS-UI-003` 的原因细化为“Codex 标签可控但飞书会话数据/搜索输入不可用”；S1、日报
+  Web UI 和 S4 工作台仍保持 `UI pending / blocked`。下一步需要在同一 Codex 标签恢复已登录的
+  “销售agent”会话并能显示消息输入框，之后才执行最小受控验证。
+
 ## 2026-09-30 S4 历史商机逐条治理第一切片
 
 - 在只读准备度报告基础上新增 `POST /api/platform/stale-opportunity-readiness/govern`，每次只处理一条本人商机；请求必须携带读取时的商机状态/版本、跟进记录/版本和幂等键。

@@ -1,6 +1,16 @@
 # 需求追踪矩阵
 
-状态：`Approved / Goal v3 aligned / automated Green / UI pending 2026-09-27`
+状态：`Approved / Goal v3 aligned / automated Green / UI pending 2026-09-30`
+
+2026-09-30 最新运行态复核：Agent `260/260`、Postgres 集成 `11/11`，服务端/客户端/测试
+TypeScript、ESLint、Agent/Web 构建通过；本地 Agent `72384` 在 `3100` 返回 `200`。由于
+`WEB_PUBLIC_URL` 的 Tunnelmole 临时域名失效，飞书 OAuth 无法回调；Codex 内置浏览器随后虽恢复
+标签控制，但目标会话和输入控件不可用，因此 S1、`REV-001` 和 `S4` 工作台的真实 UI 证据仍为
+`UI pending / blocked`。本轮不以自动化结果替代 UI，不发布 GitHub milestone。
+
+同日后续只读复核已恢复 Codex In-app Browser 标签控制，但标签实际为“消息 - 轮动”空白首页，
+没有“销售agent”会话或输入框；搜索入口还触发 `dispatchSearchSetInputEvent not impl on web`。
+因此 UI 阻塞原因更新为“目标会话/输入控件不可用”，不改变任何 `UI pending` 或 `blocked` 状态。
 
 2026-09-29 产品方向确认：本项目建设为多 Agent、多场景销售助手。销售跟进、商机推进、
 任务履约、商机停滞提醒、销售日报、团队 Review 和 Playbook 优化共享同一权限、上下文、
@@ -134,7 +144,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | `REV-001` 个人日报 | B7 | Automated Green / API contract ready / UI pending | 日报聚合快照 3/3；Agent 全量 `245/245`、Postgres `8/8`、服务端/客户端/测试 TypeScript、ESLint、Agent/Web 构建通过；`GET /api/platform/daily-report` 已实现登录、租户、销售范围和 `review:read-personal` 权限边界，来源不可用/分页不完整安全降级；当前租户真实只读 Task 探针返回 5 条本人未完成任务、无分页警告 | 尚未在真实登录态回读日报内容，也未完成真实 Web/飞书 UI 验收 |
 | `COP-001..007` 客户商机决策 | C | Draft | 待查询/评分/权限/评测 | 待销售/主管页面验收 |
 | `SIA-001..006` 问答、RAG 和操作 | D | Draft | 待 ACL/RAG/工具测试 | 待问答与操作验收 |
-| `REV-002..006` 团队 Review 和经营分析 | E | Draft | 待聚合/调度/幂等测试 | 待主管/高管验收 |
+| `REV-002..006` 团队 Review 和经营分析 | E | Automated Green / API contract ready / UI pending | `GET /api/platform/team-review` 已覆盖主管递归范围、高管租户范围、成员日报聚合、逾期/无跟进关注项、来源降级和无效成员 fail-closed；定向 3 项单测、服务端 TypeScript、ESLint、Agent 构建通过 | 尚未在真实主管/高管 Web 或飞书入口验收；管理动作执行、调度和幂等仍未实现 |
 | `BPA-001..006` 最佳实践与 Playbook | F | Draft | 待样本/版本/审核测试 | 待管理员审核验收 |
 | `OPS-001..002` 正式运行保障 | G | Draft | 待故障/恢复/备份测试 | 待两个真实租户验收 |
 
