@@ -244,4 +244,32 @@ describe('TeamReviewService', (): void => {
       warnings: ['当前主管成员不在有效团队范围内'],
     });
   });
+
+  it('does not read team data for a sales-only viewer or disabled integration', async (): Promise<void> => {
+    const identity: TeamReviewIdentityReader = makeIdentity([
+      member('member-manager', 'ou_manager', '主管'),
+    ], []);
+    const reports: DailyReportGenerator = makeReports();
+    const service = new TeamReviewService(identity, reports);
+
+    const salesResult: TeamReviewResponse = await service.generate({
+      integration,
+      session: session(['sales']),
+      reportDate: '2026-09-30',
+      timezone: 'Asia/Shanghai',
+      now: NOW,
+    });
+    const disabledResult: TeamReviewResponse = await service.generate({
+      integration: { ...integration, status: 'disabled' },
+      session: session(['manager']),
+      reportDate: '2026-09-30',
+      timezone: 'Asia/Shanghai',
+      now: NOW,
+    });
+
+    expect(salesResult.warnings).toEqual(['当前成员没有团队 Review 权限']);
+    expect(disabledResult.warnings).toEqual(['销售数据连接未启用']);
+    expect(identity.listMembers).not.toHaveBeenCalled();
+    expect(reports.generate).not.toHaveBeenCalled();
+  });
 });

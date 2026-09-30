@@ -178,6 +178,14 @@ class TeamReviewService {
 
   async generate(input: TeamReviewInput): Promise<TeamReviewResponse> {
     const now: Date = input.now ?? new Date();
+    if (input.integration.status !== 'active') {
+      return this.unavailable(input, now, ['销售数据连接未启用']);
+    }
+    if (!input.session.roles.some((role: PlatformRole): boolean =>
+      role === 'manager' || role === 'executive' || role === 'admin'
+    )) {
+      return this.unavailable(input, now, ['当前成员没有团队 Review 权限']);
+    }
     const members: PlatformMember[] = await this.identity.listMembers(
       input.integration.tenantId,
     );
