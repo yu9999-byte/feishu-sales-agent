@@ -9,6 +9,7 @@ import type {
   AgentExecutionResult,
   AgentSessionState,
   PendingActionStatus,
+  TaskFulfillmentChange,
 } from '@shared/api.interface';
 import type { ControlStore } from '@server/modules/agent-core/agent.ports';
 import type {
@@ -19,6 +20,7 @@ import type {
   SaveCollectingSessionInput,
   SaveIntentClarificationSessionInput,
   TenantIntegration,
+  TaskStatusSnapshot,
 } from '@server/modules/agent-core/agent.types';
 import {
   parseAgentExecutionResult,
@@ -64,6 +66,15 @@ interface PendingActionRow {
   expires_at: Date | string;
   created_at: Date | string;
   updated_at: Date | string;
+}
+
+interface TaskSnapshotRow {
+  task_guid: string;
+  title: string;
+  status: string;
+  completed_at: Date | string | null;
+  due_at: Date | string | null;
+  task_url: string | null;
 }
 
 interface IdRow {
@@ -608,6 +619,92 @@ export class PostgresControlStore
     return current;
   }
 
+  async listSucceededActions(
+    tenantId: string,
+    actorOpenId: string,
+    since: Date,
+    limit: number,
+  ): Promise<PendingAction[]> {
+    const safeLimit: number = Math.min(Math.max(limit, 1), 500);
+    const rows: PendingActionRow[] = await this.sql<PendingActionRow[]>`
+      SELECT *
+      FROM pending_actions
+      WHERE tenant_id = ${tenantId}
+        AND actor_open_id = ${actorOpenId}
+        AND status = 'succeeded'
+        AND updated_at >= ${since}
+      ORDER BY updated_at DESC
+      LIMIT ${safeLimit}
+    `;
+    return rows.map(
+      (row: PendingActionRow): PendingAction => this.mapPendingAction(row),
+    );
+  }
+
+  async recordTaskSnapshots(
+    tenantId: string,
+    actorOpenId: string,
+    observedAt: Date,
+    snapshots: TaskStatusSnapshot[],
+  ): Promise<TaskFulfillmentChange[]> {
+    const changes: TaskFulfillmentChange[] = [];
+    for (const snapshot of snapshots) {
+      const previousRows: TaskSnapshotRow[] =
+        await this.sql<TaskSnapshotRow[]>`
+          SELECT task_guid, title, status, completed_at, due_at, task_url
+          FROM task_status_snapshots
+          WHERE tenant_id = ${tenantId}::uuid
+            AND actor_open_id = ${actorOpenId}
+            AND task_guid = ${snapshot.guid}
+          LIMIT 1
+        `;
+      const previous: TaskStatusSnapshot | null = previousRows[0]
+        ? this.mapTaskSnapshot(previousRows[0])
+        : null;
+      if (previous && this.taskSnapshotChanged(previous, snapshot)) {
+        const kind: TaskFulfillmentChange['kind'] =
+          previous.completedAt === null && snapshot.completedAt !== null
+            ? 'completed'
+            : previous.completedAt !== null && snapshot.completedAt === null
+              ? 'reopened'
+              : 'changed';
+        changes.push({
+          guid: snapshot.guid,
+          title: snapshot.title,
+          kind,
+          previousTitle: previous.title,
+          currentTitle: snapshot.title,
+          previousStatus: previous.status,
+          currentStatus: snapshot.status,
+          previousCompletedAt: previous.completedAt,
+          currentCompletedAt: snapshot.completedAt,
+          previousDueAt: previous.dueAt,
+          currentDueAt: snapshot.dueAt,
+          observedAt: observedAt.toISOString(),
+        });
+      }
+      await this.sql`
+        INSERT INTO task_status_snapshots (
+          tenant_id, actor_open_id, task_guid, title, status,
+          completed_at, due_at, task_url, observed_at
+        ) VALUES (
+          ${tenantId}::uuid, ${actorOpenId}, ${snapshot.guid}, ${snapshot.title},
+          ${snapshot.status}, ${snapshot.completedAt}, ${snapshot.dueAt},
+          ${snapshot.url}, ${observedAt}
+        )
+        ON CONFLICT (tenant_id, actor_open_id, task_guid)
+        DO UPDATE SET
+          title = EXCLUDED.title,
+          status = EXCLUDED.status,
+          completed_at = EXCLUDED.completed_at,
+          due_at = EXCLUDED.due_at,
+          task_url = EXCLUDED.task_url,
+          observed_at = EXCLUDED.observed_at
+      `;
+    }
+    return changes;
+  }
+
   async recoverStaleExecutingActions(
     now: Date,
     timeoutMs: number,
@@ -772,6 +869,30 @@ export class PostgresControlStore
 
   private toDate(value: Date | string): Date {
     return value instanceof Date ? value : new Date(value);
+  }
+
+  private mapTaskSnapshot(row: TaskSnapshotRow): TaskStatusSnapshot {
+    return {
+      guid: row.task_guid,
+      title: row.title,
+      status: row.status,
+      completedAt: row.completed_at === null
+        ? null
+        : this.toDate(row.completed_at).toISOString(),
+      dueAt: row.due_at === null ? null : this.toDate(row.due_at).toISOString(),
+      url: row.task_url,
+    };
+  }
+
+  private taskSnapshotChanged(
+    previous: TaskStatusSnapshot,
+    current: TaskStatusSnapshot,
+  ): boolean {
+    return previous.title !== current.title ||
+      previous.status !== current.status ||
+      previous.completedAt !== current.completedAt ||
+      previous.dueAt !== current.dueAt ||
+      previous.url !== current.url;
   }
 
   private parseJsonColumn(value: unknown): unknown {

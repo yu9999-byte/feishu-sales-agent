@@ -158,12 +158,27 @@ describe('PlatformShellService', (): void => {
       service.getSection(webSession, 'reviews-team'),
     ).resolves.toMatchObject({
       title: '团队 Review',
-      status: 'planned',
+      status: 'available',
+      message: '团队复盘已提供只读指标、关注项和建议管理动作。',
     });
     repository.roles = [];
     await expect(
       service.getSection(webSession, 'reviews-team'),
     ).rejects.toMatchObject({ code: 'ACCESS_DENIED' });
+  });
+
+  it('exposes the read-only task fulfillment section to sales users', async (): Promise<void> => {
+    const repository: StubRepository = new StubRepository();
+    const service: PlatformShellService = new PlatformShellService(
+      repository,
+      new AuthorizationPolicyService(),
+    );
+
+    await expect(service.getSection(webSession, 'tasks')).resolves.toMatchObject({
+      title: '任务履约',
+      status: 'available',
+      message: '任务履约已提供未完成任务的到期风险判断和执行建议。',
+    });
   });
 
   it('rejects cross-tenant session data with the same safe error', async (): Promise<void> => {

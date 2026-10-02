@@ -9,6 +9,8 @@ import FollowupCreatePage from './pages/FollowupCreatePage/FollowupCreatePage';
 import FollowupDraftPage from './pages/FollowupDraftPage/FollowupDraftPage';
 import DailyReportPage from './pages/DailyReportPage/DailyReportPage';
 import StaleOpportunityReadinessPage from './pages/StaleOpportunityReadinessPage/StaleOpportunityReadinessPage';
+import TeamReviewPage from './pages/TeamReviewPage/TeamReviewPage';
+import TaskFulfillmentPage from './pages/TaskFulfillmentPage/TaskFulfillmentPage';
 
 const RoutesComponent: React.FC = () => (
   <Routes>
@@ -21,8 +23,8 @@ const RoutesComponent: React.FC = () => (
       <Route path="followups" element={<SectionPage sectionKey="followups" />} />
       <Route path="followups/new" element={<FollowupCreatePage />} />
       <Route path="followups/:id/edit" element={<FollowupDraftPage />} />
-      <Route path="tasks" element={<SectionPage sectionKey="tasks" />} />
-      <Route path="reviews/team" element={<SectionPage sectionKey="reviews-team" />} />
+      <Route path="tasks" element={<TaskFulfillmentPage />} />
+      <Route path="reviews/team" element={<TeamReviewPage />} />
       <Route path="analytics" element={<SectionPage sectionKey="analytics" />} />
       <Route path="playbooks" element={<SectionPage sectionKey="playbooks" />} />
       <Route path="admin/members" element={<SectionPage sectionKey="admin-members" />} />

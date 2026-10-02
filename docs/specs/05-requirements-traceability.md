@@ -1,6 +1,13 @@
 # 需求追踪矩阵
 
-状态：`Approved / Goal v3 aligned / automated Green / UI pending 2026-09-30`
+状态：`Approved / Goal v3 aligned / automated Green / UI pending 2026-10-03`
+
+2026-10-03 任务履约证据加固：任务网关解析 ISO/秒/毫秒 `completed_at`，只有可解析且
+大于 0 的时间作为完成证据；`"0"` 即使伴随冲突的完成状态也保持未完成。迁移 014、
+快照前后完成时间、API 和 `/tasks` 展示已接入。定向 `33/33`、Agent `278/278`、隔离
+Postgres 迁移 003..014 与快照集成 `1/1`、三套 TypeScript、统一 Lint、Stylelint、Agent/Web
+构建和 `git diff --check` 通过。本项目本地 55432 Postgres 未运行，本轮不声称全套
+Postgres 或完整运行态复验；不做飞书 UI，因此状态仍为 `UI pending`。
 
 2026-09-30 最新运行态复核：Agent `260/260`、Postgres 集成 `11/11`，服务端/客户端/测试
 TypeScript、ESLint、Agent/Web 构建通过；本地 Agent `72384` 在 `3100` 返回 `200`。由于
@@ -136,7 +143,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | `ING-005..007` 文档输入和失败恢复 | B5 | Draft | 待 Docs 权限/异常测试 | 待真实文档验收 |
 | `FUP-007..009` 写入、结果/项目质检卡、策略推送和幂等 | B6 | Implementing / regression fix | 三项 Base 后建任务、原卡唯一成功终态、原卡 patch 失败时补发、幂等、`followupRecordUrl` 持久化、成功卡记录链接，以及 `card.source_finalized`/补发 `card.result_sent` 审计均进入 137 项回归 | 历史双成功卡仅保留为 D-022 前的缺陷证据；本次唯一“跟进登记成功＋查看跟进记录”待真实复测 |
 | `FUP-010..011` 即时执行反馈、失败恢复和成功结果修订 | B6 | Isolated callback E2E Verified / real UI pending | 飞书 SDK 回调入口贯通真实 Bridge/Workflow/Executor/MemoryStore；测试替身验证同卡执行中、唯一成功/失败终态、重试及修订原跟进/任务；真实机器人 API E2E 仍只到待确认卡，无真实业务确认 | 本轮不要求手工 UI；真实飞书点击、业务写入和 Base/Task 回读仍待独立验收 |
-| `TSK-001..006` 任务预览、一次确认、状态建议/回收和提醒 | B6 | Partial / read permission verified / UI pending | 精确版本候选选择、空选择不建任务；Task 应用身份真实读取 `code=0`，分页上限 30 和不完整可见性 fail-closed 已回归；只有日期无钟点时不补造时间 | 用新草案复验任务候选 UI；状态回收和主动提醒仍待闭环 |
+| `TSK-001..006` 任务预览、一次确认、状态建议/回收和提醒 | B6 / P1-FULFILL | Partial overall / fulfillment v1 automated green / Web implemented / UI pending | 精确版本候选选择、空选择不建任务；`GET /api/platform/task-fulfillment` 和 `/tasks` 按本人范围及租户时区识别未完成任务风险，并按最终选中候选及精确 `taskGuid` 核对最近 180 天 Agent 成功执行的跟进承诺；列表未命中时读取精确任务详情，控制库保存最新状态和有效完成时间快照，输出已完成/部分完成/仍未完成/待核实及变更/重新开放证据；`completed_at="0"` 与冲突状态不得误报完成；无任务、不可见、详情失败和分页不完整分开呈现，500 条历史上限警告；不发送提醒、不修改任务、不升级主管。定向 `33/33`、Agent `278/278`、隔离 Postgres 快照集成 `1/1`，完整门禁以最新 `current-state.md` 为准 | 真实登录态内容、链接和视觉待验收；全量完成历史、无任务承接的兑现判断、状态更新、提醒与升级仍待闭环 |
 | `CTX-001..012` 客户/商机/跟进/任务上下文读取、匹配与来源 | P1-CTX | Partial / UI pending | Base 富文本数组 Red/Green、本人范围商机回退、真实华南科技只读重放成功；Task 读取权限和真实本人范围已验证 | 原草案 UI 曾失败；最新卡片与 Web 多分支待验收 |
 | `PRG-001..012` 本次进展、缺口、风险、建议与确认动作 | P1-PROGRESS | Automated Green / UI pending | 风险和行动建议在 Task 缺权限时保留；任务候选 fail-closed；编辑重算、Postgres 回读及旧草案兼容；201 项 Agent 测试和真实来源只读重放 | 最新飞书/Web 四层展示、编辑和确认边界仍待 UI 对账 |
 | `S4-001` 商机 7 天未更新提醒 | P1 internal trigger | Partial / scan green / ledger green / readiness API green / governance API automated green / workbench UI pending / disabled / prerequisites open | 纯判定、逐商机汇总、本人商机/跟进/Task 全分页、持久账本和逐条治理接口均有测试；工作台已支持状态 Select、已有跟进日期 Calendar、二次确认、版本校验、写后回读和审计。未知数据不推断，不能创建伪造历史跟进。尚无真实工作台 UI、剩余历史记录确认、定时任务、提醒发送或结果未知对账恢复 | 恢复浏览器句柄后只处理一条受控记录并回读 Base/审计；全部历史治理和真实 UI 通过后，再接默认关闭触发器和本人投递 |
@@ -144,7 +151,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | `REV-001` 个人日报 | B7 | Automated Green / API contract ready / UI pending | 日报聚合快照 3/3；Agent 全量 `245/245`、Postgres `8/8`、服务端/客户端/测试 TypeScript、ESLint、Agent/Web 构建通过；`GET /api/platform/daily-report` 已实现登录、租户、销售范围和 `review:read-personal` 权限边界，来源不可用/分页不完整安全降级；当前租户真实只读 Task 探针返回 5 条本人未完成任务、无分页警告 | 尚未在真实登录态回读日报内容，也未完成真实 Web/飞书 UI 验收 |
 | `COP-001..007` 客户商机决策 | C | Draft | 待查询/评分/权限/评测 | 待销售/主管页面验收 |
 | `SIA-001..006` 问答、RAG 和操作 | D | Draft | 待 ACL/RAG/工具测试 | 待问答与操作验收 |
-| `REV-002..006` 团队 Review 和经营分析 | E | Automated Green / API contract ready / UI pending | `GET /api/platform/team-review` 已覆盖主管递归范围、高管租户范围、成员日报聚合、逾期/无跟进关注项、来源降级和无效成员 fail-closed；定向 3 项单测、服务端 TypeScript、ESLint、Agent 构建通过 | 尚未在真实主管/高管 Web 或飞书入口验收；管理动作执行、调度和幂等仍未实现 |
+| `REV-002..006` 团队 Review 和经营分析 | E | Automated Green / Web implemented / UI pending | `GET /api/platform/team-review` 已覆盖主管递归范围、高管租户范围、成员日报聚合、逾期/无跟进关注项、来源降级和无效成员 fail-closed；`/reviews/team` 已展示团队指标、关注成员、管理建议和逐人状态；团队/平台权限/导航 16 项定向回归、全量 Agent `264/264`、Postgres `11/11`、三套 TypeScript、全库 ESLint、Stylelint 和 Agent/Web 构建通过 | 尚未在真实主管/高管登录态核对团队范围、真实内容和视觉呈现；管理动作执行、调度和幂等仍未实现 |
 | `BPA-001..006` 最佳实践与 Playbook | F | Draft | 待样本/版本/审核测试 | 待管理员审核验收 |
 | `OPS-001..002` 正式运行保障 | G | Draft | 待故障/恢复/备份测试 | 待两个真实租户验收 |
 

@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { MODULE_METADATA } from '@nestjs/common/constants';
 
 import {
   StaleOpportunityContextService,
   type StaleOpportunityFollowupRecord,
 } from '@server/modules/insight/stale-opportunity-context.service';
+import { StaleOpportunityReadinessModule } from
+  '@server/modules/insight/stale-opportunity-readiness.module';
 
 const record = (
   overrides: Partial<StaleOpportunityFollowupRecord> = {},
@@ -81,5 +84,16 @@ describe('StaleOpportunityContextService', (): void => {
 
   it('returns an empty result when no record is effective', (): void => {
     expect(service.summarize([])).toEqual([]);
+  });
+});
+
+describe('StaleOpportunityReadinessModule', (): void => {
+  it('registers the context dependency required at runtime', (): void => {
+    const providers: unknown[] = Reflect.getMetadata(
+      MODULE_METADATA.PROVIDERS,
+      StaleOpportunityReadinessModule,
+    ) as unknown[];
+
+    expect(providers).toContain(StaleOpportunityContextService);
   });
 });

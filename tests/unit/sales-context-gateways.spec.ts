@@ -568,6 +568,79 @@ describe('sales context gateways', (): void => {
     expect(patch).not.toHaveBeenCalled();
   });
 
+  it('reads a linked completed task by exact GUID without searching by title', async (): Promise<void> => {
+    const search = vi.fn();
+    const get = vi.fn(async () => ({
+      code: 0,
+      data: {
+        task: {
+          guid: 'completed-guid',
+          summary: '已完成回访',
+          completed_at: '2026-10-01T02:00:00.000Z',
+          due: { timestamp: '1790810400000' },
+          url: 'https://task/completed-guid',
+        },
+      },
+    }));
+    const client = { task: { v2: { task: { search, get } } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+    const result = await new FeishuTaskGateway(factory).getTaskByGuid(
+      integration,
+      'ou_sales_a',
+      'completed-guid',
+    );
+
+    expect(result).toMatchObject({
+      guid: 'completed-guid',
+      title: '已完成回访',
+      status: 'completed',
+      completedAt: '2026-10-01T02:00:00.000Z',
+      url: 'https://task/completed-guid',
+    });
+    expect(get).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: { task_guid: 'completed-guid' },
+        params: { user_id_type: 'open_id' },
+      }),
+      undefined,
+    );
+    expect(search).not.toHaveBeenCalled();
+  });
+
+  it('treats a zero completion timestamp as a reopened task', async (): Promise<void> => {
+    const get = vi.fn(async () => ({
+      code: 0,
+      data: {
+        task: {
+          guid: 'reopened-guid',
+          summary: '重新处理回访',
+          status: 'completed',
+          completed_at: '0',
+        },
+      },
+    }));
+    const client = { task: { v2: { task: { get } } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    const result = await new FeishuTaskGateway(factory).getTaskByGuid(
+      integration,
+      'ou_sales_a',
+      'reopened-guid',
+    );
+
+    expect(result).toMatchObject({
+      guid: 'reopened-guid',
+      status: 'todo',
+      completedAt: null,
+    });
+  });
+
   it('consumes every Task search page before returning complete visibility', async (): Promise<void> => {
     const search = vi.fn()
       .mockResolvedValueOnce({

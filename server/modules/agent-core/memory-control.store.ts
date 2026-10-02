@@ -1,6 +1,7 @@
 import type {
   AgentExecutionResult,
   PendingActionStatus,
+  TaskFulfillmentChange,
 } from '@shared/api.interface';
 import type {
   AgentSession,
@@ -10,6 +11,7 @@ import type {
   SaveCollectingSessionInput,
   SaveIntentClarificationSessionInput,
   TenantIntegration,
+  TaskStatusSnapshot,
 } from './agent.types';
 import type { ControlStore } from './agent.ports';
 
@@ -27,6 +29,8 @@ export class MemoryControlStore implements ControlStore {
   private readonly pendingActions: Map<string, PendingAction> =
     new Map<string, PendingAction>();
   private readonly auditEvents: StoredAuditEvent[] = [];
+  private readonly taskSnapshots: Map<string, TaskStatusSnapshot> =
+    new Map<string, TaskStatusSnapshot>();
 
   constructor(integrations: TenantIntegration[]) {
     this.tenantsByKey = new Map<string, TenantIntegration>(
@@ -359,6 +363,68 @@ export class MemoryControlStore implements ControlStore {
     return clone(action);
   }
 
+  async listSucceededActions(
+    tenantId: string,
+    actorOpenId: string,
+    since: Date,
+    limit: number,
+  ): Promise<PendingAction[]> {
+    return Array.from(this.pendingActions.values())
+      .filter((action: PendingAction): boolean =>
+        action.tenantId === tenantId &&
+        action.actorOpenId === actorOpenId &&
+        action.status === 'succeeded' &&
+        action.updatedAt.getTime() >= since.getTime(),
+      )
+      .sort((left: PendingAction, right: PendingAction): number =>
+        right.updatedAt.getTime() - left.updatedAt.getTime(),
+      )
+      .slice(0, Math.max(0, limit))
+      .map((action: PendingAction): PendingAction => clone(action));
+  }
+
+  async recordTaskSnapshots(
+    tenantId: string,
+    actorOpenId: string,
+    observedAt: Date,
+    snapshots: TaskStatusSnapshot[],
+  ): Promise<TaskFulfillmentChange[]> {
+    const changes: TaskFulfillmentChange[] = [];
+    snapshots.forEach((snapshot: TaskStatusSnapshot): void => {
+      const key: string = this.taskSnapshotKey(
+        tenantId,
+        actorOpenId,
+        snapshot.guid,
+      );
+      const previous: TaskStatusSnapshot | undefined =
+        this.taskSnapshots.get(key);
+      if (previous && this.taskSnapshotChanged(previous, snapshot)) {
+        const kind: TaskFulfillmentChange['kind'] =
+          previous.completedAt === null && snapshot.completedAt !== null
+            ? 'completed'
+            : previous.completedAt !== null && snapshot.completedAt === null
+              ? 'reopened'
+              : 'changed';
+        changes.push({
+          guid: snapshot.guid,
+          title: snapshot.title,
+          kind,
+          previousTitle: previous.title,
+          currentTitle: snapshot.title,
+          previousStatus: previous.status,
+          currentStatus: snapshot.status,
+          previousCompletedAt: previous.completedAt,
+          currentCompletedAt: snapshot.completedAt,
+          previousDueAt: previous.dueAt,
+          currentDueAt: snapshot.dueAt,
+          observedAt: observedAt.toISOString(),
+        });
+      }
+      this.taskSnapshots.set(key, clone(snapshot));
+    });
+    return changes;
+  }
+
   async recoverStaleExecutingActions(
     now: Date,
     timeoutMs: number,
@@ -428,5 +494,24 @@ export class MemoryControlStore implements ControlStore {
 
   private actionKey(tenantId: string, actionId: string): string {
     return `${tenantId}:${actionId}`;
+  }
+
+  private taskSnapshotKey(
+    tenantId: string,
+    actorOpenId: string,
+    taskGuid: string,
+  ): string {
+    return `${tenantId}:${actorOpenId}:${taskGuid}`;
+  }
+
+  private taskSnapshotChanged(
+    previous: TaskStatusSnapshot,
+    current: TaskStatusSnapshot,
+  ): boolean {
+    return previous.title !== current.title ||
+      previous.status !== current.status ||
+      previous.completedAt !== current.completedAt ||
+      previous.dueAt !== current.dueAt ||
+      previous.url !== current.url;
   }
 }

@@ -6,6 +6,7 @@ import type {
   PendingActionPayload,
   PendingActionStatus,
   SalesContext,
+  TaskFulfillmentChange,
 } from '@shared/api.interface';
 
 export type FeishuAppType = 'selfBuild' | 'isv';
@@ -302,6 +303,7 @@ export interface DailyReportTaskRecord {
   guid: string;
   title: string;
   status: string;
+  completedAt?: string | null;
   dueAt: string | null;
   url: string | null;
 }
@@ -310,6 +312,17 @@ export interface DailyReportTaskResult {
   items: DailyReportTaskRecord[];
   warning?: string;
 }
+
+export interface TaskStatusSnapshot {
+  guid: string;
+  title: string;
+  status: string;
+  completedAt: string | null;
+  dueAt: string | null;
+  url: string | null;
+}
+
+export type TaskStatusChange = TaskFulfillmentChange;
 
 export interface StaleOpportunityFollowupRecord {
   recordId: string;

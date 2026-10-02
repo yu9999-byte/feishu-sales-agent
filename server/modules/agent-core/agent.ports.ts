@@ -22,6 +22,7 @@ import type {
   SalesContextHints,
   SalesContextTaskResult,
   DailyReportBaseResult,
+  DailyReportTaskRecord,
   DailyReportTaskResult,
   StaleOpportunityFollowupPage,
   StaleOpportunityFollowupRecord,
@@ -29,6 +30,8 @@ import type {
   StaleOpportunityFollowupUpdateResult,
   StaleOpportunityPage,
   StaleOpportunityRecord,
+  TaskStatusSnapshot,
+  TaskStatusChange,
   TaskCreationResult,
   TenantIntegration,
 } from './agent.types';
@@ -110,6 +113,18 @@ export interface ControlStore {
     status: PendingActionStatus,
     result: AgentExecutionResult,
   ): Promise<PendingAction>;
+  listSucceededActions?(
+    tenantId: string,
+    actorOpenId: string,
+    since: Date,
+    limit: number,
+  ): Promise<PendingAction[]>;
+  recordTaskSnapshots?(
+    tenantId: string,
+    actorOpenId: string,
+    observedAt: Date,
+    snapshots: TaskStatusSnapshot[],
+  ): Promise<TaskStatusChange[]>;
   recoverStaleExecutingActions?(
     now: Date,
     timeoutMs: number,
@@ -241,6 +256,11 @@ export interface TaskGateway {
     integration: TenantIntegration,
     actorOpenId: string,
   ): Promise<DailyReportTaskResult>;
+  getTaskByGuid?(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    taskGuid: string,
+  ): Promise<DailyReportTaskRecord | null>;
   createTask(
     integration: TenantIntegration,
     action: PendingAction,

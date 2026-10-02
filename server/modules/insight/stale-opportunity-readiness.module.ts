@@ -4,6 +4,8 @@ import { AgentExecutionModule } from '@server/modules/agent-core/agent-execution
 import { AgentControlModule } from '@server/modules/control-store/agent-control.module';
 import { PlatformShellModule } from '@server/modules/platform-shell/platform-shell.module';
 import { WebAuthModule } from '@server/modules/web-auth/web-auth.module';
+import { StaleOpportunityContextService } from
+  './stale-opportunity-context.service';
 import { StaleOpportunityReadinessController } from
   './stale-opportunity-readiness.controller';
 import { StaleOpportunityReadinessService } from
@@ -17,7 +19,10 @@ import { StaleOpportunityReadinessService } from
     WebAuthModule,
   ],
   controllers: [StaleOpportunityReadinessController],
-  providers: [StaleOpportunityReadinessService],
+  providers: [
+    StaleOpportunityContextService,
+    StaleOpportunityReadinessService,
+  ],
 })
 class StaleOpportunityReadinessModule {}
 

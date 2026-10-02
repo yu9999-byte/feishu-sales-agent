@@ -13,6 +13,8 @@ import type {
   StaleOpportunityGovernanceRequest,
   StaleOpportunityGovernanceResponse,
   StaleOpportunityReadinessResponse,
+  TaskFulfillmentResponse,
+  TeamReviewResponse,
   WorkspaceResponse,
 } from '@shared/api.interface';
 
@@ -132,6 +134,40 @@ const getDailySalesReport = async (
       : '';
     const response = await axios.get<DailySalesReportResponse>(
       `/api/platform/daily-report${query}`,
+      { withCredentials: true },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
+const getTeamReview = async (
+  reviewDate?: string,
+): Promise<TeamReviewResponse> => {
+  try {
+    const query: string = reviewDate
+      ? `?date=${encodeURIComponent(reviewDate)}`
+      : '';
+    const response = await axios.get<TeamReviewResponse>(
+      `/api/platform/team-review${query}`,
+      { withCredentials: true },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
+const getTaskFulfillment = async (
+  referenceDate?: string,
+): Promise<TaskFulfillmentResponse> => {
+  try {
+    const query: string = referenceDate
+      ? `?date=${encodeURIComponent(referenceDate)}`
+      : '';
+    const response = await axios.get<TaskFulfillmentResponse>(
+      `/api/platform/task-fulfillment${query}`,
       { withCredentials: true },
     );
     return response.data;
@@ -268,6 +304,8 @@ export {
   getFollowupDraft,
   getFollowupExecution,
   getDailySalesReport,
+  getTaskFulfillment,
+  getTeamReview,
   getStaleOpportunityReadiness,
   submitStaleOpportunityGovernance,
   getPlatformSection,

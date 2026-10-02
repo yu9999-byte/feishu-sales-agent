@@ -410,6 +410,136 @@ export interface DailySalesReportResponse {
   warnings: string[];
 }
 
+export type TaskFulfillmentStatus =
+  | 'ready'
+  | 'partial'
+  | 'empty'
+  | 'unavailable';
+
+export type TaskFulfillmentCategory =
+  | 'overdue'
+  | 'due_today'
+  | 'due_soon'
+  | 'unscheduled'
+  | 'scheduled';
+
+export type TaskFulfillmentPriority =
+  | 'critical'
+  | 'high'
+  | 'medium'
+  | 'normal';
+
+export type TaskPromiseStatus =
+  | 'open_overdue'
+  | 'open_due_today'
+  | 'open_scheduled'
+  | 'open_unscheduled'
+  | 'open_changed'
+  | 'completed'
+  | 'not_task_tracked'
+  | 'task_not_visible'
+  | 'task_lookup_incomplete'
+  | 'task_lookup_unavailable';
+
+export type TaskPromiseCompletionState =
+  | 'completed'
+  | 'partially_completed'
+  | 'still_open'
+  | 'unknown';
+
+export type TaskFulfillmentChangeKind =
+  | 'completed'
+  | 'changed'
+  | 'reopened';
+
+export interface TaskFulfillmentChange {
+  guid: string;
+  title: string;
+  kind: TaskFulfillmentChangeKind;
+  previousTitle: string | null;
+  currentTitle: string;
+  previousStatus: string | null;
+  currentStatus: string;
+  previousCompletedAt: string | null;
+  currentCompletedAt: string | null;
+  previousDueAt: string | null;
+  currentDueAt: string | null;
+  observedAt: string;
+}
+
+export interface TaskFulfillmentItem {
+  guid: string;
+  title: string;
+  status: string;
+  completedAt: string | null;
+  dueAt: string | null;
+  dueDate: string | null;
+  daysUntilDue: number | null;
+  url: string | null;
+  category: TaskFulfillmentCategory;
+  priority: TaskFulfillmentPriority;
+  suggestedAction: string;
+}
+
+export interface TaskFulfillmentMetrics {
+  openTaskCount: number;
+  overdueCount: number;
+  dueTodayCount: number;
+  dueSoonCount: number;
+  unscheduledCount: number;
+  scheduledCount: number;
+  promiseCount: number;
+  linkedOpenPromiseCount: number;
+  completedPromiseCount: number;
+  partiallyCompletedPromiseCount: number;
+  stillOpenPromiseCount: number;
+  changedPromiseCount: number;
+  overduePromiseCount: number;
+  untrackedPromiseCount: number;
+  unverifiablePromiseCount: number;
+}
+
+export interface TaskPromiseFulfillmentItem {
+  pendingActionId: string;
+  customerName: string | null;
+  opportunityName: string | null;
+  nextAction: string;
+  promisedDueAt: string | null;
+  confirmedAt: string;
+  taskGuid: string | null;
+  taskUrl: string | null;
+  taskTitle: string | null;
+  taskStatus: string | null;
+  taskCompletedAt: string | null;
+  taskDueAt: string | null;
+  status: TaskPromiseStatus;
+  completionState: TaskPromiseCompletionState;
+  suggestedAction: string;
+  change?: TaskFulfillmentChange;
+}
+
+export interface TaskFulfillmentCoverage {
+  openTasks: true;
+  completedTasks: false;
+  promiseReconciliation: 'agent_confirmed_only';
+  promiseHistoryDays: 180;
+  taskSnapshots: 'latest_observation' | 'unavailable';
+}
+
+export interface TaskFulfillmentResponse {
+  referenceDate: string;
+  timezone: string;
+  status: TaskFulfillmentStatus;
+  generatedAt: string;
+  metrics: TaskFulfillmentMetrics;
+  items: TaskFulfillmentItem[];
+  promises: TaskPromiseFulfillmentItem[];
+  changes: TaskFulfillmentChange[];
+  recommendations: string[];
+  coverage: TaskFulfillmentCoverage;
+  warnings: string[];
+}
+
 export type TeamReviewStatus =
   | 'ready'
   | 'partial'
@@ -537,7 +667,7 @@ export type PlatformSectionKey =
 export interface PlatformSectionResponse {
   key: PlatformSectionKey;
   title: string;
-  status: 'planned';
+  status: 'available' | 'planned';
   phase: 'B' | 'C' | 'E' | 'F' | 'G';
   message: string;
 }

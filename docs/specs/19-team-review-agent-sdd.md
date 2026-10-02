@@ -1,6 +1,6 @@
 # 团队 Review Agent SDD
 
-状态：`Automated Green / UI pending / 2026-09-30`
+状态：`Automated Green / Web implemented / UI pending / 2026-09-30`
 
 ## 目标
 
@@ -25,9 +25,18 @@
 5. 来源不完整时整体返回 `partial`；所有成员都不可用时返回 `unavailable`；没有数据时返回 `empty`。
 6. `managerActions` 只给出建议文本，不创建任务、不发送消息、不升级主管。
 
+## Web 呈现
+
+- 路由：`/reviews/team`，只对会话导航中具备 `review:read-team` 的成员显示。
+- 首屏展示团队范围、当天数据成员、跟进、商机、未完成任务、需关注成员和逾期任务。
+- “主管今天先看”按服务端顺序展示高/中优先级成员及确定性原因，不在前端重新推断风险。
+- “建议管理动作”只展示服务端建议，不提供直接派单或发送消息按钮。
+- “成员执行情况”展示每人的日报状态、四项指标、首个下一步和来源警告。
+- 页面覆盖 loading、error、partial、empty、unavailable 和无关注项状态；不得使用模拟团队数据。
+
 ## 验收
 
 - Red/Green：主管递归范围、高管全租户范围、禁用成员过滤、逾期风险、来源不可用和无效成员。
-- 服务端 TypeScript、ESLint、Agent 构建和 Agent 单测必须通过。
-- 真实 Web/飞书页面、主管账号和管理动作尚未验收，不能标记为 `UI Verified`。
-
+- 三套 TypeScript、ESLint、Agent/Web 构建和相关 Agent 单测必须通过。
+- Web 页面代码和路由已实现；真实主管/高管登录态、视觉呈现和管理动作仍未验收，不能标记为
+  `UI Verified`。

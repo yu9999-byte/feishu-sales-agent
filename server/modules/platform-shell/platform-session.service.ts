@@ -66,13 +66,13 @@ const NAVIGATION_DEFINITIONS: NavigationDefinition[] = [
   },
   {
     key: 'tasks',
-    label: '任务',
+    label: '任务履约',
     path: '/tasks',
     requiredPermission: 'task:read',
   },
   {
     key: 'reviews',
-    label: 'Review',
+    label: '团队 Review',
     path: '/reviews/team',
     requiredPermission: 'review:read-team',
   },

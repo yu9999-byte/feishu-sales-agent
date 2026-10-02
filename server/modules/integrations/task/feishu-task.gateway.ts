@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import type { TaskGateway } from '@server/modules/agent-core/agent.ports';
 import type {
+  DailyReportTaskRecord,
   DailyReportTaskResult,
   PendingAction,
   SalesContextTaskResult,
@@ -147,10 +148,12 @@ class FeishuTaskGateway implements TaskGateway {
       const task = detail.data?.task;
       if (!task?.guid) return null;
       const dueTimestamp: number = Number(task.due?.timestamp);
+      const completedAt: string | null = this.taskTimestamp(task.completed_at);
       return {
         guid: task.guid,
         title: task.summary ?? item.meta_data?.description ?? '未命名任务',
-        status: task.completed_at ? 'completed' : task.status ?? 'todo',
+        status: this.taskStatus(completedAt, task.status),
+        completedAt,
         dueAt: Number.isFinite(dueTimestamp) && dueTimestamp > 0
           ? new Date(dueTimestamp).toISOString()
           : null,
@@ -168,6 +171,36 @@ class FeishuTaskGateway implements TaskGateway {
     actorOpenId: string,
   ): Promise<DailyReportTaskResult> {
     return this.searchOwnedTasks(integration, actorOpenId, '');
+  }
+
+  async getTaskByGuid(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    taskGuid: string,
+  ): Promise<DailyReportTaskRecord | null> {
+    const client = this.clients.getClient(integration);
+    const detail = await client.task.v2.task.get(
+      {
+        path: { task_guid: taskGuid },
+        params: { user_id_type: 'open_id' },
+      },
+      this.clients.getRequestOptions(integration),
+    );
+    assertFeishuSuccess(detail.code, detail.msg, 'read Feishu task detail');
+    const task = detail.data?.task;
+    if (!task?.guid) return null;
+    const dueTimestamp: number = Number(task.due?.timestamp);
+    const completedAt: string | null = this.taskTimestamp(task.completed_at);
+    return {
+      guid: task.guid,
+      title: task.summary ?? '未命名任务',
+      status: this.taskStatus(completedAt, task.status),
+      completedAt,
+      dueAt: Number.isFinite(dueTimestamp) && dueTimestamp > 0
+        ? new Date(dueTimestamp).toISOString()
+        : null,
+      url: task.url ?? this.fallbackTaskUrl(task.guid),
+    };
   }
 
   async createTask(
@@ -220,6 +253,34 @@ class FeishuTaskGateway implements TaskGateway {
       'create Feishu task URL',
     );
     return { guid, url };
+  }
+
+  private taskTimestamp(value: string | undefined): string | null {
+    if (!value) return null;
+    const numericValue: number = Number(value);
+    const timestamp: number = Number.isFinite(numericValue)
+      ? numericValue < 1_000_000_000_000
+        ? numericValue * 1_000
+        : numericValue
+      : Date.parse(value);
+    if (!Number.isFinite(timestamp) || timestamp <= 0) return null;
+    const result: Date = new Date(timestamp);
+    return Number.isFinite(result.getTime()) ? result.toISOString() : null;
+  }
+
+  private taskStatus(
+    completedAt: string | null,
+    value: string | undefined,
+  ): string {
+    if (completedAt !== null) return 'completed';
+    const status: string = value?.trim() ?? '';
+    const normalizedStatus: string = status
+      .normalize('NFKC')
+      .toLocaleLowerCase()
+      .replace(/[\s_-]+/gu, '');
+    return normalizedStatus === 'completed' || status.length === 0
+      ? 'todo'
+      : status;
   }
 
   async updateTask(

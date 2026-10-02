@@ -32,20 +32,78 @@ import { PlatformAccessDeniedError } from './platform-session.service';
 interface SectionDefinition {
   key: PlatformSectionKey;
   title: string;
+  status: PlatformSectionResponse['status'];
   phase: PlatformSectionResponse['phase'];
   permission: PlatformPermission;
+  message?: string;
 }
 
 const SECTION_DEFINITIONS: SectionDefinition[] = [
-  { key: 'customers', title: '客户', phase: 'C', permission: 'customer:read' },
-  { key: 'opportunities', title: '商机', phase: 'C', permission: 'opportunity:read' },
-  { key: 'followups', title: '跟进', phase: 'B', permission: 'followup:read' },
-  { key: 'tasks', title: '任务', phase: 'B', permission: 'task:read' },
-  { key: 'reviews-team', title: '团队 Review', phase: 'E', permission: 'review:read-team' },
-  { key: 'analytics', title: '经营看板', phase: 'E', permission: 'analytics:read' },
-  { key: 'playbooks', title: '知识与打法', phase: 'F', permission: 'playbook:read' },
-  { key: 'admin-members', title: '成员与组织', phase: 'G', permission: 'admin:manage-members' },
-  { key: 'admin-audit', title: '审计', phase: 'G', permission: 'audit:read' },
+  {
+    key: 'customers',
+    title: '客户',
+    status: 'planned',
+    phase: 'C',
+    permission: 'customer:read',
+  },
+  {
+    key: 'opportunities',
+    title: '商机',
+    status: 'planned',
+    phase: 'C',
+    permission: 'opportunity:read',
+  },
+  {
+    key: 'followups',
+    title: '跟进',
+    status: 'planned',
+    phase: 'B',
+    permission: 'followup:read',
+  },
+  {
+    key: 'tasks',
+    title: '任务履约',
+    status: 'available',
+    phase: 'B',
+    permission: 'task:read',
+    message: '任务履约已提供未完成任务的到期风险判断和执行建议。',
+  },
+  {
+    key: 'reviews-team',
+    title: '团队 Review',
+    status: 'available',
+    phase: 'E',
+    permission: 'review:read-team',
+    message: '团队复盘已提供只读指标、关注项和建议管理动作。',
+  },
+  {
+    key: 'analytics',
+    title: '经营看板',
+    status: 'planned',
+    phase: 'E',
+    permission: 'analytics:read',
+  },
+  {
+    key: 'playbooks',
+    title: '知识与打法',
+    status: 'planned',
+    phase: 'F',
+    permission: 'playbook:read',
+  },
+  {
+    key: 'admin-members',
+    title: '成员与组织',
+    status: 'planned',
+    phase: 'G',
+    permission: 'admin:manage-members',
+  },
+  {
+    key: 'admin-audit',
+    title: '审计',
+    status: 'planned',
+    phase: 'G',
+    permission: 'audit:read',
+  },
 ];
 
 @Injectable()
@@ -91,9 +149,10 @@ class PlatformShellService {
     return {
       key: definition.key,
       title: definition.title,
-      status: 'planned',
+      status: definition.status,
       phase: definition.phase,
-      message: '该模块将在对应阶段实现。当前可通过飞书机器人使用 P0 跟进闭环。',
+      message: definition.message ??
+        '该模块将在对应阶段实现。当前可通过飞书机器人使用 P0 跟进闭环。',
     };
   }
 
