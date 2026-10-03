@@ -9,6 +9,7 @@ import type {
   TaskFulfillmentMetrics,
   TaskFulfillmentPriority,
   TaskFulfillmentResponse,
+  TaskFulfillmentCompletedItem,
   TaskFulfillmentChange,
   TaskPromiseCompletionState,
 } from '@shared/api.interface';
@@ -38,6 +39,10 @@ interface TaskFulfillmentTasksReader {
     integration: TenantIntegration,
     actorOpenId: string,
   ): Promise<DailyReportTaskResult>;
+  listCompletedTasks?(
+    integration: TenantIntegration,
+    actorOpenId: string,
+  ): Promise<DailyReportTaskResult>;
   getTaskByGuid?(
     integration: TenantIntegration,
     actorOpenId: string,
@@ -59,6 +64,12 @@ interface SnapshotResult {
 interface PromiseReconciliationResult {
   promises: TaskPromiseFulfillmentItem[];
   changes: TaskFulfillmentChange[];
+}
+
+interface CompletedTasksResult {
+  items: TaskFulfillmentCompletedItem[];
+  taskItems: TaskFulfillmentItem[];
+  coverage: 'search_scope' | 'partial' | 'unavailable';
 }
 
 const DATE_PATTERN: RegExp = /^\d{4}-\d{2}-\d{2}$/u;
@@ -174,6 +185,15 @@ const sourceWarning = (warning: string): string => {
   return labels[warning] ?? warning;
 };
 
+const completedSourceWarning = (warning: string): string => {
+  const labels: Record<string, string> = {
+    task_query_scope_limited: '任务检索范围受限，结果可能不完整',
+    task_query_pagination_incomplete: '任务分页未完整返回，结果可能不完整',
+    task_query_pagination_limited: '任务数量超过本次读取上限',
+  };
+  return labels[warning] ?? warning;
+};
+
 @Injectable()
 class TaskFulfillmentService {
   private readonly logger: Logger = new Logger(TaskFulfillmentService.name);
@@ -255,9 +275,11 @@ class TaskFulfillmentService {
         if (right.dueAt === null) return -1;
         return Date.parse(left.dueAt) - Date.parse(right.dueAt);
       });
+    const completedResult: CompletedTasksResult =
+      await this.readCompletedTasks(input, warnings);
     const snapshotResult: SnapshotResult = await this.recordSnapshots(
       input,
-      items,
+      [...items, ...completedResult.taskItems],
       warnings,
       now,
     );
@@ -265,6 +287,7 @@ class TaskFulfillmentService {
       await this.reconcilePromises(
         input,
         items,
+        completedResult.taskItems,
         Boolean(taskResult.warning),
         snapshotResult.changes,
         warnings,
@@ -277,6 +300,7 @@ class TaskFulfillmentService {
     ];
     const metrics: TaskFulfillmentMetrics = {
       openTaskCount: items.length,
+      completedTaskCount: completedResult.items.length,
       overdueCount: this.count(items, 'overdue'),
       dueTodayCount: this.count(items, 'due_today'),
       dueSoonCount: this.count(items, 'due_soon'),
@@ -307,8 +331,11 @@ class TaskFulfillmentService {
     };
     const recommendations: string[] = this.recommend(metrics);
     const status: TaskFulfillmentResponse['status'] = warnings.length > 0
-      ? items.length > 0 || promises.length > 0 ? 'partial' : 'unavailable'
-      : items.length > 0 || promises.length > 0 ? 'ready' : 'empty';
+      ? items.length > 0 || promises.length > 0 ||
+          completedResult.items.length > 0 ||
+          completedResult.coverage === 'partial' ? 'partial' : 'unavailable'
+      : items.length > 0 || promises.length > 0 ||
+          completedResult.items.length > 0 ? 'ready' : 'empty';
 
     return {
       referenceDate: input.referenceDate,
@@ -317,11 +344,12 @@ class TaskFulfillmentService {
       generatedAt: now.toISOString(),
       metrics,
       items,
+      completedItems: completedResult.items,
       promises,
       recommendations,
       coverage: {
         openTasks: true,
-        completedTasks: false,
+        completedTasks: completedResult.coverage,
         promiseReconciliation: 'agent_confirmed_only',
         promiseHistoryDays: PROMISE_HISTORY_DAYS,
         taskSnapshots: snapshotResult.available
@@ -330,6 +358,63 @@ class TaskFulfillmentService {
       },
       warnings,
       changes,
+    };
+  }
+
+  private async readCompletedTasks(
+    input: TaskFulfillmentInput,
+    warnings: string[],
+  ): Promise<CompletedTasksResult> {
+    if (!this.tasks.listCompletedTasks) {
+      return { items: [], taskItems: [], coverage: 'unavailable' };
+    }
+    let result: DailyReportTaskResult;
+    try {
+      result = await this.tasks.listCompletedTasks(
+        input.integration,
+        input.actorOpenId,
+      );
+    } catch (error: unknown) {
+      this.logger.warn(
+        `Completed task read failed: ${error instanceof Error
+          ? error.message
+          : String(error)}`,
+      );
+      warnings.push('已完成任务历史暂时不可读取');
+      return { items: [], taskItems: [], coverage: 'unavailable' };
+    }
+    const validRecords: DailyReportTaskRecord[] = result.items.filter(
+      (task: DailyReportTaskRecord): boolean => {
+        const completedAt: string | null = task.completedAt ?? null;
+        return completedAt !== null && Number.isFinite(Date.parse(completedAt));
+      },
+    );
+    if (validRecords.length !== result.items.length) {
+      warnings.push('部分已完成任务缺少有效完成时间，未计入');
+    }
+    if (result.warning) {
+      warnings.push(`已完成${completedSourceWarning(result.warning)}`);
+    }
+    const coverage: 'search_scope' | 'partial' | 'unavailable' =
+      result.warning || validRecords.length !== result.items.length
+        ? 'partial'
+        : 'search_scope';
+    const items: TaskFulfillmentCompletedItem[] = validRecords.map(
+      (task: DailyReportTaskRecord): TaskFulfillmentCompletedItem => ({
+        guid: task.guid,
+        title: task.title,
+        completedAt: task.completedAt ?? '',
+        dueAt: task.dueAt,
+        url: task.url,
+      }),
+    );
+    return {
+      items,
+      taskItems: validRecords.map(
+        (task: DailyReportTaskRecord): TaskFulfillmentItem =>
+          this.toTaskItem(task, input.timezone, input.referenceDate),
+      ),
+      coverage,
     };
   }
 
@@ -376,6 +461,7 @@ class TaskFulfillmentService {
   private async reconcilePromises(
     input: TaskFulfillmentInput,
     tasks: TaskFulfillmentItem[],
+    completedTasks: TaskFulfillmentItem[],
     taskSourceIncomplete: boolean,
     existingChanges: TaskFulfillmentChange[],
     warnings: string[],
@@ -409,7 +495,7 @@ class TaskFulfillmentService {
       warnings.push('跟进承诺历史达到本次读取上限，结果可能不完整');
     }
     const taskByGuid: Map<string, TaskFulfillmentItem> = new Map(
-      tasks.map(
+      [...tasks, ...completedTasks].map(
         (task: TaskFulfillmentItem): [string, TaskFulfillmentItem] =>
           [task.guid, task],
       ),
@@ -721,6 +807,7 @@ class TaskFulfillmentService {
       generatedAt: now.toISOString(),
       metrics: {
         openTaskCount: 0,
+        completedTaskCount: 0,
         overdueCount: 0,
         dueTodayCount: 0,
         dueSoonCount: 0,
@@ -737,12 +824,13 @@ class TaskFulfillmentService {
         unverifiablePromiseCount: 0,
       },
       items: [],
+      completedItems: [],
       promises: [],
       changes: [],
       recommendations: [],
       coverage: {
         openTasks: true,
-        completedTasks: false,
+        completedTasks: 'unavailable',
         promiseReconciliation: 'agent_confirmed_only',
         promiseHistoryDays: PROMISE_HISTORY_DAYS,
         taskSnapshots: 'unavailable',

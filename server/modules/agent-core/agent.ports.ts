@@ -256,6 +256,10 @@ export interface TaskGateway {
     integration: TenantIntegration,
     actorOpenId: string,
   ): Promise<DailyReportTaskResult>;
+  listCompletedTasks?(
+    integration: TenantIntegration,
+    actorOpenId: string,
+  ): Promise<DailyReportTaskResult>;
   getTaskByGuid?(
     integration: TenantIntegration,
     actorOpenId: string,

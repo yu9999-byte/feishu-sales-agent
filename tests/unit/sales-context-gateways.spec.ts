@@ -687,6 +687,42 @@ describe('sales context gateways', (): void => {
     });
   });
 
+  it('reads paginated completed tasks for the current assignee without writes', async (): Promise<void> => {
+    const search = vi.fn()
+      .mockResolvedValueOnce({ code: 0, data: {
+        items: [{ id: 'done-1' }], has_more: true, page_token: 'next',
+      } })
+      .mockResolvedValueOnce({ code: 0, data: {
+        items: [{ id: 'done-1' }, { id: 'done-2' }], has_more: false,
+      } });
+    const get = vi.fn(async (request: { path: { task_guid: string } }) => ({
+      code: 0,
+      data: { task: {
+        guid: request.path.task_guid, summary: request.path.task_guid,
+        completed_at: request.path.task_guid === 'done-1' ? '1790737200' : '0',
+      } },
+    }));
+    const create = vi.fn();
+    const client = { task: { v2: { task: { search, get, create } } } };
+    const factory = {
+      getClient: vi.fn(() => client), getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+    const result = await new FeishuTaskGateway(factory).listCompletedTasks(
+      integration, 'ou_sales_a',
+    );
+
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(search.mock.calls[0]?.[0].data).toEqual({
+      query: '', filter: { assignee_ids: ['ou_sales_a'], is_completed: true },
+    });
+    expect(search.mock.calls[1]?.[0].params.page_token).toBe('next');
+    expect(get).toHaveBeenCalledTimes(2);
+    expect(result.items.map((item) => item.guid)).toEqual(['done-1', 'done-2']);
+    expect(result.items[1].completedAt).toBeNull();
+    expect(result.warning).toBeUndefined();
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it('marks Task visibility incomplete when continuation is missing', async (): Promise<void> => {
     const search = vi.fn(async () => ({
       code: 0,

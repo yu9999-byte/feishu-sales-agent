@@ -158,6 +158,7 @@ describe('TaskFulfillmentService', (): void => {
     expect(result.status).toBe('ready');
     expect(result.metrics).toEqual({
       openTaskCount: 5,
+      completedTaskCount: 0,
       overdueCount: 1,
       dueTodayCount: 1,
       dueSoonCount: 1,
@@ -187,7 +188,7 @@ describe('TaskFulfillmentService', (): void => {
     });
     expect(result.coverage).toEqual({
       openTasks: true,
-      completedTasks: false,
+      completedTasks: 'unavailable',
       promiseReconciliation: 'agent_confirmed_only',
       promiseHistoryDays: 180,
       taskSnapshots: 'latest_observation',
@@ -237,7 +238,7 @@ describe('TaskFulfillmentService', (): void => {
 
     expect(result.status).toBe('empty');
     expect(result.items).toEqual([]);
-    expect(result.coverage.completedTasks).toBe(false);
+    expect(result.coverage.completedTasks).toBe('unavailable');
   });
 
   it('fails closed when the task source throws', async (): Promise<void> => {
@@ -473,5 +474,64 @@ describe('TaskFulfillmentService', (): void => {
     expect(report.metrics).toMatchObject({
       partiallyCompletedPromiseCount: 1, stillOpenPromiseCount: 0,
     });
+  });
+
+  it('shows completed search results and reconciles exact linked promises', async (): Promise<void> => {
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    await saveSucceeded(store, 'completed-action', { taskGuid: 'done-guid' });
+    await saveSucceeded(store, 'untracked-action', {}, makePayload('寄送资料'));
+    const tasks: TaskFulfillmentTasksReader = {
+      listOwnedTasks: async (): Promise<DailyReportTaskResult> => ({ items: [] }),
+      listCompletedTasks: async (): Promise<DailyReportTaskResult> => ({
+        items: [{
+          guid: 'done-guid', title: '准备报价说明', status: 'completed',
+          completedAt: '2026-09-30T03:00:00.000Z', dueAt: null,
+          url: 'https://example.com/done',
+        }],
+      }),
+      getTaskByGuid: vi.fn(),
+    };
+    const report = await new TaskFulfillmentService(tasks, store).analyze({
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    });
+
+    expect(report.status).toBe('ready');
+    expect(report.coverage.completedTasks).toBe('search_scope');
+    expect(report.metrics.completedTaskCount).toBe(1);
+    expect(report.completedItems).toEqual([{
+      guid: 'done-guid', title: '准备报价说明',
+      completedAt: '2026-09-30T03:00:00.000Z', dueAt: null,
+      url: 'https://example.com/done',
+    }]);
+    expect(report.promises.find((item) => item.pendingActionId === 'completed-action'))
+      .toMatchObject({ status: 'completed', completionState: 'completed' });
+    expect(report.promises.find((item) => item.pendingActionId === 'untracked-action'))
+      .toMatchObject({ status: 'not_task_tracked', completionState: 'unknown' });
+    expect(tasks.getTaskByGuid).not.toHaveBeenCalled();
+  });
+
+  it('keeps partial completed history and invalid completion evidence visible', async (): Promise<void> => {
+    const tasks: TaskFulfillmentTasksReader = {
+      listOwnedTasks: async (): Promise<DailyReportTaskResult> => ({ items: [] }),
+      listCompletedTasks: async (): Promise<DailyReportTaskResult> => ({
+        items: [{
+          guid: 'ambiguous', title: '无完成时间', status: 'todo',
+          completedAt: null, dueAt: null, url: null,
+        }],
+        warning: 'task_query_scope_limited',
+      }),
+    };
+    const report = await new TaskFulfillmentService(
+      tasks, new MemoryControlStore([integration]),
+    ).analyze({
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    });
+    expect(report.status).toBe('partial');
+    expect(report.coverage.completedTasks).toBe('partial');
+    expect(report.completedItems).toEqual([]);
+    expect(report.warnings).toContain('已完成任务检索范围受限，结果可能不完整');
+    expect(report.warnings).toContain('部分已完成任务缺少有效完成时间，未计入');
   });
 });

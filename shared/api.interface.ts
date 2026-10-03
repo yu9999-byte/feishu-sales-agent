@@ -481,8 +481,17 @@ export interface TaskFulfillmentItem {
   suggestedAction: string;
 }
 
+export interface TaskFulfillmentCompletedItem {
+  guid: string;
+  title: string;
+  completedAt: string;
+  dueAt: string | null;
+  url: string | null;
+}
+
 export interface TaskFulfillmentMetrics {
   openTaskCount: number;
+  completedTaskCount: number;
   overdueCount: number;
   dueTodayCount: number;
   dueSoonCount: number;
@@ -520,7 +529,7 @@ export interface TaskPromiseFulfillmentItem {
 
 export interface TaskFulfillmentCoverage {
   openTasks: true;
-  completedTasks: false;
+  completedTasks: 'search_scope' | 'partial' | 'unavailable';
   promiseReconciliation: 'agent_confirmed_only';
   promiseHistoryDays: 180;
   taskSnapshots: 'latest_observation' | 'unavailable';
@@ -533,6 +542,7 @@ export interface TaskFulfillmentResponse {
   generatedAt: string;
   metrics: TaskFulfillmentMetrics;
   items: TaskFulfillmentItem[];
+  completedItems: TaskFulfillmentCompletedItem[];
   promises: TaskPromiseFulfillmentItem[];
   changes: TaskFulfillmentChange[];
   recommendations: string[];

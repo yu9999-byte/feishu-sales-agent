@@ -13,11 +13,22 @@
   可作为完成证据；即使同时带有冲突的 `status="completed"`，零时间仍保持未完成。
 - 迁移 014 为任务快照增加完成时间，变化证据增加前后完成时间，`/tasks`
   增加完成时间展示。完成/重新开放判定改用完成时间证据，不再仅依赖状态字符串。
-- 定向 `33/33`、Agent 全量 `278/278`、隔离 Postgres 迁移 003..014 及快照集成
+- 定向 `35/35`、Agent 全量 `281/281`、隔离 Postgres 迁移 003..014 及快照集成
   `1/1`、三套 TypeScript、统一 Lint、Stylelint、Agent/Web 构建和 `git diff --check`
   通过。本轮没有飞书 UI、消息或真实任务写入，状态保持 UI pending。
 - 本项目 `127.0.0.1:55432` 控制库实例当前缺失；本轮不复用其他项目数据库，
   不声称旧的 Postgres `12/12` 是本轮结果。需恢复项目专用实例后再做全套数据库和运行态复验。
+
+## 2026-10-03 已完成任务检索范围切片
+
+- `FeishuTaskGateway` 已按当前销售负责人和 `is_completed=true` 分页读取已完成任务，最多
+  10 页；服务只接受有效完成时间，避免把空值、非法值或 `completed_at="0"` 计入完成结果。
+- `/api/platform/task-fulfillment` 和 `/tasks` 新增已完成任务指标与明细，并将覆盖范围明确为
+  `search_scope`、`partial` 或 `unavailable`。精确关联的 Agent 承诺可以据此核对；没有精确
+  任务 GUID 的承诺仍为未关联/待核实，不按标题相似或列表缺席推断兑现。
+- 全量 Agent `281/281`、服务端/客户端/测试 TypeScript、ESLint、Stylelint、Agent/Web
+  构建和 `git diff --check` 通过。本轮不做飞书 UI、不发消息、不修改真实业务数据，状态保持
+  `Automated Green / Web implemented / UI pending`。
 
 ## 2026-10-02 精确关联承诺的履约完成度判定
 
@@ -95,7 +106,7 @@
 | `ISS-CTX-005` | 真实 Base 文本单元格为富文本数组，客户存在却被误判未找到 | Resolved / UI pending | 真实草案为 `customer_not_found`；只读 Base 响应显示本人客户；富文本映射 Red/Green、同原文只读重放匹配客户和商机 | 最新卡片视觉回归，旧待确认卡不自动修复 |
 | `ISS-FUP-012` | 测试元备注可被误认商机，且“下周五前”被补造钟点 | Resolved / UI pending | 提取测试元备注正反例及重复相对日期；只读重放的 `dueAt=null`；错误时间的旧测试动作已取消并审计 | 最新卡片核对时间为空、需销售选择 |
 | `ISS-TASK-007` | 销售agent应用身份缺少 `task:task:read`，无法核对本人已有待办 | Resolved / UI regression pending | 权限已开通；销售agent自身身份真实搜索返回 `code=0`、5 条未完成任务、无 notice；读取按真实上限 30 条完整分页，不完整时 fail closed | 保持权限/分页回归；用新草案复验任务候选 UI |
-| `ISS-TASK-008` | 飞书 `completed_at="0"` 可被误判为已完成，且快照缺少完成时间证据 | Resolved / automated green / UI pending | 任务网关仅接受可解析且大于 0 的 ISO/秒/毫秒完成时间；冲突原始状态 + 零时间有反例；迁移 014、快照回读和 `/tasks` 显示已接入；定向 `33/33`、Agent `278/278`、隔离 Postgres `1/1` | 保持时间格式和重新开放回归；真实销售登录态只读验收后再升级 UI 状态 |
+| `ISS-TASK-008` | 飞书 `completed_at="0"` 可被误判为已完成，且快照缺少完成时间证据 | Resolved / automated green / UI pending | 任务网关仅接受可解析且大于 0 的 ISO/秒/毫秒完成时间；冲突原始状态 + 零时间有反例；迁移 014、快照回读和 `/tasks` 显示已接入；定向 `35/35`、Agent `281/281`、隔离 Postgres `1/1` | 保持时间格式和重新开放回归；真实销售登录态只读验收后再升级 UI 状态 |
 | `ISS-AUTH-001` | 飞书机器人入口的成员/角色权限校验尚未完成 | Open / existing | 已在 `current-state.md` 保留，未纳入 Goal v3 修改 | 单独立项，不与 S4 混做 |
 | `ISS-OPS-002` | 新增商机状态网关后独立 Agent 启动缺少依赖导出 | Resolved | `AgentExecutionModule` 已导出 `SALES_RECORDS_GATEWAY`；服务端类型检查、构建通过，3100 端口启动、路由注册和飞书长连接均已验证 | 保持根模块启动冒烟测试，避免只依赖单元测试 |
 | `ISS-OPS-003` | 商机准备度上下文服务未注册到 Nest 模块，类型检查与单测通过但完整 Agent 无法启动 | Resolved | 进程级冒烟复现依赖注入失败；上下文服务增加 `@Injectable()` 并注册为模块 provider，新增模块装配回归。修复后隔离端口 3111 启动成功，首页 200，任务履约接口未登录返回预期 401；全量 `270/270` | 保持模块装配回归和完整 Agent 启动冒烟；不得只以服务单测替代根模块启动验证 |

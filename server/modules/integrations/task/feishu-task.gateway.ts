@@ -33,6 +33,7 @@ interface TaskSearchItem {
 
 const TASK_SEARCH_PAGE_SIZE = 30;
 const TASK_SEARCH_MAX_PAGES = 100;
+const COMPLETED_SEARCH_MAX_PAGES = 10;
 
 const resolveTaskInput = (action: PendingAction): ResolvedTaskInput => {
   const selectedIds: string[] | undefined =
@@ -78,6 +79,27 @@ class FeishuTaskGateway implements TaskGateway {
     actorOpenId: string,
     customerName: string,
   ): Promise<SalesContextTaskResult> {
+    return this.searchTasks(
+      integration, actorOpenId, customerName, false, TASK_SEARCH_MAX_PAGES,
+    );
+  }
+
+  async listCompletedTasks(
+    integration: TenantIntegration,
+    actorOpenId: string,
+  ): Promise<DailyReportTaskResult> {
+    return this.searchTasks(
+      integration, actorOpenId, '', true, COMPLETED_SEARCH_MAX_PAGES,
+    );
+  }
+
+  private async searchTasks(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    query: string,
+    isCompleted: boolean,
+    maxPages: number,
+  ): Promise<DailyReportTaskResult> {
     const client = this.clients.getClient(integration);
     const items: TaskSearchItem[] = [];
     const itemIds: Set<string> = new Set();
@@ -85,7 +107,7 @@ class FeishuTaskGateway implements TaskGateway {
     let pageToken: string | undefined;
     let warning: string | undefined;
 
-    for (let page: number = 0; page < TASK_SEARCH_MAX_PAGES; page += 1) {
+    for (let page: number = 0; page < maxPages; page += 1) {
       const params: {
         page_size: number;
         user_id_type: 'open_id';
@@ -98,10 +120,10 @@ class FeishuTaskGateway implements TaskGateway {
       const response = await client.task.v2.task.search(
         {
           data: {
-            query: customerName,
+            query,
             filter: {
               assignee_ids: [actorOpenId],
-              is_completed: false,
+              is_completed: isCompleted,
             },
           },
           params,
@@ -131,7 +153,7 @@ class FeishuTaskGateway implements TaskGateway {
       }
       seenPageTokens.add(nextPageToken);
       pageToken = nextPageToken;
-      if (page === TASK_SEARCH_MAX_PAGES - 1) {
+      if (page === maxPages - 1) {
         warning = 'task_query_pagination_limited';
       }
     }

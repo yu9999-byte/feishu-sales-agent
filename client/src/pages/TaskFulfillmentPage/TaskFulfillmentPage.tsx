@@ -13,6 +13,7 @@ import {
 
 import type {
   TaskFulfillmentCategory,
+  TaskFulfillmentCompletedItem,
   TaskFulfillmentItem,
   TaskFulfillmentResponse,
   TaskFulfillmentStatus,
@@ -93,8 +94,8 @@ const TaskFulfillmentPage: React.FC = () => {
     return (
       <div className="mx-auto max-w-6xl space-y-6" aria-busy="true">
         <Skeleton className="h-28 w-full rounded-lg" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {[1, 2, 3, 4, 5].map((item: number): React.ReactNode => (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+          {[1, 2, 3, 4, 5, 6].map((item: number): React.ReactNode => (
             <Skeleton key={item} className="h-28 rounded-lg" />
           ))}
         </div>
@@ -166,9 +167,8 @@ const TaskFulfillmentPage: React.FC = () => {
         <div>
           <h2 className="text-sm font-semibold">当前检查范围</h2>
           <p className="mt-1 text-sm leading-6">
-            已覆盖本人未完成任务和最近 {report.coverage.promiseHistoryDays} 天的 Agent 已确认跟进承诺。
-            当前页面只保存最近一次观察到的任务状态；已完成任务历史尚未完整接入，
-            关联任务当前不可见不代表承诺已兑现，需人工核实。
+            已覆盖本人未完成任务、可读取的已完成任务和最近 {report.coverage.promiseHistoryDays} 天的 Agent 已确认跟进承诺。
+            已完成任务只在有有效完成时间时计入；关联任务当前不可见或没有任务承接不代表承诺已兑现，需人工核实。
           </p>
         </div>
       </section>
@@ -195,7 +195,7 @@ const TaskFulfillmentPage: React.FC = () => {
 
       <section
         data-ai-section-type="card-stat"
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6"
         aria-label="任务履约统计"
       >
         <Metric label="未完成任务" value={report.metrics.openTaskCount} />
@@ -211,6 +211,7 @@ const TaskFulfillmentPage: React.FC = () => {
         />
         <Metric label="3 天内到期" value={report.metrics.dueSoonCount} />
         <Metric label="未设期限" value={report.metrics.unscheduledCount} />
+        <Metric label="已完成任务" value={report.metrics.completedTaskCount} />
       </section>
 
       <section className="space-y-4" aria-label="跟进承诺履约">
@@ -239,6 +240,24 @@ const TaskFulfillmentPage: React.FC = () => {
           </div>
         )}
       </section>
+
+      {report.completedItems.length > 0 && (
+        <section className="space-y-4" aria-label="已完成任务">
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h2 className="text-xl font-semibold">已完成任务</h2>
+            <span className="text-sm text-muted-foreground">
+              仅展示当前读取范围内有有效完成时间的任务
+            </span>
+          </div>
+          <div data-ai-section-type="card-list" className="grid gap-3 md:grid-cols-2">
+            {report.completedItems.map(
+              (item: TaskFulfillmentCompletedItem): React.ReactNode => (
+                <CompletedTaskItem key={item.guid} item={item} />
+              ),
+            )}
+          </div>
+        </section>
+      )}
 
       {report.changes.length > 0 && (
         <section className="space-y-4" aria-label="任务状态变化">
@@ -376,6 +395,31 @@ const TaskItem: React.FC<{ item: TaskFulfillmentItem }> = ({ item }) => (
     </div>
     <p className="mt-4 text-sm leading-6 text-muted-foreground">
       {item.suggestedAction}
+    </p>
+    {item.url && (
+      <a
+        className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+        href={item.url}
+        target="_blank"
+        rel="noreferrer"
+      >
+        查看飞书任务
+        <ArrowUpRight aria-hidden="true" className="size-4" />
+      </a>
+    )}
+  </article>
+);
+
+const CompletedTaskItem: React.FC<{ item: TaskFulfillmentCompletedItem }> = ({
+  item,
+}) => (
+  <article className="rounded-lg border border-border bg-card p-5">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <h3 className="break-words font-semibold leading-6">{item.title}</h3>
+      <Badge variant="secondary">已完成</Badge>
+    </div>
+    <p className="mt-3 text-sm leading-6 text-muted-foreground">
+      完成于 {formatDateTime(item.completedAt)}
     </p>
     {item.url && (
       <a
