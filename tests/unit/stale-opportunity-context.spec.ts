@@ -42,12 +42,14 @@ describe('StaleOpportunityContextService', (): void => {
         followupRecordId: 'followup-2',
         lastEffectiveFollowupAt: '2026-09-21T01:00:00.000Z',
         followupVersion: 'version-2',
+        timeVerified: true,
       },
       {
         opportunityRecordId: 'opportunity-2',
         followupRecordId: 'followup-3',
         lastEffectiveFollowupAt: '2026-09-19T01:00:00.000Z',
         followupVersion: 'version-3',
+        timeVerified: true,
       },
     ]);
   });
@@ -59,7 +61,11 @@ describe('StaleOpportunityContextService', (): void => {
       record({ sourceVersion: null }),
       record({ communicationAt: '2026-09-20' }),
       record({ communicationAt: 'not-a-date' }),
-    ])).toEqual([]);
+    ])).toMatchObject([{
+      opportunityRecordId: 'opportunity-1',
+      lastEffectiveFollowupAt: null,
+      timeVerified: false,
+    }]);
   });
 
   it('does not replace a newer communication with an older record', (): void => {
@@ -79,6 +85,28 @@ describe('StaleOpportunityContextService', (): void => {
       followupRecordId: 'followup-new',
       lastEffectiveFollowupAt: '2026-09-22T01:00:00.000Z',
       followupVersion: 'version-new',
+      timeVerified: true,
+    }]);
+  });
+
+  it('fails closed when an opportunity has an unverified followup', (): void => {
+    expect(service.summarize([
+      record({
+        recordId: 'followup-valid',
+        communicationAt: '2026-09-22T09:00:00+08:00',
+        sourceVersion: 'version-valid',
+      }),
+      record({
+        recordId: 'followup-missing-time',
+        communicationAt: null,
+        sourceVersion: 'version-newer',
+      }),
+    ])).toMatchObject([{
+      opportunityRecordId: 'opportunity-1',
+      followupRecordId: 'followup-missing-time',
+      lastEffectiveFollowupAt: null,
+      followupVersion: 'version-newer',
+      timeVerified: false,
     }]);
   });
 

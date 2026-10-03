@@ -432,6 +432,7 @@ describe('sales context gateways', (): void => {
       followupRecordId: 'followup-page-2',
       lastEffectiveFollowupAt: new Date(1790128800000).toISOString(),
       followupVersion: new Date(1790215200000).toISOString(),
+      timeVerified: true,
     }]);
   });
 

@@ -262,7 +262,9 @@ const OpportunityItem: React.FC<OpportunityItemProps> = ({ item, onSaved }) => {
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<ProductApiError | null>(null);
   const ready: boolean = item.blockers.length === 0;
-  const canSetCommunicationDate: boolean = item.followupRecordId !== null;
+  const canGovernOpportunity: boolean = item.sourceVersion !== null;
+  const canSetCommunicationDate: boolean = item.followupRecordId !== null &&
+    item.followupSourceVersion !== null;
   const dateText: string = communicationDate
     ? new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium' }).format(communicationDate)
     : '未选择';
@@ -340,6 +342,11 @@ const OpportunityItem: React.FC<OpportunityItemProps> = ({ item, onSaved }) => {
           <p className="mt-2 text-xs text-muted-foreground">
             当前读取值：{opportunityStatusLabel[item.status]}
           </p>
+          {!canGovernOpportunity && (
+            <p className="mt-2 text-xs text-amber-700">
+              当前商机版本不可验证，刷新数据后才能安全确认。
+            </p>
+          )}
         </div>
         <div>
           <p className="text-xs text-muted-foreground">已有跟进的可信沟通日期</p>
@@ -364,7 +371,9 @@ const OpportunityItem: React.FC<OpportunityItemProps> = ({ item, onSaved }) => {
           </Popover>
           {!canSetCommunicationDate && (
             <p className="mt-2 text-xs text-amber-700">
-              当前没有已有跟进记录，不能用日期伪造历史跟进。
+              {item.followupRecordId === null
+                ? '当前没有已有跟进记录，不能用日期伪造历史跟进。'
+                : '当前跟进版本不可验证，不能安全修改沟通日期。'}
             </p>
           )}
           {canSetCommunicationDate && (
@@ -399,7 +408,7 @@ const OpportunityItem: React.FC<OpportunityItemProps> = ({ item, onSaved }) => {
       <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-border pt-4 text-sm">
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button disabled={status === '' || saving}>
+            <Button disabled={status === '' || saving || !canGovernOpportunity}>
               <CheckCircle2 aria-hidden="true" />确认这条记录
             </Button>
           </DialogTrigger>
@@ -418,7 +427,10 @@ const OpportunityItem: React.FC<OpportunityItemProps> = ({ item, onSaved }) => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={(): void => setDialogOpen(false)} disabled={saving}>取消</Button>
-              <Button onClick={submit} disabled={saving || status === ''}>
+              <Button
+                onClick={submit}
+                disabled={saving || status === '' || !canGovernOpportunity}
+              >
                 {saving ? '正在校验并写入…' : '确认写入'}
               </Button>
             </DialogFooter>

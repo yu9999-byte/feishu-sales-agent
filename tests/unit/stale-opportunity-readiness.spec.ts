@@ -150,6 +150,34 @@ describe('StaleOpportunityReadinessService', (): void => {
     ]);
   });
 
+  it('retains the invalid followup identity and version for manual repair', async (): Promise<void> => {
+    const records = reader(
+      [opportunity()],
+      [
+        followup('opportunity-1', '2026-09-20T02:00:00.000Z'),
+        {
+          ...followup('opportunity-1', '2026-09-21T02:00:00.000Z'),
+          recordId: 'followup-missing-time',
+          communicationAt: null,
+          sourceVersion: 'followup-v2',
+        },
+      ],
+    );
+
+    const result = await new StaleOpportunityReadinessService(records).generate({
+      integration,
+      actorOpenId: 'ou_sales_a',
+      now: NOW,
+    });
+
+    expect(result.items[0]).toMatchObject({
+      lastEffectiveFollowupAt: null,
+      followupRecordId: 'followup-missing-time',
+      followupSourceVersion: 'followup-v2',
+      blockers: ['followup_time_missing'],
+    });
+  });
+
   it('fails closed when either source is incomplete', async (): Promise<void> => {
     const records = {
       readStaleOpportunityPage: vi.fn(

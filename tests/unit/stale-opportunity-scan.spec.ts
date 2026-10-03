@@ -288,4 +288,41 @@ describe('StaleOpportunityScanService', (): void => {
     }]);
     expect(searchOwnedTasks).not.toHaveBeenCalled();
   });
+
+  it('fails closed when an invalid followup would otherwise hide an older valid one', async (): Promise<void> => {
+    const records: StaleOpportunityRecordsReader = {
+      readStaleOpportunityPage: async (): Promise<StaleOpportunityPage> => ({
+        items: [opportunity()],
+        nextPageToken: null,
+      }),
+      readStaleOpportunityFollowupPage:
+        async (): Promise<StaleOpportunityFollowupPage> => ({
+          items: [
+            followup('2026-09-20T02:00:00.000Z'),
+            {
+              ...followup('2026-09-21T02:00:00.000Z'),
+              recordId: 'followup-missing-time',
+              communicationAt: null,
+              sourceVersion: 'followup-v2',
+            },
+          ],
+          nextPageToken: null,
+        }),
+    };
+    const searchOwnedTasks = vi.fn(async () => ({ items: [] }));
+
+    const result = await new StaleOpportunityScanService(
+      records,
+      { searchOwnedTasks },
+    ).scan(input());
+
+    expect(result.status).toBe('complete');
+    expect(result.candidates).toEqual([]);
+    expect(result.skips).toEqual([{
+      opportunityRecordId: 'opportunity-1',
+      opportunityName: '北辰数字化项目',
+      reason: 'unverified_followup',
+    }]);
+    expect(searchOwnedTasks).not.toHaveBeenCalled();
+  });
 });

@@ -168,6 +168,9 @@ class StaleOpportunityScanService {
         ownerOpenId: opportunity.ownerOpenId,
         recipientOpenId: input.actorOpenId,
         lastFollowup: lastFollowup
+          && lastFollowup.timeVerified
+          && lastFollowup.lastEffectiveFollowupAt !== null
+          && lastFollowup.followupVersion !== null
           ? {
               recordId: lastFollowup.followupRecordId,
               occurredAt: lastFollowup.lastEffectiveFollowupAt,
@@ -216,6 +219,9 @@ class StaleOpportunityScanService {
         ownerOpenId: opportunity.ownerOpenId,
         recipientOpenId: input.actorOpenId,
         lastFollowup: lastFollowup
+          && lastFollowup.timeVerified
+          && lastFollowup.lastEffectiveFollowupAt !== null
+          && lastFollowup.followupVersion !== null
           ? {
               recordId: lastFollowup.followupRecordId,
               occurredAt: lastFollowup.lastEffectiveFollowupAt,

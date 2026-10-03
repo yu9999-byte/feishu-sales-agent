@@ -175,7 +175,7 @@ class StaleOpportunityReadinessService {
         if (opportunity.status === 'unknown') {
           blockers.push('status_unconfirmed');
         }
-        if (followup === undefined) {
+        if (followup === undefined || !followup.timeVerified) {
           blockers.push('followup_time_missing');
         }
         return {
@@ -183,7 +183,9 @@ class StaleOpportunityReadinessService {
           name: opportunity.name,
           status: opportunity.status,
           sourceVersion: opportunity.sourceVersion,
-          lastEffectiveFollowupAt: followup?.lastEffectiveFollowupAt ?? null,
+          lastEffectiveFollowupAt: followup?.timeVerified === true
+            ? followup.lastEffectiveFollowupAt
+            : null,
           followupRecordId: followup?.followupRecordId ?? null,
           followupSourceVersion: followup?.followupVersion ?? null,
           blockers,
