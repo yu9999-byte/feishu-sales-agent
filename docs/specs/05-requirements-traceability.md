@@ -2,21 +2,24 @@
 
 状态：`Approved / Goal v3 aligned / automated Green / UI pending 2026-10-03`
 
+2026-10-03 任务履约切片的本地数据库验证已补齐：项目自带 Postgres 在
+`127.0.0.1:55432` 启动，迁移 014/015 成功应用，3 个 Postgres 集成测试文件共 `12/12`
+通过；该证据不替代真实飞书/Web UI 验收，UI 仍保持 `UI pending`。
+
 2026-10-03 任务履约已完成范围接入与证据加固：任务网关按负责人分页读取
 `is_completed=true` 的已完成任务，解析 ISO/秒/毫秒 `completed_at`，只有可解析且
 大于 0 的时间作为完成证据；`"0"` 即使伴随冲突的完成状态也保持未完成。迁移 014、
 快照前后完成时间、API 和 `/tasks` 展示已接入。完成任务覆盖明确为检索范围而非全量历史；
-无精确任务 GUID 的承诺不推断兑现。定向 `35/35`、Agent `281/281`、隔离
-Postgres 迁移 003..014 与快照集成 `1/1`、三套 TypeScript、统一 Lint、Stylelint、Agent/Web
-构建和 `git diff --check` 通过。本项目本地 55432 Postgres 未运行，本轮不声称全套
-Postgres 或完整运行态复验；不做飞书 UI，因此状态仍为 `UI pending`。
+无精确任务 GUID 的承诺不推断兑现。定向 `35/35`、Agent `281/281`、本地 Postgres
+迁移 003..015 与快照集成 `1/1`、三套 TypeScript、统一 Lint、Stylelint、Agent/Web 构建和
+`git diff --check` 通过。本轮不做飞书 UI，因此状态仍为 `UI pending`。
 
 同日任务状态事件账本已接入迁移 015、内存/Postgres 控制库和履约服务：记录
 `observed`/`changed`/`completed`/`reopened`，只按租户、销售和精确任务 GUID 隔离读取。
 事件账本只代表 Agent 观察证据，不是飞书全量历史；只有明确完成/重新开放事件可恢复历史判断，
-不按标题、时间或列表缺失建立跨任务关系。Agent 全量 `284/284`、服务端/测试 TypeScript、
-ESLint、统一 Lint、Stylelint、Agent/Web 构建和 `git diff --check` 通过；本地 Postgres
-`ECONNREFUSED`，本轮不声称集成测试通过，UI 仍 pending。
+不按标题、时间或列表缺失建立跨任务关系。Agent 全量 `284/284`、Postgres `12/12`、服务端/
+测试 TypeScript、ESLint、统一 Lint、Stylelint、Agent/Web 构建和 `git diff --check` 通过；
+本轮不做飞书 UI，UI 仍 pending。
 
 2026-09-30 最新运行态复核：Agent `260/260`、Postgres 集成 `11/11`，服务端/客户端/测试
 TypeScript、ESLint、Agent/Web 构建通过；本地 Agent `72384` 在 `3100` 返回 `200`。由于

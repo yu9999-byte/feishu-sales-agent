@@ -14,8 +14,8 @@
 - `TaskFulfillmentService` 只接受精确 GUID 的明确完成/重新开放事件恢复判断；普通变化、
   事件读取失败、事件来源不完整、标题相似、时间接近和列表缺失均不产生跨任务完成结论。
 - Agent 全量 `284/284`、服务端/测试 TypeScript、ESLint、统一 Lint、Stylelint、Agent/Web
-  构建和 `git diff --check` 通过。Postgres 集成因 `127.0.0.1:55432` 无本项目实例返回
-  `ECONNREFUSED`，未把集成测试写成通过；UI、消息和真实任务写入均未执行。
+  构建和 `git diff --check` 通过。项目自带 Postgres 已恢复到 `127.0.0.1:55432`，迁移
+  014/015 成功应用，3 个集成测试文件共 `12/12` 通过；UI、消息和真实任务写入均未执行。
 
 ## 2026-10-03 飞书任务完成时间证据与零值误判
 
@@ -118,11 +118,11 @@
 | `ISS-FUP-012` | 测试元备注可被误认商机，且“下周五前”被补造钟点 | Resolved / UI pending | 提取测试元备注正反例及重复相对日期；只读重放的 `dueAt=null`；错误时间的旧测试动作已取消并审计 | 最新卡片核对时间为空、需销售选择 |
 | `ISS-TASK-007` | 销售agent应用身份缺少 `task:task:read`，无法核对本人已有待办 | Resolved / UI regression pending | 权限已开通；销售agent自身身份真实搜索返回 `code=0`、5 条未完成任务、无 notice；读取按真实上限 30 条完整分页，不完整时 fail closed | 保持权限/分页回归；用新草案复验任务候选 UI |
 | `ISS-TASK-008` | 飞书 `completed_at="0"` 可被误判为已完成，且快照缺少完成时间证据 | Resolved / automated green / UI pending | 任务网关仅接受可解析且大于 0 的 ISO/秒/毫秒完成时间；冲突原始状态 + 零时间有反例；迁移 014、快照回读和 `/tasks` 显示已接入；定向 `35/35`、Agent `281/281`、隔离 Postgres `1/1` | 保持时间格式和重新开放回归；真实销售登录态只读验收后再升级 UI 状态 |
-| `ISS-TASK-009` | 任务不可见时缺少可审计的状态历史，容易把列表缺失误判为完成或跨任务承接 | Resolved / automated green / UI pending | 迁移 015 和内存/Postgres 事件账本记录 `observed`/`changed`/`completed`/`reopened`；服务只按精确 GUID 的明确事件恢复，事件失败和来源不完整均保守降级；Agent `284/284` 通过 | 恢复项目专用 Postgres 后补跑集成测试；全量飞书历史、显式跨任务替代关系、提醒和 UI 验收仍是后续工作 |
+| `ISS-TASK-009` | 任务不可见时缺少可审计的状态历史，容易把列表缺失误判为完成或跨任务承接 | Resolved / automated green / UI pending | 迁移 015 和内存/Postgres 事件账本记录 `observed`/`changed`/`completed`/`reopened`；服务只按精确 GUID 的明确事件恢复，事件失败和来源不完整均保守降级；Agent `284/284`、Postgres `12/12` 通过 | 全量飞书历史、显式跨任务替代关系、提醒和 UI 验收仍是后续工作 |
 | `ISS-AUTH-001` | 飞书机器人入口的成员/角色权限校验尚未完成 | Open / existing | 已在 `current-state.md` 保留，未纳入 Goal v3 修改 | 单独立项，不与 S4 混做 |
 | `ISS-OPS-002` | 新增商机状态网关后独立 Agent 启动缺少依赖导出 | Resolved | `AgentExecutionModule` 已导出 `SALES_RECORDS_GATEWAY`；服务端类型检查、构建通过，3100 端口启动、路由注册和飞书长连接均已验证 | 保持根模块启动冒烟测试，避免只依赖单元测试 |
 | `ISS-OPS-003` | 商机准备度上下文服务未注册到 Nest 模块，类型检查与单测通过但完整 Agent 无法启动 | Resolved | 进程级冒烟复现依赖注入失败；上下文服务增加 `@Injectable()` 并注册为模块 provider，新增模块装配回归。修复后隔离端口 3111 启动成功，首页 200，任务履约接口未登录返回预期 401；全量 `270/270` | 保持模块装配回归和完整 Agent 启动冒烟；不得只以服务单测替代根模块启动验证 |
-| `ISS-OPS-004` | 项目 `.env.local` 指向的 `127.0.0.1:55432` 没有本项目 Postgres 实例 | Open / local environment | 旧 Agent 日志记录 `CONNECT_TIMEOUT`；发现同端口历史数据目录属于其他项目后立即停止，未运行本项目迁移或测试；本轮改用系统 Temp 中的隔离实例完成 003..014 和快照 `1/1` | 恢复本项目专用 Postgres 或更正本地环境指向，再跑全套 Postgres 和完整 Agent 运行态冒烟 |
+| `ISS-OPS-004` | 项目 `.env.local` 指向的 `127.0.0.1:55432` 没有本项目 Postgres 实例 | Resolved / local environment | 已启动项目自带 Postgres，未重置数据；迁移 014/015 成功应用，3 个集成测试文件共 `12/12` 通过，控制库回读正常 | 保持本地测试实例和迁移回归；真实运行态与 UI 仍按各自验收门禁执行 |
 | `ISS-CARD-013` | 跟进输入卡因沟通原文 `max_length=5000` 被飞书 Card 2.0 接口拒绝 | Resolved / API E2E verified / UI pending | 2026-09-28 位置 101 的真实消息复现 400；修正为协议上限 1000，新增回归断言；重启后位置 104→106 输入卡、位置 107→109 草案卡均成功发送；确认前无业务写入 | 保持 Card 2.0 schema 回归；执行确认链仍需 API 回调或 UI 证据 |
 | `ISS-EXE-014` | 回调解析、确认执行和终态修订此前分层验证，缺少贯通证据 | Resolved / isolated callback E2E / UI pending | SDK EventDispatcher 进入真实 Bridge、Workflow、Executor、MemoryStore 的两条隔离回放覆盖同卡执行中与唯一成功/失败终态、编辑原记录和失败重试；外部网关全为替身；全量 `242/242`、Postgres `8/8` 通过 | 保持跨层回归；真实 UI 及真实 Base/Task 回读仍待独立验收，不能用隔离结果代替 |
 | `ISS-UI-003` | Codex 标签可控但没有可验证的“销售agent”会话和输入框，无法完成 S1 真实 UI 复验 | Open / blocked on target session | 用户已明确允许 Codex 右侧浏览器、禁止本地 Chrome。2026-09-30 已取得 Codex In-app Browser 标签 4 的控制句柄，但页面实际为“消息 - 轮动”空白首页；刷新、等待和无障碍回读均无目标会话，搜索入口触发 `dispatchSearchSetInputEvent not impl on web`，未发送消息。3100 运行态返回 200，不能替代 UI 证据 | 在同一 Codex 标签恢复已登录并可见“销售agent”消息输入框；确认标题后再做最小受控验证。不得用本地浏览器或 API 冒充 UI |

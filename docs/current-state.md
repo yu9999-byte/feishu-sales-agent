@@ -12,10 +12,11 @@
 - 新增迁移 `015_task_status_events.sql`，并更新迁移脚本、内存/Postgres 控制库和服务单测；
   Agent 全量 `284/284`、服务端/测试 TypeScript、ESLint、统一 Lint、Stylelint、Agent/Web
   构建和 `git diff --check` 通过。
-- Postgres 集成测试已执行但被本地环境阻断：`.env.local` 的 `127.0.0.1:55432` 当前无项目
-  专用实例，连接返回 `ECONNREFUSED`。本轮不冒用其他项目数据库、不声称 Postgres 集成通过，
-  也不进行飞书 UI、消息发送或真实任务修改；状态保持 `Automated Green / Web implemented /
-  UI pending`。
+- 项目自带 Postgres 已在 `.env.local` 指定的 `127.0.0.1:55432` 恢复运行，迁移
+  `014_task_completion_evidence.sql`、`015_task_status_events.sql` 已应用；3 个 Postgres
+  集成测试文件共 `12/12` 通过。该结果只覆盖本地自动化和控制库回读，不代表真实飞书/Web UI
+  验收；本轮仍未发送消息、修改真实任务或进入飞书 UI，状态保持
+  `Automated Green / Web implemented / UI pending`。
 
 ## 2026-10-03 飞书任务完成时间证据与零值误判修复（真实 UI 待验收）
 
@@ -28,10 +29,9 @@
 - 定向任务履约/任务网关/迁移测试 `35/35`、Agent 全量 `281/281`、服务端/客户端/
   测试 TypeScript、统一 Lint、Stylelint、Agent/Web 构建和 `git diff --check` 通过。
   隔离临时 Postgres 已从 003 迁移到 014，快照持久化集成测试 `1/1` 通过，验证后已停止并删除。
-- 项目 `.env.local` 指向的 `127.0.0.1:55432` 当前没有本项目 Postgres 实例，因此
-  本轮不声称全套 Postgres 或当前运行态复验。旧运行日志中的 `CONNECT_TIMEOUT`
-  与该本地环境缺口一致；没有修改其他项目数据库。本轮不进行飞书 UI、不发消息、
-  不修改真实任务，状态保持 `Automated Green / Web implemented / UI pending`。
+- 项目 `.env.local` 指向的 `127.0.0.1:55432` 已恢复为本地测试实例；本轮在不重置数据的前提下
+  完成迁移和控制库复验。此前的 `CONNECT_TIMEOUT` 仅代表当时环境缺口；本轮不进行飞书 UI、
+  不发消息、不修改真实任务，状态保持 `Automated Green / Web implemented / UI pending`。
 
 ## 2026-10-02 任务状态快照与完成/变更证据切片（真实 UI 待验收）
 
