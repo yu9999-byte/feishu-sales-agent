@@ -574,6 +574,66 @@ describe('TaskFulfillmentService', (): void => {
     ]);
   });
 
+  it('fails closed when a newer ordinary event follows completion', async (): Promise<void> => {
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    await saveSucceeded(store, 'stale-completion-action', {
+      taskGuid: 'stale-completion-guid',
+    });
+    let current: DailyReportTaskResult = {
+      items: [{
+        guid: 'stale-completion-guid', title: '准备客户回访', status: 'todo',
+        completedAt: null, dueAt: '2026-10-02T02:00:00.000Z', url: null,
+      }],
+    };
+    const tasks: TaskFulfillmentTasksReader = {
+      listOwnedTasks: async (): Promise<DailyReportTaskResult> => current,
+    };
+    const service: TaskFulfillmentService = new TaskFulfillmentService(tasks, store);
+    const input = {
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    };
+
+    await service.analyze(input);
+    current = {
+      items: [{
+        guid: 'stale-completion-guid', title: '完成客户回访', status: 'completed',
+        completedAt: '2026-10-01T02:00:00.000Z', dueAt: null, url: null,
+      }],
+    };
+    await service.analyze({
+      ...input,
+      now: new Date('2026-10-01T04:00:00.000Z'),
+      referenceDate: '2026-10-01',
+    });
+    current = {
+      items: [{
+        guid: 'stale-completion-guid', title: '完成客户回访（补充说明）',
+        status: 'completed', completedAt: '2026-10-01T02:00:00.000Z',
+        dueAt: '2026-10-04T02:00:00.000Z', url: null,
+      }],
+    };
+    await service.analyze({
+      ...input,
+      now: new Date('2026-10-02T04:00:00.000Z'),
+      referenceDate: '2026-10-02',
+    });
+    current = { items: [] };
+
+    const historical = await service.analyze({
+      ...input,
+      now: new Date('2026-10-03T04:00:00.000Z'),
+      referenceDate: '2026-10-03',
+    });
+
+    expect(historical.promises[0]).toMatchObject({
+      status: 'task_lookup_unavailable',
+      completionState: 'unknown',
+      taskGuid: 'stale-completion-guid',
+    });
+    expect(historical.promises[0].taskTitle).toBeNull();
+  });
+
   it('fails closed when task event history cannot be read', async (): Promise<void> => {
     const store: MemoryControlStore = new MemoryControlStore([integration]);
     await saveSucceeded(store, 'event-history-failure', {

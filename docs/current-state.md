@@ -7,10 +7,11 @@
   普通状态变化不会被解释成完成。
 - 当前任务不可见时，只有精确 GUID 的最新明确 `completed` 或 `reopened` 事件可以恢复完成/
   重新开放判断；事件读取失败、事件来源不完整、只有 `observed`/`changed`，以及标题相似、
-  时间接近或列表缺失，均保持待核实。当前观察不会自动建立跨任务替代关系；只有明确的
-  `relatedTaskGuid + relation: replaces` 才允许后续扩展使用。
+  时间接近或列表缺失，均保持待核实。若最新事件是普通 `changed`/`observed`，即使更早有
+  `completed`/`reopened`，也不恢复旧结论，并给出待核实警告。当前观察不会自动建立跨任务替代
+  关系；只有明确的 `relatedTaskGuid + relation: replaces` 才允许后续扩展使用。
 - 新增迁移 `015_task_status_events.sql`，并更新迁移脚本、内存/Postgres 控制库和服务单测；
-  Agent 全量 `284/284`、服务端/测试 TypeScript、ESLint、统一 Lint、Stylelint、Agent/Web
+  Agent 全量 `285/285`、服务端/测试 TypeScript、ESLint、统一 Lint、Stylelint、Agent/Web
   构建和 `git diff --check` 通过。
 - 项目自带 Postgres 已在 `.env.local` 指定的 `127.0.0.1:55432` 恢复运行，迁移
   `014_task_completion_evidence.sql`、`015_task_status_events.sql` 已应用；3 个 Postgres

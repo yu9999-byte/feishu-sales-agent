@@ -628,17 +628,21 @@ class TaskFulfillmentService {
       eventsByGuid.set(event.guid, events);
     });
     const changes: TaskFulfillmentChange[] = [];
+    const unavailableGuids: Set<string> = new Set<string>();
+    let hasNewerOrdinaryEvent: boolean = false;
     missingGuids.forEach((guid: string): void => {
-      const event: TaskStatusEvent | undefined = (eventsByGuid.get(guid) ?? [])
-        .filter(
-          (candidate: TaskStatusEvent): boolean =>
-            candidate.kind === 'completed' || candidate.kind === 'reopened',
-        )
+      const events: TaskStatusEvent[] = (eventsByGuid.get(guid) ?? [])
         .sort(
           (left: TaskStatusEvent, right: TaskStatusEvent): number =>
             Date.parse(right.occurredAt) - Date.parse(left.occurredAt),
-        )[0];
+        );
+      const event: TaskStatusEvent | undefined = events[0];
       if (!event) return;
+      if (event.kind !== 'completed' && event.kind !== 'reopened') {
+        hasNewerOrdinaryEvent = true;
+        unavailableGuids.add(guid);
+        return;
+      }
       if (event.kind === 'completed' && (
         event.completedAt === null ||
         !Number.isFinite(Date.parse(event.completedAt))
@@ -658,7 +662,10 @@ class TaskFulfillmentService {
       );
       changes.push(this.toTaskFulfillmentChange(event));
     });
-    return { changes, unavailableGuids: new Set<string>() };
+    if (hasNewerOrdinaryEvent) {
+      warnings.push('任务状态历史包含较新的普通变化，部分承诺待核实');
+    }
+    return { changes, unavailableGuids };
   }
 
   private toTaskFulfillmentChange(
