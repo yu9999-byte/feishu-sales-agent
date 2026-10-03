@@ -20,7 +20,10 @@ import { AgentWorkflowService } from '@server/modules/agent-core/agent-workflow.
 import type {
   IncomingCardAction,
   IncomingMessage,
+  IncomingTaskUpdateEvent,
 } from '@server/modules/agent-core/agent.types';
+import { TaskEventIngestionService } from
+  '@server/modules/agent-core/task-event-ingestion.service';
 import { parseJsonObject } from '@server/modules/agent-core/agent.validation';
 import {
   redactErrorMessage,
@@ -32,6 +35,10 @@ type MessageReceiveHandler = NonNullable<
   lark.EventHandles['im.message.receive_v1']
 >;
 type MessageReceiveEvent = Parameters<MessageReceiveHandler>[0];
+type TaskUpdateHandler = NonNullable<
+  lark.EventHandles['task.task.update_user_access_v2']
+>;
+type TaskUpdateEvent = Parameters<TaskUpdateHandler>[0];
 
 interface SafeSdkLogger {
   error(...messages: unknown[]): void;
@@ -68,6 +75,14 @@ const cardCallbackSchema = z.object({
   }),
 });
 
+const taskUpdateSchema = z.object({
+  event_id: z.string().trim().min(1),
+  create_time: z.string().trim().min(1),
+  tenant_key: z.string().trim().min(1),
+  event_types: z.array(z.string().trim().min(1)).min(1),
+  task_guid: z.string().trim().min(1),
+});
+
 const decodeCardCallbackObject = (value: unknown): JsonObject => {
   if (value === undefined || value === null || value === '') {
     return {};
@@ -97,6 +112,7 @@ class FeishuWebhookBridge implements OnModuleInit, OnModuleDestroy {
     private readonly workflow: AgentWorkflowService,
     @Inject(AGENT_CONFIG)
     private readonly config: AgentRuntimeConfig,
+    private readonly taskEventIngestion: TaskEventIngestionService,
   ) {
     this.sdkLogger = this.createSdkLogger();
     this.eventDispatcher =
@@ -156,6 +172,44 @@ class FeishuWebhookBridge implements OnModuleInit, OnModuleDestroy {
                   );
                 },
               );
+          });
+        },
+      }).register({
+        'task.task.update_user_access_v2': (
+          data: TaskUpdateEvent,
+        ): void => {
+          let incoming: IncomingTaskUpdateEvent;
+          try {
+            incoming = this.mapTaskUpdate(data);
+          } catch (error: unknown) {
+            const normalized: Error = this.toError(error);
+            this.logger.error(
+              `Feishu task event mapping failed: ${redactErrorMessage(
+                normalized,
+              )}`,
+              redactErrorStack(normalized),
+            );
+            throw error;
+          }
+          this.logger.debug(
+            `Feishu task event mapped: event=${this.hashValue(
+              incoming.eventId,
+            )} tenant=${this.hashValue(
+              incoming.feishuTenantKey,
+            )} task=${this.hashValue(incoming.taskGuid)}`,
+          );
+          queueMicrotask((): void => {
+            void this.taskEventIngestion.ingest(incoming).catch(
+              (error: unknown): void => {
+                const normalized: Error = this.toError(error);
+                this.logger.error(
+                  `Task event ingestion failed: event=${this.hashValue(
+                    incoming.eventId,
+                  )} ${redactErrorMessage(normalized)}`,
+                  redactErrorStack(normalized),
+                );
+              },
+            );
           });
         },
       }).register({
@@ -334,6 +388,45 @@ class FeishuWebhookBridge implements OnModuleInit, OnModuleDestroy {
       formValue,
       receivedAt: this.parseTimestamp(parsed.create_time),
     };
+  }
+
+  private mapTaskUpdate(data: TaskUpdateEvent): IncomingTaskUpdateEvent {
+    const parsed = taskUpdateSchema.parse(data);
+    return {
+      feishuTenantKey: parsed.tenant_key,
+      eventId: parsed.event_id,
+      taskGuid: parsed.task_guid,
+      eventTypes: parsed.event_types,
+      occurredAt: this.parseRequiredTimestamp(parsed.create_time),
+      receivedAt: new Date(),
+    };
+  }
+
+  private parseRequiredTimestamp(value: string): Date {
+    const numeric: number = Number(value);
+    if (Number.isFinite(numeric)) {
+      if (numeric <= 0) {
+        throw new Error('Feishu task event has an invalid timestamp');
+      }
+      let milliseconds: number = numeric;
+      while (milliseconds > 10_000_000_000_000) {
+        milliseconds /= 1000;
+      }
+      if (milliseconds < 100_000_000_000) {
+        milliseconds *= 1000;
+      }
+      const date: Date = new Date(milliseconds);
+      if (Number.isNaN(date.getTime())) {
+        throw new Error('Feishu task event has an invalid timestamp');
+      }
+      return date;
+    }
+
+    const timestamp: number = Date.parse(value);
+    if (Number.isNaN(timestamp)) {
+      throw new Error('Feishu task event has an invalid timestamp');
+    }
+    return new Date(timestamp);
   }
 
   private parseTimestamp(value: string | undefined): Date {

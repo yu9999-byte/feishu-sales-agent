@@ -24,6 +24,7 @@ import type {
   TaskStatusEventResult,
   TenantIntegration,
   TaskStatusSnapshot,
+  TaskEventReceiptInput,
 } from '@server/modules/agent-core/agent.types';
 import {
   parseAgentExecutionResult,
@@ -96,6 +97,10 @@ interface TaskStatusEventRow {
   previous_due_at: Date | string | null;
   related_task_guid: string | null;
   relation: 'replaces' | null;
+}
+
+interface TaskEventReceiptRow {
+  event_id: string;
 }
 
 interface IdRow {
@@ -660,6 +665,36 @@ export class PostgresControlStore
     return rows.map(
       (row: PendingActionRow): PendingAction => this.mapPendingAction(row),
     );
+  }
+
+  async recordTaskEventReceipt(
+    input: TaskEventReceiptInput,
+  ): Promise<boolean> {
+    const eventTypesJson: string = JSON.stringify(input.eventTypes);
+    const rows: TaskEventReceiptRow[] = await this.sql<TaskEventReceiptRow[]>`
+      INSERT INTO task_event_receipts (
+        tenant_id,
+        event_id,
+        task_guid,
+        event_types,
+        occurred_at,
+        received_at,
+        receipt_status,
+        payload_hash
+      ) VALUES (
+        ${input.tenantId}::uuid,
+        ${input.eventId},
+        ${input.taskGuid},
+        ${eventTypesJson}::text::jsonb,
+        ${input.occurredAt},
+        ${input.receivedAt},
+        ${input.receiptStatus},
+        ${input.payloadHash}
+      )
+      ON CONFLICT (tenant_id, event_id) DO NOTHING
+      RETURNING event_id
+    `;
+    return rows.length === 1;
   }
 
   async recordTaskSnapshots(

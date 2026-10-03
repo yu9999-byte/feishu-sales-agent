@@ -68,16 +68,19 @@ Review v1 已完成只读 API 和 Web 产品面，Playbook 仍按阶段建设。
 跨销售，以及标题/时间/列表缺失推断均保持待核实。该关系不写入任务状态事件账本，不修改真实
 飞书任务，也不构成 UI 验收证据。
 
+任务事件回执现已按租户和事件 ID 去重保存最小元数据，用于补充 Agent 自身观察；它不读取任务
+详情、不改变履约判断、不发送提醒，也不等同于完整飞书任务历史。
+
 | 能力 | 当前状态 | 证据与缺口 |
 | --- | --- | --- |
 | P0 文本跟进闭环 | `UI Verified`（历史基线） | 已有真实 Base/Task 写入和两租户自动化隔离；需持续回归 |
-| LangGraph 对话编排 | `Automated Green / UI pending` | 191 项 Agent 单测、8 项 Postgres 集成、类型检查、Lint、构建通过；最新 UI 内容仍待对账 |
+| LangGraph 对话编排 | `Automated Green / UI pending` | 当前项目回归基线为 34 个 Agent 测试文件、303 项测试及 4 个 Postgres 集成测试文件、13 项测试；类型检查、Lint、构建通过，最新 UI 内容仍待对账 |
 | 跟进草稿、质检、确认 | `Partial` | 结构化抽取、卡内编辑、版本和确认门已有；最新确认按钮与终态需真实 UI 对账 |
 | 执行中、成功/失败、结果修订 | `Automated Green / UI pending` | 同卡状态机、超时恢复、结果修订已测；真实飞书需观察唯一终态和原记录更新 |
 | 短期上下文 | `Automated Green / UI pending` | LangGraph Checkpointer 已成为生产主路径；需干净双轮和自然路由复测 |
 | 长期语义记忆 | `Partial` | Mem0 适配、ACL 和批准门存在；真实向量后端、中文召回、删除、容量评测未完成，生产写入关闭 |
 | 客户/商机历史读取 | `Automated Green / UI pending` | 已有本人范围的客户、商机、近期跟进和任务只读端口、来源引用、冲突与降级；真实多分支 UI 待验收 |
-| 任务履约 Agent v1 | `Automated Green / Web implemented / UI pending` | 已按本人范围识别未完成任务风险，并按负责人分页读取检索范围内的已完成任务；按精确 `taskGuid` 只读核对最近 180 天 Agent 已确认承诺。任务详情和持久快照保存有效完成时间，并新增按租户/销售/GUID 隔离的 `observed`/`changed`/`completed`/`reopened` 事件账本，可识别已完成、部分完成、仍未完成、变更、重新开放证据，`completed_at="0"` 不再误判为完成；`/tasks` 展示关联、未关联、已完成和不可核实结果；本地 Postgres 迁移 003..015、集成 `12/12` 和 Agent 全量 `299/299` 已通过；事件账本不是全量飞书历史，不按标题/时间/列表缺失跨任务关联；全量完成历史、无任务承诺兑现判断、提醒、状态更新和主管升级未实现 |
+| 任务履约 Agent v1 | `Automated Green / Web implemented / UI pending` | 已按本人范围识别未完成任务风险，并按负责人分页读取检索范围内的已完成任务；按精确 `taskGuid` 只读核对最近 180 天 Agent 已确认承诺。任务详情和持久快照保存有效完成时间，并新增按租户/销售/GUID 隔离的 `observed`/`changed`/`completed`/`reopened` 事件账本，可识别已完成、部分完成、仍未完成、变更、重新开放证据，`completed_at="0"` 不再误判为完成；任务事件回执按租户和事件 ID 去重保存，但不被误作完整历史；`/tasks` 展示关联、未关联、已完成和不可核实结果；本地 Postgres 迁移 003..016、集成 `13/13` 和 Agent 全量 `303/303` 已通过；事件账本不是全量飞书历史，不按标题/时间/列表缺失跨任务关联；全量完成历史、无任务承诺兑现判断、提醒、状态更新和主管升级未实现 |
 | 销售日报 Agent v1 | `Automated Green / API contract ready / UI pending` | `GET /api/platform/daily-report` 已按当前销售和租户权限只读汇总当天跟进、商机、未完成/逾期任务；单测、全量 Agent 回归、类型、Lint、构建通过；真实登录态内容和 Web/飞书 UI 尚未验收 |
 | 商机提醒准备度工作台 | `Automated Green / API contract ready / UI pending` | `/stale-opportunity-readiness` 复用 `review:read-personal`，只读展示商机状态、可信跟进时间、阻断原因和 Base 来源；页面不写业务数据、不发送提醒；真实登录态内容和视觉验收仍待浏览器控制句柄 |
 | 商机推进 | `Automated Green / UI pending`（当前跟进切片） | 已基于本次沟通与业务上下文生成版本化的变化、缺口、风险和行动建议；既有商机状态已具备聊天确认执行入口，主动停滞扫描仍属于 S4 |
@@ -290,7 +293,12 @@ Playbook 的共同基础，优先级高于语音、报告、RAG 和管理看板�
   预留 `full` 仅供未来可信全量历史来源通过完整性门禁后启用。
 - [x] 建立 `TaskGateway.readTaskHistory` 可信来源扩展口；只有来源明确返回 `full` 且无警告时
   才允许履约 API 使用 `coverage.taskHistory=full`，partial、unavailable 和异常均 fail closed。
+- [x] 接入 `task.task.update_user_access_v2` 的前向可见事件回执：按 `(tenantId, eventId)` 持久化
+  去重，仅保存最小元数据和 SHA-256 哈希；不保存原始任务正文、不更新快照、不推断销售归属。
+  它不能补齐订阅前历史或自动证明无丢失。
 - [ ] 接入可信的全量任务历史/事件来源；当前账本不是全量飞书历史。
+- [ ] 建立全量覆盖证明：记录订阅起点/游标与连续性，隔离租户和精确任务 GUID，处理断线补偿；
+  只有受控二次读取成功且未覆盖窗口为空时才允许升级历史覆盖。当前回执不是完整任务历史。
 - [ ] 在外部明确提供 `relatedTaskGuid + relation: replaces` 后实现跨任务兑现识别；不得按标题、
   时间或列表缺失猜测替代关系。
 - [ ] 实现无任务承接的兑现判断；提醒和主管升级必须复用租户策略、免打扰、去重账本、权限和

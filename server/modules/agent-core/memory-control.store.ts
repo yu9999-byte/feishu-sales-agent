@@ -14,6 +14,7 @@ import type {
   TaskStatusEvent,
   TaskStatusEventResult,
   TaskStatusSnapshot,
+  TaskEventReceiptInput,
 } from './agent.types';
 import type { ControlStore } from './agent.ports';
 
@@ -35,6 +36,8 @@ export class MemoryControlStore implements ControlStore {
     new Map<string, TaskStatusSnapshot>();
   private readonly taskStatusEvents: Map<string, TaskStatusEvent[]> =
     new Map<string, TaskStatusEvent[]>();
+  private readonly taskEventReceipts: Map<string, TaskEventReceiptInput> =
+    new Map<string, TaskEventReceiptInput>();
 
   constructor(integrations: TenantIntegration[]) {
     this.tenantsByKey = new Map<string, TenantIntegration>(
@@ -387,6 +390,20 @@ export class MemoryControlStore implements ControlStore {
       .map((action: PendingAction): PendingAction => clone(action));
   }
 
+  async recordTaskEventReceipt(
+    input: TaskEventReceiptInput,
+  ): Promise<boolean> {
+    const key: string = this.taskEventReceiptKey(
+      input.tenantId,
+      input.eventId,
+    );
+    if (this.taskEventReceipts.has(key)) {
+      return false;
+    }
+    this.taskEventReceipts.set(key, clone(input));
+    return true;
+  }
+
   async recordTaskSnapshots(
     tenantId: string,
     actorOpenId: string,
@@ -547,6 +564,10 @@ export class MemoryControlStore implements ControlStore {
     taskGuid: string,
   ): string {
     return `${tenantId}:${actorOpenId}:${taskGuid}`;
+  }
+
+  private taskEventReceiptKey(tenantId: string, eventId: string): string {
+    return `${tenantId}:${eventId}`;
   }
 
   private taskSnapshotChanged(

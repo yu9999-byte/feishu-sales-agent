@@ -16,8 +16,10 @@
 P0 已通过真实飞书企业闭环验收：用户私聊机器人提交跟进，智谱 GLM
 完成结构化提取，用户确认消息卡片后，Agent 写入客户、商机和跟进三张 Demo Base 表，并
 创建分配给发送者的飞书任务。版本 `1.0.1` 已审核发布，应用身份可读取和写入 Demo Base。
-2026-09-24 整改基线为 22 个测试文件、158 项测试和 8 项真实 Postgres 集成测试；服务端、
-客户端和测试类型检查、ESLint、Agent 与 Web 构建均通过。Vitest 已固定使用 `threads` pool，
+2026-09-24 整改基线为 22 个测试文件、158 项测试和 8 项真实 Postgres 集成测试。
+截至 2026-10-03，当前工程回归基线为 34 个 Agent 测试文件、303 项测试和 4 个
+Postgres 集成测试文件、13 项测试；服务端、客户端和测试类型检查、ESLint、Agent 与 Web
+构建均通过。Vitest 已固定使用 `threads` pool，
 避免 Windows/Node 25 默认 fork worker 的原生
 CSPRNG 初始化崩溃。
 
@@ -51,8 +53,8 @@ CSPRNG 初始化崩溃。
 ## P0 本地运行
 
 1. 准备独立 Postgres，在 `.env.local` 配置 `DATABASE_URL` 后运行
-   `npm run migrate:agent`。该命令固定执行 `003`、`005`、`006`、`007`、`008`、`009`、`010`，记录文件
-   校验和并可重复运行；不会执行 Demo 租户种子。
+   `npm run migrate:agent`。该命令固定执行 `003`、`005` 至 `016`，记录文件校验和并可
+   重复运行；不会执行 Demo 租户种子。
 2. 创建客户、商机、跟进三张 Base 表，并按
    `migrations/004_agent_p0_demo_tenant.example.sql` 写入租户配置。
 3. 将 `.env.example` 复制为 Git 已忽略的 `.env.local`，通过本地安全环境配置提供：

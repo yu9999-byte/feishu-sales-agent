@@ -34,6 +34,7 @@ import type {
   TaskStatusChange,
   TaskStatusEventResult,
   TaskHistorySourceResult,
+  TaskEventReceiptInput,
   TaskCreationResult,
   TenantIntegration,
 } from './agent.types';
@@ -121,6 +122,7 @@ export interface ControlStore {
     since: Date,
     limit: number,
   ): Promise<PendingAction[]>;
+  recordTaskEventReceipt(input: TaskEventReceiptInput): Promise<boolean>;
   recordTaskSnapshots?(
     tenantId: string,
     actorOpenId: string,

@@ -322,6 +322,36 @@ export interface TaskStatusSnapshot {
   url: string | null;
 }
 
+export interface IncomingTaskUpdateEvent {
+  feishuTenantKey: string;
+  eventId: string;
+  taskGuid: string;
+  eventTypes: string[];
+  occurredAt: Date;
+  receivedAt: Date;
+}
+
+export type TaskEventReceiptStatus =
+  | 'received'
+  | 'refreshed'
+  | 'unavailable';
+
+export interface TaskEventReceiptInput {
+  tenantId: string;
+  eventId: string;
+  taskGuid: string;
+  eventTypes: string[];
+  occurredAt: Date;
+  receivedAt: Date;
+  receiptStatus: TaskEventReceiptStatus;
+  payloadHash: string;
+}
+
+export type TaskEventIngestionOutcome =
+  | 'recorded'
+  | 'duplicate'
+  | 'ignored_unknown_tenant';
+
 export type TaskStatusEventKind =
   | 'observed'
   | 'changed'

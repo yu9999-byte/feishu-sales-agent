@@ -14,6 +14,8 @@ import { createConfirmationCard } from '@server/modules/agent-core/agent.cards';
 import { MemoryControlStore } from '@server/modules/agent-core/memory-control.store';
 import type { AgentRuntimeConfig } from '@server/config/agent.config';
 import { FeishuWebhookBridge } from '@server/modules/feishu/feishu-webhook.bridge';
+import type { TaskEventIngestionService } from
+  '@server/modules/agent-core/task-event-ingestion.service';
 import { FollowupChatDraftService } from '@server/modules/sales-behavior/followup-chat-draft.service';
 import { FollowupQualityService } from '@server/modules/sales-behavior/followup-quality.service';
 import {
@@ -725,6 +727,9 @@ const withIsolatedDispatcher = async (
   const bridge: FeishuWebhookBridge = new FeishuWebhookBridge(
     workflow,
     isolatedCallbackConfig,
+    {
+      ingest: async (): Promise<'recorded'> => 'recorded',
+    } as unknown as TaskEventIngestionService,
   );
   try {
     await bridge.onModuleInit();

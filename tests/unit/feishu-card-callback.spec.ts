@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { AgentRuntimeConfig } from '@server/config/agent.config';
 import type { AgentWorkflowService } from '@server/modules/agent-core/agent-workflow.service';
+import type { TaskEventIngestionService } from
+  '@server/modules/agent-core/task-event-ingestion.service';
 import {
   decodeCardCallbackObject,
   FeishuWebhookBridge,
@@ -61,11 +63,20 @@ describe('Feishu long connection', (): void => {
       const cardResponse = { toast: { type: 'success', content: '已处理' } };
       const handleCardAction = vi.fn(async (): Promise<typeof cardResponse> =>
         cardResponse);
+      const ingestTaskEvent = vi.fn(async (): Promise<'recorded'> =>
+        'recorded');
       const workflow = {
         handleMessage,
         handleCardAction,
       } as unknown as AgentWorkflowService;
-      const bridge = new FeishuWebhookBridge(workflow, runtimeConfig);
+      const taskEventIngestion = {
+        ingest: ingestTaskEvent,
+      } as unknown as TaskEventIngestionService;
+      const bridge = new FeishuWebhookBridge(
+        workflow,
+        runtimeConfig,
+        taskEventIngestion,
+      );
 
       await bridge.onModuleInit();
       expect(start).toHaveBeenCalledOnce();
@@ -120,6 +131,29 @@ describe('Feishu long connection', (): void => {
       }));
       expect(result).toEqual(cardResponse);
 
+      await dispatcher.invoke({
+        schema: '2.0',
+        header: {
+          event_type: 'task.task.update_user_access_v2',
+          tenant_key: 'tenant-1',
+          event_id: 'task-event-1',
+          create_time: '1790236800000',
+        },
+        event: {
+          event_types: ['task_status_changed'],
+          task_guid: 'task-guid-1',
+        },
+      }, { needCheck: false });
+      await vi.waitFor((): void => {
+        expect(ingestTaskEvent).toHaveBeenCalledWith(expect.objectContaining({
+          eventId: 'task-event-1',
+          feishuTenantKey: 'tenant-1',
+          taskGuid: 'task-guid-1',
+          eventTypes: ['task_status_changed'],
+          occurredAt: new Date('2026-09-24T08:00:00.000Z'),
+        }));
+      });
+
       bridge.onModuleDestroy();
       expect(close).toHaveBeenCalledWith({ force: true });
     });
@@ -132,12 +166,65 @@ describe('Feishu long connection', (): void => {
         handleMessage: vi.fn(),
         handleCardAction: vi.fn(),
       } as unknown as AgentWorkflowService;
-      const bridge = new FeishuWebhookBridge(workflow, {
-        ...runtimeConfig,
-        feishu: { ...runtimeConfig.feishu, appId: undefined },
-      });
+      const taskEventIngestion = {
+        ingest: vi.fn(),
+      } as unknown as TaskEventIngestionService;
+      const bridge = new FeishuWebhookBridge(
+        workflow,
+        {
+          ...runtimeConfig,
+          feishu: { ...runtimeConfig.feishu, appId: undefined },
+        },
+        taskEventIngestion,
+      );
 
       await expect(bridge.onModuleInit()).rejects.toThrow('FEISHU_APP_ID');
       expect(start).not.toHaveBeenCalled();
     });
+
+  it('rejects task events without every receipt identity field', async (): Promise<void> => {
+    let dispatcher: lark.EventDispatcher | undefined;
+    const start = vi.spyOn(lark.WSClient.prototype, 'start')
+      .mockImplementation(async (
+        params: { eventDispatcher: lark.EventDispatcher },
+      ): Promise<void> => {
+        dispatcher = params.eventDispatcher;
+      });
+    const close = vi.spyOn(lark.WSClient.prototype, 'close')
+      .mockImplementation((): void => undefined);
+    const ingestTaskEvent = vi.fn(async (): Promise<'recorded'> =>
+      'recorded');
+    const workflow = {
+      handleMessage: vi.fn(),
+      handleCardAction: vi.fn(),
+    } as unknown as AgentWorkflowService;
+    const taskEventIngestion = {
+      ingest: ingestTaskEvent,
+    } as unknown as TaskEventIngestionService;
+    const bridge = new FeishuWebhookBridge(
+      workflow,
+      runtimeConfig,
+      taskEventIngestion,
+    );
+
+    await bridge.onModuleInit();
+    if (!dispatcher) throw new Error('Missing event dispatcher');
+    await expect(dispatcher.invoke({
+      schema: '2.0',
+      header: {
+        event_type: 'task.task.update_user_access_v2',
+        tenant_key: 'tenant-1',
+        event_id: 'task-event-2',
+        create_time: '1790236800000',
+      },
+      event: {
+        event_types: ['task_status_changed'],
+      },
+    }, { needCheck: false })).rejects.toThrow();
+    expect(ingestTaskEvent).not.toHaveBeenCalled();
+
+    bridge.onModuleDestroy();
+    expect(close).toHaveBeenCalledWith({ force: true });
+    expect(start).toHaveBeenCalledOnce();
+  });
 });

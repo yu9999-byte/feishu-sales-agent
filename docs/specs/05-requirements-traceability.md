@@ -24,10 +24,14 @@ API 现通过 `coverage.taskHistory` 显式标记 `agent_observations`、`unavai
 本轮新增 `TaskGateway.readTaskHistory` 可信来源扩展口和完整性门禁：只有来源返回
 `coverage=full` 且无警告时才允许 `full`，当前 FeishuTaskGateway 未实现该来源，故现网输出
 保持不变。履约定向测试 `25/25` 通过。
+本轮已接入飞书 SDK 的 `task.task.update_user_access_v2`。该接收器只记录订阅后可见事件的最小
+回执元数据和 SHA-256 哈希，并以 `(tenantId, eventId)` 去重；不保存原始事件体、不二次读取任务、
+不更新快照、不推断销售归属。它不能覆盖订阅前历史，也不能单独证明事件无丢失，因此不能改变
+`full` 的门禁。
 跨任务替代只接受当前租户、当前销售成功 Agent 动作结果中的成对
 `relatedTaskGuid + relation: replaces`；缺字段、冲突、自替代、读取失败、跨租户、跨销售
 均 fail closed，原任务可见时不被替代证据覆盖。
-Agent 全量 `299/299`、Postgres `12/12`、服务端/
+Agent 全量 `303/303`、Postgres `13/13`、服务端/
 测试 TypeScript、ESLint、统一 Lint、Stylelint、Agent/Web 构建和 `git diff --check` 通过；
 本轮不做飞书 UI，UI 仍 pending。
 

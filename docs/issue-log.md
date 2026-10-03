@@ -6,6 +6,17 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-03 飞书任务事件回执已接入，历史覆盖仍未证明
+
+- 原风险：把 `listRelatedTask` 当前列表、任务订阅或单一任务事件误读为可回溯的全量历史，
+  会把列表缺失、订阅前状态或断线期间的未知误判成“未完成”。
+- 处理：已订阅 `task.task.update_user_access_v2`，并持久化最小回执元数据与 SHA-256 哈希；同一
+  `(tenantId, eventId)` 只记录一次。接收层不保存原始事件体、不读取任务详情、不更新任务快照，
+  也不从事件内容推断销售归属。
+- 状态：`Resolved / receipt ledger implemented / history coverage pending / UI not required`。
+- 下一动作：记录订阅起点与中断窗口，建立连续性和补偿证据，并在精确 GUID 二次读取可审计后再评估
+  历史覆盖；在此之前继续禁用 `coverage.taskHistory=full`。
+
 ## 2026-10-03 可信任务历史来源扩展口
 
 - 原风险：`coverage.taskHistory` 预留了 `full`，但未来接入历史源时如果只依赖调用方约定，
