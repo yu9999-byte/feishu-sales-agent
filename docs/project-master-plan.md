@@ -286,6 +286,8 @@ Playbook 的共同基础，优先级高于语音、报告、RAG 和管理看板�
   `completed_at="0"` 与冲突状态不得误报完成。
 - [x] 建立 Agent 观察事件账本：记录 `observed`、`changed`、`completed`、`reopened`，按租户、
   销售和精确任务 GUID 隔离；事件读取失败和来源不完整时保守降级。
+- [x] 在履约 API 的 `coverage.taskHistory` 中显式标记当前历史覆盖为 Agent 观察账本或不可用；
+  预留 `full` 仅供未来可信全量历史来源通过完整性门禁后启用。
 - [ ] 接入可信的全量任务历史/事件来源；当前账本不是全量飞书历史。
 - [ ] 在外部明确提供 `relatedTaskGuid + relation: replaces` 后实现跨任务兑现识别；不得按标题、
   时间或列表缺失猜测替代关系。

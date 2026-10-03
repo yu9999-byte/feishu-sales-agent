@@ -66,11 +66,13 @@ interface SnapshotResult {
 interface PromiseReconciliationResult {
   promises: TaskPromiseFulfillmentItem[];
   changes: TaskFulfillmentChange[];
+  taskHistory: TaskFulfillmentResponse['coverage']['taskHistory'];
 }
 
 interface TaskHistoryResult {
   changes: TaskFulfillmentChange[];
   unavailableGuids: Set<string>;
+  coverage: TaskFulfillmentResponse['coverage']['taskHistory'];
 }
 
 interface TaskReplacement {
@@ -373,6 +375,7 @@ class TaskFulfillmentService {
         taskSnapshots: snapshotResult.available
           ? 'latest_observation'
           : 'unavailable',
+        taskHistory: reconciliation.taskHistory,
       },
       warnings,
       changes,
@@ -487,7 +490,9 @@ class TaskFulfillmentService {
   ): Promise<PromiseReconciliationResult> {
     if (!this.controlStore.listSucceededActions) {
       warnings.push('Agent 执行记录读取能力未配置，无法核对跟进承诺');
-      return { promises: [], changes: [] };
+      return {
+        promises: [], changes: [], taskHistory: 'unavailable',
+      };
     }
     let actions: PendingAction[];
     try {
@@ -507,7 +512,9 @@ class TaskFulfillmentService {
           : String(error)}`,
       );
       warnings.push('Agent 跟进承诺暂时不可读取');
-      return { promises: [], changes: [] };
+      return {
+        promises: [], changes: [], taskHistory: 'unavailable',
+      };
     }
     if (actions.length >= PROMISE_HISTORY_LIMIT) {
       warnings.push('跟进承诺历史达到本次读取上限，结果可能不完整');
@@ -582,6 +589,7 @@ class TaskFulfillmentService {
     return {
       promises,
       changes: [...historyResult.changes, ...changes],
+      taskHistory: historyResult.coverage,
     };
   }
 
@@ -657,13 +665,23 @@ class TaskFulfillmentService {
     now: Date,
   ): Promise<TaskHistoryResult> {
     if (taskGuids.length === 0 || !this.controlStore.listTaskStatusEvents) {
-      return { changes: [], unavailableGuids: new Set<string>() };
+      return {
+        changes: [],
+        unavailableGuids: new Set<string>(),
+        coverage: this.controlStore.listTaskStatusEvents
+          ? 'agent_observations'
+          : 'unavailable',
+      };
     }
     const missingGuids: string[] = taskGuids.filter(
       (guid: string): boolean => !taskByGuid.has(guid),
     );
     if (missingGuids.length === 0) {
-      return { changes: [], unavailableGuids: new Set<string>() };
+      return {
+        changes: [],
+        unavailableGuids: new Set<string>(),
+        coverage: 'agent_observations',
+      };
     }
     let result: TaskStatusEventResult;
     try {
@@ -684,6 +702,7 @@ class TaskFulfillmentService {
       return {
         changes: [],
         unavailableGuids: new Set(missingGuids),
+        coverage: 'unavailable',
       };
     }
     if (result.warning) {
@@ -691,6 +710,7 @@ class TaskFulfillmentService {
       return {
         changes: [],
         unavailableGuids: new Set(missingGuids),
+        coverage: 'unavailable',
       };
     }
     const eventsByGuid: Map<string, TaskStatusEvent[]> = new Map();
@@ -737,7 +757,7 @@ class TaskFulfillmentService {
     if (hasNewerOrdinaryEvent) {
       warnings.push('任务状态历史包含较新的普通变化，部分承诺待核实');
     }
-    return { changes, unavailableGuids };
+    return { changes, unavailableGuids, coverage: 'agent_observations' };
   }
 
   private toTaskFulfillmentChange(
@@ -1066,6 +1086,7 @@ class TaskFulfillmentService {
         promiseReconciliation: 'agent_confirmed_only',
         promiseHistoryDays: PROMISE_HISTORY_DAYS,
         taskSnapshots: 'unavailable',
+        taskHistory: 'unavailable',
       },
       warnings,
     };

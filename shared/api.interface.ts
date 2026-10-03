@@ -540,6 +540,7 @@ export interface TaskFulfillmentCoverage {
   promiseReconciliation: 'agent_confirmed_only';
   promiseHistoryDays: 180;
   taskSnapshots: 'latest_observation' | 'unavailable';
+  taskHistory: 'agent_observations' | 'full' | 'unavailable';
 }
 
 export interface TaskFulfillmentResponse {

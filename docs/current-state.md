@@ -1,5 +1,15 @@
 # 当前工程说明
 
+## 2026-10-03 任务历史覆盖契约（真实 UI 待验收）
+
+- `/api/platform/task-fulfillment` 新增 `coverage.taskHistory`，明确区分
+  `agent_observations`、预留的 `full` 和 `unavailable`；当前实现只返回 Agent 观察账本或
+  不可用，不把控制库事件解释成飞书全量任务历史。
+- `/tasks` 页面同步显示该边界：无精确 GUID 的承诺仍为待核实，任务历史来源不可用时不展示
+  可被误读为完成的结论。未增加提醒、调度、消息或真实业务写入。
+- 履约定向测试 `23/23` 通过；真实飞书/Web UI 未执行，状态保持
+  `Automated Green / Web implemented / UI pending`。
+
 ## 2026-10-03 跨任务替代关系安全边界（真实 UI 待验收）
 
 - `TaskFulfillmentService` 只从当前租户、当前销售的成功 Agent 执行结果建立

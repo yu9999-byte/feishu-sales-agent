@@ -192,6 +192,7 @@ describe('TaskFulfillmentService', (): void => {
       promiseReconciliation: 'agent_confirmed_only',
       promiseHistoryDays: 180,
       taskSnapshots: 'latest_observation',
+      taskHistory: 'agent_observations',
     });
     expect(result.recommendations).toHaveLength(4);
   });
@@ -261,6 +262,7 @@ describe('TaskFulfillmentService', (): void => {
     expect(result.status).toBe('unavailable');
     expect(result.metrics.openTaskCount).toBe(0);
     expect(result.warnings).toEqual(['任务数据源暂时不可用']);
+    expect(result.coverage.taskHistory).toBe('unavailable');
   });
 
   it('reconciles only this actor and tenant by exact task GUID and final selection', async (): Promise<void> => {

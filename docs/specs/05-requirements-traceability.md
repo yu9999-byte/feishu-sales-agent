@@ -18,6 +18,9 @@
 `observed`/`changed`/`completed`/`reopened`，只按租户、销售和精确任务 GUID 隔离读取。
 事件账本只代表 Agent 观察证据，不是飞书全量历史；只有明确完成/重新开放事件可恢复历史判断，
 不按标题、时间或列表缺失建立跨任务关系；较新的普通事件不会被旧的完成/重开事件覆盖。
+API 现通过 `coverage.taskHistory` 显式标记 `agent_observations`、`unavailable`（未来可信
+全量历史来源才可使用预留的 `full`），Web 页面同步展示该边界，避免调用方把观察账本误读为
+全量历史。
 跨任务替代只接受当前租户、当前销售成功 Agent 动作结果中的成对
 `relatedTaskGuid + relation: replaces`；缺字段、冲突、自替代、读取失败、跨租户、跨销售
 均 fail closed，原任务可见时不被替代证据覆盖。

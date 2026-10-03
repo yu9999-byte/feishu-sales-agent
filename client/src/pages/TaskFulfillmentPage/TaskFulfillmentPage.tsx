@@ -169,6 +169,10 @@ const TaskFulfillmentPage: React.FC = () => {
           <p className="mt-1 text-sm leading-6">
             已覆盖本人未完成任务、可读取的已完成任务和最近 {report.coverage.promiseHistoryDays} 天的 Agent 已确认跟进承诺。
             已完成任务只在有有效完成时间时计入；关联任务当前不可见或没有任务承接不代表承诺已兑现，需人工核实。
+            {report.coverage.taskHistory === 'agent_observations' &&
+              '任务历史只包含 Agent 运行期间观察到的状态，不代表飞书全量历史。'}
+            {report.coverage.taskHistory === 'unavailable' &&
+              '任务历史来源当前不可用，状态变化和完成结论需人工核实。'}
           </p>
         </div>
       </section>
