@@ -6,6 +6,7 @@ import type {
   FollowupDraft,
   FollowupMissingField,
   JsonObject,
+  PlatformSessionResponse,
   SalesContext,
 } from '@shared/api.interface';
 import { AgentWorkflowService } from '@server/modules/agent-core/agent-workflow.service';
@@ -22,6 +23,8 @@ import {
   FollowupProjectRiskService,
 } from '@server/modules/insight/followup-project-risk.service';
 import type { PlatformSessionService } from '@server/modules/platform-shell/platform-session.service';
+import type { PlatformMember } from
+  '@server/modules/identity-access/identity-access.types';
 import type {
   ConversationAssistant,
   FeishuMessenger,
@@ -422,6 +425,17 @@ class FakeTasks implements TaskGateway {
   }
 }
 
+interface FakePlatformSessions {
+  activeMember: PlatformMember | null;
+  failActiveMemberLookup: boolean;
+  activeMemberChecks: number;
+  getSession(): Promise<PlatformSessionResponse>;
+  getActiveMember(
+    tenantId: string,
+    feishuOpenId: string,
+  ): Promise<PlatformMember | null>;
+}
+
 interface TestHarness {
   integrationA: TenantIntegration;
   integrationB: TenantIntegration;
@@ -431,6 +445,7 @@ interface TestHarness {
   tasks: FakeTasks;
   extractor: FixedExtractor;
   conversation: FakeConversationAssistant;
+  sessions: FakePlatformSessions;
   workflow: AgentWorkflowService;
 }
 
@@ -464,15 +479,17 @@ const createHarness = (
       tasks,
       new FollowupProjectRiskService(),
     );
-  const sessions = {
-    getSession: async (): Promise<{
-      tenant: { id: string; name: string; timezone: string };
-      member: { id: string; feishuOpenId: string; displayName: string };
-      roles: ['sales'];
-      permissions: ['followup:create-own'];
-      navigation: [];
-      policyVersion: string;
-    }> => ({
+  const sessions: FakePlatformSessions = {
+    activeMember: {
+      id: '00000000-0000-4000-8000-00000000000c',
+      tenantId: integrationA.tenantId,
+      feishuOpenId: 'ou_sales',
+      displayName: '销售',
+      status: 'active',
+    },
+    failActiveMemberLookup: false,
+    activeMemberChecks: 0,
+    getSession: async (): Promise<PlatformSessionResponse> => ({
       tenant: {
         id: integrationA.tenantId,
         name: integrationA.name,
@@ -488,9 +505,31 @@ const createHarness = (
       navigation: [],
       policyVersion: 'test',
     }),
-  } as unknown as PlatformSessionService;
+    getActiveMember: async (
+      tenantId: string,
+      feishuOpenId: string,
+    ): Promise<PlatformMember | null> => {
+      sessions.activeMemberChecks += 1;
+      if (sessions.failActiveMemberLookup) {
+        throw new Error('Injected member lookup failure');
+      }
+      if (
+        sessions.activeMember === null ||
+        sessions.activeMember.status !== 'active'
+      ) {
+        return null;
+      }
+      return {
+        ...sessions.activeMember,
+        tenantId,
+        feishuOpenId,
+      };
+    },
+  };
+  const platformSessions: PlatformSessionService =
+    sessions as unknown as PlatformSessionService;
   const chatDrafts = new FollowupChatDraftService(
-    sessions,
+    platformSessions,
     new FollowupQualityService(),
   );
   const workflow: AgentWorkflowService = new AgentWorkflowService(
@@ -501,6 +540,7 @@ const createHarness = (
     executor,
     chatDrafts,
     records,
+    platformSessions,
     salesContext,
   );
   return {
@@ -512,6 +552,7 @@ const createHarness = (
     tasks,
     extractor,
     conversation,
+    sessions,
     workflow,
   };
 };
@@ -743,6 +784,116 @@ const withIsolatedDispatcher = async (
 };
 
 describe('AgentWorkflowService', (): void => {
+  it('does not claim or process a message from an unknown member', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    const activeMember: PlatformMember | null = harness.sessions.activeMember;
+    if (activeMember === null) {
+      throw new Error('Expected an active test member');
+    }
+    const message: IncomingMessage = createMessage(
+      'tenant-a',
+      'om-member-forbidden',
+    );
+    harness.sessions.activeMember = null;
+
+    await harness.workflow.handleMessage(message);
+
+    expect(harness.sessions.activeMemberChecks).toBe(1);
+    expect(harness.conversation.calls).toBe(0);
+    expect(harness.extractor.calls).toBe(0);
+    expect(harness.messenger.texts).toHaveLength(0);
+    expect(harness.messenger.actions).toHaveLength(0);
+    expect(harness.records.customerCalls).toBe(0);
+    expect(harness.records.opportunityCalls).toBe(0);
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+    expect(harness.store.getAudits(harness.integrationA.tenantId))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          eventType: 'message.member_forbidden',
+          traceId: message.messageId,
+          outcome: 'failed',
+        }),
+      ]));
+
+    harness.sessions.activeMember = activeMember;
+    await harness.workflow.handleMessage(message);
+
+    expect(harness.sessions.activeMemberChecks).toBe(2);
+    expect(harness.conversation.calls).toBe(0);
+    expect(harness.extractor.calls).toBe(1);
+    expect(harness.messenger.actions).toHaveLength(1);
+  });
+
+  it('rejects confirmation from a disabled member without executing it', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    await harness.workflow.handleMessage(createMessage());
+    const pending: PendingAction = harness.messenger.actions[0];
+    const activeMember: PlatformMember | null = harness.sessions.activeMember;
+    if (activeMember === null) {
+      throw new Error('Expected an active test member');
+    }
+    harness.sessions.activeMember = {
+      ...activeMember,
+      status: 'disabled',
+    };
+
+    const response: JsonObject = await harness.workflow.handleCardAction(
+      createCardAction(
+        'tenant-a',
+        pending.id,
+        'confirm',
+        'evt-disabled-member-confirm',
+      ),
+    );
+
+    expect(JSON.stringify(response)).toContain('成员身份无效，卡片未执行。');
+    await expect(harness.store.getPendingAction(
+      harness.integrationA.tenantId,
+      pending.id,
+    )).resolves.toMatchObject({ status: 'pendingConfirmation' });
+    expect(harness.records.customerCalls).toBe(0);
+    expect(harness.records.opportunityCalls).toBe(0);
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+    expect(harness.messenger.updates).toHaveLength(0);
+    expect(harness.store.getAudits(harness.integrationA.tenantId))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          eventType: 'card.member_forbidden',
+          traceId: 'evt-disabled-member-confirm',
+          outcome: 'failed',
+        }),
+      ]));
+  });
+
+  it('fails closed when member verification is unavailable', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    const message: IncomingMessage = createMessage(
+      'tenant-a',
+      'om-member-check-failed',
+    );
+    harness.sessions.failActiveMemberLookup = true;
+
+    await harness.workflow.handleMessage(message);
+
+    expect(harness.sessions.activeMemberChecks).toBe(1);
+    expect(harness.conversation.calls).toBe(0);
+    expect(harness.extractor.calls).toBe(0);
+    expect(harness.messenger.texts).toHaveLength(0);
+    expect(harness.messenger.actions).toHaveLength(0);
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+    expect(harness.store.getAudits(harness.integrationA.tenantId))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          eventType: 'message.member_check_unavailable',
+          traceId: message.messageId,
+          outcome: 'failed',
+        }),
+      ]));
+  });
+
   it('shows a text waiting state before the model completes and edits it to the answer', async (): Promise<void> => {
     const harness: TestHarness = createHarness();
     let finish: (decision: ConversationDecision) => void = (): void => {};

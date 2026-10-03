@@ -62,6 +62,8 @@ import {
   LONG_TERM_MEMORY,
   type LongTermMemoryPort,
 } from '@server/modules/llm/long-term-memory.port';
+import { PlatformSessionService } from
+  '@server/modules/platform-shell/platform-session.service';
 
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const ACTION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -95,6 +97,7 @@ export class AgentWorkflowService {
     private readonly chatDrafts: FollowupChatDraftService,
     @Inject(SALES_RECORDS_GATEWAY)
     private readonly records: SalesRecordsGateway,
+    private readonly sessions: PlatformSessionService,
     @Optional()
     @Inject(SALES_CONTEXT_READER)
     private readonly salesContext?: SalesContextReader,
@@ -107,6 +110,16 @@ export class AgentWorkflowService {
     const integration: TenantIntegration | null =
       await this.store.resolveTenant(message.feishuTenantKey);
     if (!integration || integration.status !== 'active') {
+      return;
+    }
+
+    const memberAllowed: boolean = await this.hasActiveMember(
+      integration,
+      message.senderOpenId,
+      message.messageId,
+      'message',
+    );
+    if (!memberAllowed) {
       return;
     }
 
@@ -151,6 +164,16 @@ export class AgentWorkflowService {
       await this.store.resolveTenant(action.feishuTenantKey);
     if (!integration || integration.status !== 'active') {
       return this.createAccessDeniedCard('当前企业尚未配置销售 Agent。');
+    }
+
+    const memberAllowed: boolean = await this.hasActiveMember(
+      integration,
+      action.operatorOpenId,
+      action.eventId,
+      'card',
+    );
+    if (!memberAllowed) {
+      return this.createAccessDeniedCard('成员身份无效，卡片未执行。');
     }
 
     if (
@@ -2150,6 +2173,72 @@ export class AgentWorkflowService {
         ],
       },
     };
+  }
+
+  private async hasActiveMember(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    traceId: string,
+    entrypoint: 'message' | 'card',
+  ): Promise<boolean> {
+    try {
+      const member = await this.sessions.getActiveMember(
+        integration.tenantId,
+        actorOpenId,
+      );
+      if (member !== null) {
+        return true;
+      }
+      await this.appendMemberGateAudit(
+        integration,
+        actorOpenId,
+        traceId,
+        `${entrypoint}.member_forbidden`,
+        { reason: 'inactive_or_unknown_member' },
+      );
+      return false;
+    } catch (error: unknown) {
+      const normalized: Error = this.toError(error);
+      this.logger.error(
+        `Member check failed for ${entrypoint} ${traceId}: ` +
+          redactErrorMessage(normalized),
+        redactErrorStack(normalized),
+      );
+      await this.appendMemberGateAudit(
+        integration,
+        actorOpenId,
+        traceId,
+        `${entrypoint}.member_check_unavailable`,
+        { errorCode: this.errorCode(error) },
+      );
+      return false;
+    }
+  }
+
+  private async appendMemberGateAudit(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    traceId: string,
+    eventType: string,
+    details: JsonObject,
+  ): Promise<void> {
+    try {
+      await this.store.appendAudit({
+        tenantId: integration.tenantId,
+        traceId,
+        eventType,
+        actorOpenId,
+        outcome: 'failed',
+        details,
+      });
+    } catch (error: unknown) {
+      const normalized: Error = this.toError(error);
+      this.logger.error(
+        `Member gate audit failed for ${traceId}: ` +
+          redactErrorMessage(normalized),
+        redactErrorStack(normalized),
+      );
+    }
   }
 
   private toError(error: unknown): Error {

@@ -144,6 +144,28 @@ class PlatformSessionService {
     return this.createSession(tenant, member, occurredAt);
   }
 
+  async getActiveMember(
+    tenantId: string,
+    feishuOpenId: string,
+  ): Promise<PlatformMember | null> {
+    const tenant: PlatformTenant | null =
+      await this.repository.resolveTenantById(tenantId);
+    if (tenant === null || tenant.status !== 'active') {
+      return null;
+    }
+
+    const member: PlatformMember | null =
+      await this.repository.resolveMemberByOpenId(tenantId, feishuOpenId);
+    if (
+      member === null || member.status !== 'active' ||
+      member.tenantId !== tenantId
+    ) {
+      return null;
+    }
+
+    return member;
+  }
+
   async getSessionByMembership(
     tenantId: string,
     memberId: string,

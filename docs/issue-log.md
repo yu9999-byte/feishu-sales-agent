@@ -6,6 +6,20 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-03 飞书机器人成员入口门禁
+
+- 原风险：机器人收到飞书消息或卡片动作后，未在进入模型、客户/商机读取、草稿生成、
+  消息领取或确认执行前核验成员身份；未知、停用或身份查询异常的操作者可能继续走工作流。
+- 处理：`PlatformSessionService.getActiveMember` 只返回活跃租户中的活跃成员。消息和卡片入口
+  在解析租户后立即调用该门禁；身份无效时消息不领取、不回复、不调用模型或业务网关，卡片
+  返回“成员身份无效，卡片未执行。”且保持待确认动作不变。身份查询异常同样 fail closed。
+- 证据：新增未知成员、停用成员、授权恢复和身份查询异常回归；聚焦测试 `74/74`、全量 Agent
+  测试 `310/310`、三套 TypeScript、ESLint、统一 Lint、Stylelint、Agent/Web 构建和
+  `git diff --check` 均通过。本轮未发送真实飞书消息、未写入业务数据、未进行 UI 验收。
+- 状态：`Partial / member gate implemented / platform role design blocked`。
+- 下一动作：在平台中配置并确认真实角色与权限映射后，单独将角色授权接入机器人入口；当前不得
+  擅自把成员门禁映射为 `sales`、`manager` 或 `admin`，也不得把自动化验证表述为 UI 验收。
+
 ## 2026-10-03 飞书任务事件回执已接入，历史覆盖仍未证明
 
 - 原风险：把 `listRelatedTask` 当前列表、任务订阅或单一任务事件误读为可回溯的全量历史，
@@ -176,7 +190,7 @@
 | `ISS-TASK-007` | 销售agent应用身份缺少 `task:task:read`，无法核对本人已有待办 | Resolved / UI regression pending | 权限已开通；销售agent自身身份真实搜索返回 `code=0`、5 条未完成任务、无 notice；读取按真实上限 30 条完整分页，不完整时 fail closed | 保持权限/分页回归；用新草案复验任务候选 UI |
 | `ISS-TASK-008` | 飞书 `completed_at="0"` 可被误判为已完成，且快照缺少完成时间证据 | Resolved / automated green / UI pending | 任务网关仅接受可解析且大于 0 的 ISO/秒/毫秒完成时间；冲突原始状态 + 零时间有反例；迁移 014、快照回读和 `/tasks` 显示已接入；定向 `35/35`、Agent `281/281`、隔离 Postgres `1/1` | 保持时间格式和重新开放回归；真实销售登录态只读验收后再升级 UI 状态 |
 | `ISS-TASK-009` | 任务不可见时缺少可审计的状态历史，容易把列表缺失误判为完成或跨任务承接 | Resolved / automated green / UI pending | 迁移 015 和内存/Postgres 事件账本记录 `observed`/`changed`/`completed`/`reopened`；服务按精确 GUID 取最新事件，较新的普通事件会保守降级，不恢复旧终态；事件失败和来源不完整均保守降级；Agent `285/285`、Postgres `12/12` 通过 | 全量飞书历史、显式跨任务替代关系、提醒和 UI 验收仍是后续工作 |
-| `ISS-AUTH-001` | 飞书机器人入口的成员/角色权限校验尚未完成 | Open / existing | 已在 `current-state.md` 保留，未纳入 Goal v3 修改 | 单独立项，不与 S4 混做 |
+| `ISS-AUTH-001` | 飞书机器人入口的成员/角色权限校验尚未完成 | Partial / member gate implemented / platform role design blocked | 消息与卡片入口已校验活跃成员；未知/停用/查询异常均 fail closed，自动化覆盖 `74/74`、全量 Agent `310/310`；尚无真实角色映射或 UI 验收 | 配置真实平台角色与权限映射后，再为机器人入口补角色授权门禁；不与 S4 混做 |
 | `ISS-OPS-002` | 新增商机状态网关后独立 Agent 启动缺少依赖导出 | Resolved | `AgentExecutionModule` 已导出 `SALES_RECORDS_GATEWAY`；服务端类型检查、构建通过，3100 端口启动、路由注册和飞书长连接均已验证 | 保持根模块启动冒烟测试，避免只依赖单元测试 |
 | `ISS-OPS-003` | 商机准备度上下文服务未注册到 Nest 模块，类型检查与单测通过但完整 Agent 无法启动 | Resolved | 进程级冒烟复现依赖注入失败；上下文服务增加 `@Injectable()` 并注册为模块 provider，新增模块装配回归。修复后隔离端口 3111 启动成功，首页 200，任务履约接口未登录返回预期 401；全量 `270/270` | 保持模块装配回归和完整 Agent 启动冒烟；不得只以服务单测替代根模块启动验证 |
 | `ISS-OPS-004` | 项目 `.env.local` 指向的 `127.0.0.1:55432` 没有本项目 Postgres 实例 | Resolved / local environment | 已启动项目自带 Postgres，未重置数据；迁移 014/015 成功应用，3 个集成测试文件共 `12/12` 通过，控制库回读正常 | 保持本地测试实例和迁移回归；真实运行态与 UI 仍按各自验收门禁执行 |

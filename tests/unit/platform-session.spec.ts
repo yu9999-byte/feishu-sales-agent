@@ -290,6 +290,37 @@ describe('PlatformSessionService', (): void => {
     });
   });
 
+  it('returns an active member without requiring an assigned role', async (): Promise<void> => {
+    const repository: IdentityAccessRepository =
+      new FakeIdentityAccessRepository(createMember(), []);
+    const service: PlatformSessionService =
+      new PlatformSessionService(repository);
+
+    await expect(
+      service.getActiveMember(TENANT_ID, 'ou_current_user'),
+    ).resolves.toEqual(createMember());
+  });
+
+  it.each<PlatformMember | null>([
+    null,
+    createMember('disabled'),
+    {
+      ...createMember(),
+      tenantId: '00000000-0000-4000-8000-00000000000b',
+    },
+  ])('does not return an inactive, unknown, or cross-tenant member', async (
+    member: PlatformMember | null,
+  ): Promise<void> => {
+    const repository: IdentityAccessRepository =
+      new FakeIdentityAccessRepository(member, []);
+    const service: PlatformSessionService =
+      new PlatformSessionService(repository);
+
+    await expect(
+      service.getActiveMember(TENANT_ID, 'ou_current_user'),
+    ).resolves.toBeNull();
+  });
+
   it('does not accept a tenant or member override from callers', async (): Promise<void> => {
     const repository: IdentityAccessRepository =
       new FakeIdentityAccessRepository(

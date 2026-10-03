@@ -2,6 +2,14 @@
 
 状态：`Approved / Goal v3 aligned / automated Green / UI pending 2026-10-03`
 
+2026-10-03 飞书机器人成员入口已补齐第一道准入门：在消息和卡片动作解析出租户后，
+`PlatformSessionService.getActiveMember` 只允许活跃租户中的活跃成员继续进入模型调用、
+上下文读取、草稿生成、消息领取或确认执行。未知成员、停用成员和成员查询异常均 fail closed；
+无效消息不领取也不回复，无效卡片保持原待确认动作且不触发业务写入，并记录相应审计事件。
+聚焦测试 `74/74`、全量 Agent `310/310`、三套 TypeScript、ESLint、统一 Lint、Stylelint、
+Agent/Web 构建和 `git diff --check` 通过。本轮未使用真实飞书消息或 UI；真实平台角色映射尚未
+配置，不能把成员门禁表述为销售、主管或管理员角色授权。
+
 2026-10-03 任务履约切片的本地数据库验证已补齐：项目自带 Postgres 在
 `127.0.0.1:55432` 启动，迁移 014/015 成功应用，3 个 Postgres 集成测试文件共 `12/12`
 通过；该证据不替代真实飞书/Web UI 验收，UI 仍保持 `UI pending`。
@@ -73,7 +81,8 @@ TypeScript、ESLint、Agent/Web 构建通过；本地 Agent `72384` 在 `3100` �
 
 2026-09-23 复核补充：自然语言意图由 LangChain/LangGraph 主分类；`executing` 增加超时回收；
 Web 确认后的待办候选跨版本幂等；Mem0 接入 `memory_save` 和 ACL 召回。飞书机器人角色权限
-校验按用户要求保留为 P1 TODO，不在本轮改动；Web OAuth state 会话绑定已补齐。
+校验当时作为 P1 TODO；2026-10-03 已完成活跃成员入口门禁，但真实平台角色映射仍未配置，
+因此角色授权继续受阻。Web OAuth state 会话绑定已补齐。
 
 2026-09-24 代码复查将 OAuth 缺 Cookie、Web 失败动作跨版本重试、补充态 LLM 主路由和
 LangGraph thread TTL 重新打开为整改项。现已按 [项目复查整改 SDD](13-project-hardening-sdd.md)
@@ -159,7 +168,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | 需求范围 | 阶段 | 规格状态 | 自动化证据 | UI 证据 |
 | --- | --- | --- | --- | --- |
 | `SIA-000..000D` 对话入口、意图与安全路由 | B0 | Implemented / UI partial, clean-state retest pending | LangGraph 主分类覆盖普通态、澄清态和补充态；明确跟进命令确定性直达，24 小时 checkpoint TTL 具备保留/删除回归；进入 168 项全量回归 | WebSocket 已收到并完成两条真实私聊工作流；卡片内容与补充态仍待干净状态重放 |
-| `PLT-001..006` 多租户、身份、授权、审计 | A | Implemented | 51 项单测 + 5 项真实 Postgres 集成测试；包含租户范围 OAuth、RBAC、拒绝/允许审计追加 | 真实飞书 OAuth、管理员允许、销售直达管理页拒绝已通过；四真实账号/两真实租户待验收 |
+| `PLT-001..006` 多租户、身份、授权、审计 | A | Partial / member gate implemented / platform role design blocked | 机器人消息与卡片动作均在租户解析后校验活跃成员；未知、停用和身份查询异常均 fail closed，阻断模型、上下文读取、草稿、领取和确认执行，并写入审计。成员入口定向 `74/74`、全量 Agent `310/310`、类型检查、Lint、构建通过；既有 OAuth/RBAC/审计回归继续保留 | 本轮未做机器人 UI 验收；此前 Web OAuth/页面权限证据不等同于机器人角色授权。真实平台角色映射尚未配置，不能声称销售、主管或管理员角色在机器人入口已生效 |
 | `WEB-001..003` 页面授权、状态和飞书深链 | A | Implementing | OAuth 缺 state Cookie、不一致和重放均拒绝；Session/导航/页面 API 边界通过；深链签名尚未实现 | 桌面、390px 窄屏、角色导航及 forbidden 已通过；最新 OAuth 回归和卡片详情深链待验收 |
 | `ING-001..002` 表单与文本输入 | B1 | Implementing / API E2E verified / UI pending | Web 创建 API、同键并发与租户归属通过；最新真实 API E2E 已验证普通“帮我写跟进”输入卡、带原文跟进草案和确认前无写入 | 本轮不要求手工 UI；视觉和按钮点击仍未声明 UI Verified，其他输入来源待验收 |
 | `FUP-001..003` 提取、生成和证据 | B1 | Implemented / UI verified | 来源 quote、生成正文与版本通过；本次沟通方式/时间/主题、`nowLocal` 与显式 offset 契约已进入 126 项回归 | 真实飞书卡片已正确区分本次“飞书”与下一步“飞书会议”，时间为 `2026-09-21T10:15:00+08:00`，主题为“试点方案” |
