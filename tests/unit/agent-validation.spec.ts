@@ -21,6 +21,7 @@ import { FollowupExtractionUnavailableError } from '@server/modules/agent-core/a
 import { redactSensitiveText } from '@server/modules/agent-core/agent.redaction';
 import {
   getMissingFields,
+  parseAgentExecutionResult,
   parseFollowupDraft,
   parsePendingActionPayload,
   parseOpportunityStatusUpdate,
@@ -372,6 +373,56 @@ describe('follow-up validation', (): void => {
       ...payload,
       salesContext: legacySalesContext,
     })).toEqual(payload);
+  });
+
+  it('accepts only a complete explicit task replacement declaration', (): void => {
+    const payload: PendingAction['payload'] = {
+      ...pendingAction.payload,
+      executionTarget: {
+        taskGuid: 'new-task-guid',
+        taskUrl: 'https://feishu.cn/task/new-task-guid',
+        relatedTaskGuid: 'old-task-guid',
+        relation: 'replaces',
+      },
+    };
+    expect(parsePendingActionPayload(payload).executionTarget).toEqual(
+      payload.executionTarget,
+    );
+    expect(parseAgentExecutionResult({
+      pendingActionId: pendingAction.id,
+      status: 'succeeded',
+      taskGuid: 'new-task-guid',
+      relatedTaskGuid: 'old-task-guid',
+      relation: 'replaces',
+    })).toMatchObject({
+      taskGuid: 'new-task-guid',
+      relatedTaskGuid: 'old-task-guid',
+      relation: 'replaces',
+    });
+  });
+
+  it('rejects incomplete and self-replacing task declarations', (): void => {
+    expect(() => parsePendingActionPayload({
+      ...pendingAction.payload,
+      executionTarget: {
+        taskGuid: 'new-task-guid',
+        relatedTaskGuid: 'old-task-guid',
+      },
+    })).toThrow();
+    expect(() => parseAgentExecutionResult({
+      pendingActionId: pendingAction.id,
+      status: 'succeeded',
+      taskGuid: 'same-task-guid',
+      relatedTaskGuid: 'same-task-guid',
+      relation: 'replaces',
+    })).toThrow();
+    expect(() => parseAgentExecutionResult({
+      pendingActionId: pendingAction.id,
+      status: 'succeeded',
+      taskGuid: 'new-task-guid',
+      relatedTaskGuid: 'old-task-guid',
+      relation: 'renames',
+    })).toThrow();
   });
 
   it('shows both sources when business context facts conflict', (): void => {

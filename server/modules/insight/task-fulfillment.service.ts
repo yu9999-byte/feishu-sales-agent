@@ -73,6 +73,16 @@ interface TaskHistoryResult {
   unavailableGuids: Set<string>;
 }
 
+interface TaskReplacement {
+  taskGuid: string;
+  taskUrl: string | null;
+}
+
+interface TaskReplacementResult {
+  byOriginalGuid: Map<string, TaskReplacement>;
+  ambiguousOriginalGuids: Set<string>;
+}
+
 interface CompletedTasksResult {
   items: TaskFulfillmentCompletedItem[];
   taskItems: TaskFulfillmentItem[];
@@ -502,6 +512,12 @@ class TaskFulfillmentService {
     if (actions.length >= PROMISE_HISTORY_LIMIT) {
       warnings.push('跟进承诺历史达到本次读取上限，结果可能不完整');
     }
+    const replacements: TaskReplacementResult =
+      this.buildTaskReplacements(actions, warnings);
+    const taskGuids: string[] = this.taskGuidsForActions(
+      actions,
+      replacements.byOriginalGuid,
+    );
     const taskByGuid: Map<string, TaskFulfillmentItem> = new Map(
       [...tasks, ...completedTasks].map(
         (task: TaskFulfillmentItem): [string, TaskFulfillmentItem] =>
@@ -512,7 +528,7 @@ class TaskFulfillmentService {
     const detailedTasks: DailyReportTaskRecord[] =
       await this.lookupMissingTasks(
         input,
-        actions,
+        taskGuids,
         taskByGuid,
         taskSourceIncomplete,
         taskLookupUnavailable,
@@ -529,7 +545,7 @@ class TaskFulfillmentService {
     const historyResult: TaskHistoryResult =
       await this.readTaskStatusEvents(
         input,
-        actions,
+        taskGuids,
         taskByGuid,
         warnings,
         now,
@@ -556,6 +572,7 @@ class TaskFulfillmentService {
           taskSourceIncomplete,
           taskLookupUnavailable,
           changeByGuid,
+          replacements,
         ),
       )
       .filter(
@@ -568,22 +585,77 @@ class TaskFulfillmentService {
     };
   }
 
+  private buildTaskReplacements(
+    actions: PendingAction[],
+    warnings: string[],
+  ): TaskReplacementResult {
+    const byOriginalGuid: Map<string, TaskReplacement> = new Map();
+    const ambiguousOriginalGuids: Set<string> = new Set();
+    let warnedInvalidDeclaration: boolean = false;
+    actions.forEach((action: PendingAction): void => {
+      const result = action.result;
+      const relatedTaskGuid: string = result.relatedTaskGuid?.trim() ?? '';
+      const taskGuid: string = result.taskGuid?.trim() ?? '';
+      const hasDeclaration: boolean = result.relatedTaskGuid !== undefined ||
+        result.relation !== undefined;
+      if (!hasDeclaration) return;
+      if (
+        action.status !== 'succeeded' ||
+        result.status !== 'succeeded' ||
+        result.relation !== 'replaces' ||
+        !relatedTaskGuid ||
+        !taskGuid ||
+        relatedTaskGuid === taskGuid
+      ) {
+        if (!warnedInvalidDeclaration) {
+          warnings.push('存在无效的跨任务替代声明，相关承诺保持待核实');
+          warnedInvalidDeclaration = true;
+        }
+        return;
+      }
+      if (ambiguousOriginalGuids.has(relatedTaskGuid)) return;
+      const replacement: TaskReplacement = {
+        taskGuid,
+        taskUrl: result.taskUrl?.trim() || null,
+      };
+      const previous: TaskReplacement | undefined =
+        byOriginalGuid.get(relatedTaskGuid);
+      if (previous && previous.taskGuid !== replacement.taskGuid) {
+        byOriginalGuid.delete(relatedTaskGuid);
+        ambiguousOriginalGuids.add(relatedTaskGuid);
+        warnings.push('发现冲突的跨任务替代声明，相关承诺保持待核实');
+        return;
+      }
+      byOriginalGuid.set(relatedTaskGuid, replacement);
+    });
+    return { byOriginalGuid, ambiguousOriginalGuids };
+  }
+
+  private taskGuidsForActions(
+    actions: PendingAction[],
+    replacements: Map<string, TaskReplacement>,
+  ): string[] {
+    const taskGuids: Set<string> = new Set<string>();
+    actions.forEach((action: PendingAction): void => {
+      const taskGuid: string = action.result.taskGuid?.trim() ?? '';
+      if (taskGuid) taskGuids.add(taskGuid);
+    });
+    replacements.forEach(
+      (replacement: TaskReplacement, originalGuid: string): void => {
+        taskGuids.add(originalGuid);
+        taskGuids.add(replacement.taskGuid);
+      },
+    );
+    return Array.from(taskGuids);
+  }
+
   private async readTaskStatusEvents(
     input: TaskFulfillmentInput,
-    actions: PendingAction[],
+    taskGuids: string[],
     taskByGuid: Map<string, TaskFulfillmentItem>,
     warnings: string[],
     now: Date,
   ): Promise<TaskHistoryResult> {
-    const taskGuids: string[] = Array.from(new Set(
-      actions
-        .map((action: PendingAction): string | null =>
-          action.result.taskGuid?.trim() || null,
-        )
-        .filter(
-          (guid: string | null): guid is string => guid !== null,
-        ),
-    ));
     if (taskGuids.length === 0 || !this.controlStore.listTaskStatusEvents) {
       return { changes: [], unavailableGuids: new Set<string>() };
     }
@@ -691,23 +763,16 @@ class TaskFulfillmentService {
 
   private async lookupMissingTasks(
     input: TaskFulfillmentInput,
-    actions: PendingAction[],
+    taskGuids: string[],
     taskByGuid: Map<string, TaskFulfillmentItem>,
     taskSourceIncomplete: boolean,
     taskLookupUnavailable: Set<string>,
     warnings: string[],
   ): Promise<DailyReportTaskRecord[]> {
     if (taskSourceIncomplete || !this.tasks.getTaskByGuid) return [];
-    const missingGuids: string[] = Array.from(new Set(
-      actions
-        .map((action: PendingAction): string | null =>
-          action.result.taskGuid?.trim() || null,
-        )
-        .filter(
-          (guid: string | null): guid is string =>
-            guid !== null && !taskByGuid.has(guid),
-        ),
-    ));
+    const missingGuids: string[] = taskGuids.filter(
+      (guid: string): boolean => !taskByGuid.has(guid),
+    );
     const detailedTasks: DailyReportTaskRecord[] = [];
     for (const taskGuid of missingGuids) {
       try {
@@ -744,6 +809,7 @@ class TaskFulfillmentService {
     taskSourceIncomplete: boolean,
     taskLookupUnavailable: Set<string>,
     changeByGuid: Map<string, TaskFulfillmentChange>,
+    replacements: TaskReplacementResult,
   ): TaskPromiseFulfillmentItem | null {
     if ((action.payload.actionKind ?? 'followup') !== 'followup') return null;
     const candidate: FollowupTaskCandidate | undefined =
@@ -754,14 +820,28 @@ class TaskFulfillmentService {
     if (!nextAction || NO_NEXT_STEP_PATTERN.test(nextAction)) return null;
 
     const taskGuid: string | null = action.result.taskGuid?.trim() || null;
-    const task: TaskFulfillmentItem | undefined = taskGuid === null
+    const originalTask: TaskFulfillmentItem | undefined = taskGuid === null
       ? undefined
       : taskByGuid.get(taskGuid);
-    const change: TaskFulfillmentChange | undefined = taskGuid === null
+    const replacement: TaskReplacement | undefined = taskGuid === null
       ? undefined
-      : changeByGuid.get(taskGuid);
+      : replacements.byOriginalGuid.get(taskGuid);
+    const replacementTask: TaskFulfillmentItem | undefined = replacement === undefined
+      ? undefined
+      : taskByGuid.get(replacement.taskGuid);
+    const useReplacement: boolean = originalTask === undefined &&
+      replacement !== undefined;
+    const effectiveGuid: string | null = useReplacement
+      ? replacement?.taskGuid ?? taskGuid
+      : taskGuid;
+    const task: TaskFulfillmentItem | undefined = useReplacement
+      ? replacementTask
+      : originalTask;
+    const change: TaskFulfillmentChange | undefined = effectiveGuid === null
+      ? undefined
+      : changeByGuid.get(effectiveGuid);
     const status: TaskPromiseStatus = this.promiseStatus(
-      taskGuid,
+      effectiveGuid,
       task,
       taskSourceIncomplete,
       taskLookupUnavailable,
@@ -782,9 +862,14 @@ class TaskFulfillmentService {
       taskStatus: task?.status ?? null,
       taskCompletedAt: task?.completedAt ?? null,
       taskDueAt: task?.dueAt ?? null,
+      ...(replacement ? {
+        replacementTaskGuid: replacement.taskGuid,
+        replacementTaskUrl: replacementTask?.url ?? replacement.taskUrl,
+        replacementRelation: 'replaces' as const,
+      } : {}),
       status,
       completionState: this.promiseCompletionState(
-        taskGuid,
+        effectiveGuid,
         task,
         taskLookupUnavailable,
       ),

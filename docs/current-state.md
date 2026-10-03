@@ -1,5 +1,20 @@
 # 当前工程说明
 
+## 2026-10-03 跨任务替代关系安全边界（真实 UI 待验收）
+
+- `TaskFulfillmentService` 只从当前租户、当前销售的成功 Agent 执行结果建立
+  `旧任务 GUID -> 新任务 GUID` 的替代映射；`relatedTaskGuid` 与 `relation: replaces` 必须
+  成对存在，并禁止自替代。
+- 原任务仍可见时以原任务实时证据为准，替代任务不覆盖原任务；只有原任务不可见且替代任务
+  唯一、可读取、同租户同销售时，才允许使用替代任务判断已完成或进行中。
+- 缺字段、未知关系、冲突关系、替代任务读取失败、跨租户、跨销售，以及按标题、时间、列表
+  缺失或普通文本推断的关系全部 fail closed 为待核实。替代关系不写入任务状态事件账本，
+  不修改真实任务，不发送消息。
+- 新增反例覆盖替代任务已完成、进行中、关系不完整、自替代、原任务仍可见冲突、读取失败和
+  跨租户/跨销售隔离；定向履约与验证测试 `49/49` 通过。服务端、客户端和测试 TypeScript、
+  ESLint、Stylelint、Agent/Web 构建和 `git diff --check` 本轮均已通过。
+- 真实飞书/Web UI 未执行，状态保持 `Automated Green / Web implemented / UI pending`。
+
 ## 2026-10-03 S4 无效跟进 fail-closed 与治理入口安全门（真实 UI 待验收）
 
 - `StaleOpportunityContextService` 现在把缺少可信沟通时间或来源版本的跟进保留为待确认，

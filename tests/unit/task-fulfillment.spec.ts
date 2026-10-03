@@ -740,4 +740,253 @@ describe('TaskFulfillmentService', (): void => {
     expect(report.warnings).toContain('已完成任务检索范围受限，结果可能不完整');
     expect(report.warnings).toContain('部分已完成任务缺少有效完成时间，未计入');
   });
+
+  it('uses an explicitly declared replacement task when the original is not visible', async (): Promise<void> => {
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    await saveSucceeded(store, 'original-promise', { taskGuid: 'old-guid' });
+    await saveSucceeded(
+      store,
+      'replacement-action',
+      {
+        taskGuid: 'new-guid',
+        taskUrl: 'https://example.com/new-task',
+        relatedTaskGuid: 'old-guid',
+        relation: 'replaces',
+      },
+      { ...makePayload('替代任务'), actionKind: 'opportunity_status' },
+    );
+    const tasks: TaskFulfillmentTasksReader = {
+      listOwnedTasks: async (): Promise<DailyReportTaskResult> => ({ items: [] }),
+      getTaskByGuid: async (
+        _integration: TenantIntegration,
+        _actorOpenId: string,
+        taskGuid: string,
+      ): Promise<DailyReportTaskRecord | null> => taskGuid === 'new-guid'
+        ? {
+          guid: 'new-guid', title: '替代任务', status: 'completed',
+          completedAt: '2026-09-30T03:00:00.000Z', dueAt: null,
+          url: 'https://example.com/new-task',
+        }
+        : null,
+    };
+    const report = await new TaskFulfillmentService(tasks, store).analyze({
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    });
+    const promise = report.promises.find(
+      (item) => item.pendingActionId === 'original-promise',
+    );
+    expect(promise).toMatchObject({
+      status: 'completed',
+      completionState: 'completed',
+      taskGuid: 'old-guid',
+      replacementTaskGuid: 'new-guid',
+      replacementTaskUrl: 'https://example.com/new-task',
+      taskTitle: '替代任务',
+      taskCompletedAt: '2026-09-30T03:00:00.000Z',
+    });
+  });
+
+  it('uses an explicitly declared in-progress replacement without marking the original complete', async (): Promise<void> => {
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    await saveSucceeded(store, 'original-in-progress', { taskGuid: 'old-progress' });
+    await saveSucceeded(
+      store,
+      'replacement-in-progress',
+      {
+        taskGuid: 'new-progress',
+        relatedTaskGuid: 'old-progress',
+        relation: 'replaces',
+      },
+      { ...makePayload('替代进行中任务'), actionKind: 'opportunity_status' },
+    );
+    const tasks: TaskFulfillmentTasksReader = {
+      listOwnedTasks: async (): Promise<DailyReportTaskResult> => ({ items: [] }),
+      getTaskByGuid: async (): Promise<DailyReportTaskRecord | null> => ({
+        guid: 'new-progress', title: '替代进行中任务', status: 'in_progress',
+        completedAt: null, dueAt: '2026-10-02T02:00:00.000Z', url: null,
+      }),
+    };
+    const report = await new TaskFulfillmentService(tasks, store).analyze({
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    });
+    expect(report.promises.find(
+      (item) => item.pendingActionId === 'original-in-progress',
+    )).toMatchObject({
+      status: 'open_scheduled',
+      completionState: 'partially_completed',
+      taskGuid: 'old-progress',
+      replacementTaskGuid: 'new-progress',
+    });
+  });
+
+  it('does not infer a replacement when the relation declaration is incomplete', async (): Promise<void> => {
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    await saveSucceeded(store, 'missing-relation-original', {
+      taskGuid: 'missing-relation-old',
+    });
+    await saveSucceeded(
+      store,
+      'missing-relation-action',
+      { taskGuid: 'missing-relation-new', relatedTaskGuid: 'missing-relation-old' },
+      { ...makePayload('相似标题任务'), actionKind: 'opportunity_status' },
+    );
+    const tasks: TaskFulfillmentTasksReader = {
+      listOwnedTasks: async (): Promise<DailyReportTaskResult> => ({ items: [] }),
+    };
+    const report = await new TaskFulfillmentService(tasks, store).analyze({
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    });
+    expect(report.promises.find(
+      (item) => item.pendingActionId === 'missing-relation-original',
+    )).toMatchObject({
+      status: 'task_not_visible',
+      completionState: 'unknown',
+    });
+    expect(report.promises.find(
+      (item) => item.pendingActionId === 'missing-relation-original',
+    )?.replacementTaskGuid).toBeUndefined();
+  });
+
+  it('rejects a self-replacing action and keeps the promise unverifiable', async (): Promise<void> => {
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    await saveSucceeded(store, 'self-replacement', {
+      taskGuid: 'self-guid',
+      relatedTaskGuid: 'self-guid',
+      relation: 'replaces',
+    });
+    const report = await new TaskFulfillmentService(
+      { listOwnedTasks: async (): Promise<DailyReportTaskResult> => ({ items: [] }) },
+      store,
+    ).analyze({
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    });
+    expect(report.promises[0]).toMatchObject({
+      status: 'task_not_visible', completionState: 'unknown',
+    });
+    expect(report.warnings).toContain(
+      '存在无效的跨任务替代声明，相关承诺保持待核实',
+    );
+  });
+
+  it('keeps the original visible task as the authoritative evidence', async (): Promise<void> => {
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    await saveSucceeded(store, 'visible-original', { taskGuid: 'visible-old' });
+    await saveSucceeded(
+      store,
+      'visible-replacement',
+      {
+        taskGuid: 'visible-new',
+        relatedTaskGuid: 'visible-old',
+        relation: 'replaces',
+      },
+      { ...makePayload('新任务'), actionKind: 'opportunity_status' },
+    );
+    const tasks: TaskFulfillmentTasksReader = {
+      listOwnedTasks: async (): Promise<DailyReportTaskResult> => ({
+        items: [{
+          guid: 'visible-old', title: '原任务', status: 'todo',
+          completedAt: null, dueAt: '2026-10-02T02:00:00.000Z', url: null,
+        }],
+      }),
+      getTaskByGuid: async (): Promise<DailyReportTaskRecord | null> => ({
+        guid: 'visible-new', title: '新任务', status: 'completed',
+        completedAt: '2026-09-30T03:00:00.000Z', dueAt: null, url: null,
+      }),
+    };
+    const report = await new TaskFulfillmentService(tasks, store).analyze({
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    });
+    expect(report.promises.find(
+      (item) => item.pendingActionId === 'visible-original',
+    )).toMatchObject({
+      status: 'open_scheduled',
+      completionState: 'still_open',
+      taskGuid: 'visible-old',
+      taskTitle: '原任务',
+      replacementTaskGuid: 'visible-new',
+    });
+  });
+
+  it('fails closed when the explicitly declared replacement cannot be read', async (): Promise<void> => {
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    await saveSucceeded(store, 'unreadable-original', { taskGuid: 'unreadable-old' });
+    await saveSucceeded(
+      store,
+      'unreadable-replacement',
+      {
+        taskGuid: 'unreadable-new',
+        relatedTaskGuid: 'unreadable-old',
+        relation: 'replaces',
+      },
+      { ...makePayload('不可读取替代任务'), actionKind: 'opportunity_status' },
+    );
+    const tasks: TaskFulfillmentTasksReader = {
+      listOwnedTasks: async (): Promise<DailyReportTaskResult> => ({ items: [] }),
+      getTaskByGuid: async (
+        _integration: TenantIntegration,
+        _actorOpenId: string,
+        taskGuid: string,
+      ): Promise<DailyReportTaskRecord | null> => {
+        if (taskGuid === 'unreadable-new') {
+          throw new Error('replacement task unavailable');
+        }
+        return null;
+      },
+    };
+    const report = await new TaskFulfillmentService(tasks, store).analyze({
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    });
+    expect(report.promises.find(
+      (item) => item.pendingActionId === 'unreadable-original',
+    )).toMatchObject({
+      status: 'task_lookup_unavailable', completionState: 'unknown',
+      replacementTaskGuid: 'unreadable-new',
+    });
+  });
+
+  it('does not use replacement actions from another tenant or salesperson', async (): Promise<void> => {
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    await saveSucceeded(store, 'isolated-original', { taskGuid: 'isolated-old' });
+    await saveSucceeded(
+      store,
+      'other-salesperson-replacement',
+      {
+        taskGuid: 'isolated-new',
+        relatedTaskGuid: 'isolated-old',
+        relation: 'replaces',
+      },
+      { ...makePayload('其他销售替代任务'), actionKind: 'opportunity_status' },
+      integration.tenantId,
+      'ou_other_sales',
+    );
+    await saveSucceeded(
+      store,
+      'other-tenant-replacement',
+      {
+        taskGuid: 'isolated-new-tenant',
+        relatedTaskGuid: 'isolated-old',
+        relation: 'replaces',
+      },
+      { ...makePayload('其他租户替代任务'), actionKind: 'opportunity_status' },
+      'tenant-b',
+      'ou_sales_a',
+    );
+    const report = await new TaskFulfillmentService(
+      { listOwnedTasks: async (): Promise<DailyReportTaskResult> => ({ items: [] }) },
+      store,
+    ).analyze({
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    });
+    expect(report.promises[0]).toMatchObject({
+      status: 'task_not_visible', completionState: 'unknown',
+    });
+    expect(report.promises[0].replacementTaskGuid).toBeUndefined();
+  });
 });

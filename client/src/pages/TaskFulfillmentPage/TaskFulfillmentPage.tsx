@@ -474,6 +474,22 @@ const PromiseItem: React.FC<{ item: TaskPromiseFulfillmentItem }> = ({ item }) =
       确认于 {formatDateTime(item.confirmedAt)}
       {item.promisedDueAt && ` · 承诺截止 ${formatDateTime(item.promisedDueAt)}`}
     </p>
+    {item.replacementTaskGuid && (
+      <p className="mt-2 text-xs leading-5 text-muted-foreground">
+        该承诺由明确声明的替代任务承接：{item.replacementTaskGuid}
+      </p>
+    )}
+    {item.replacementTaskUrl && (
+      <a
+        className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+        href={item.replacementTaskUrl}
+        target="_blank"
+        rel="noreferrer"
+      >
+        查看替代任务
+        <ArrowUpRight aria-hidden="true" className="size-4" />
+      </a>
+    )}
     {item.taskUrl && (
       <a
         className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"

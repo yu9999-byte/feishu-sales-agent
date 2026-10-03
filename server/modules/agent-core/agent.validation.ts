@@ -118,6 +118,38 @@ const pendingActionStatusSchema = z.enum([
   'expired',
 ]);
 
+const taskReplacementFields = {
+  relatedTaskGuid: z.string().trim().min(1).optional(),
+  relation: z.literal('replaces').optional(),
+};
+
+const validateTaskReplacementFields = <T extends {
+  taskGuid?: string;
+  relatedTaskGuid?: string;
+  relation?: 'replaces';
+}>(value: T, context: z.RefinementCtx): void => {
+  const hasRelatedTask: boolean = value.relatedTaskGuid !== undefined;
+  const hasRelation: boolean = value.relation !== undefined;
+  if (hasRelatedTask !== hasRelation) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'relatedTaskGuid and relation must be provided together',
+      path: ['relation'],
+    });
+  }
+  if (
+    hasRelatedTask &&
+    value.taskGuid !== undefined &&
+    value.taskGuid === value.relatedTaskGuid
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'a task cannot replace itself',
+      path: ['relatedTaskGuid'],
+    });
+  }
+};
+
 const salesContextSchema = z.object({
   status: z.enum([
     'ready', 'partial', 'needs_clarification', 'unavailable',
@@ -273,7 +305,8 @@ const pendingActionPayloadSchema = z.object({
     followupRecordUrl: z.string().url().optional(),
     taskGuid: z.string().optional(),
     taskUrl: z.string().url().optional(),
-  }).optional(),
+    ...taskReplacementFields,
+  }).superRefine(validateTaskReplacementFields).optional(),
 });
 
 const agentExecutionResultSchema = z.object({
@@ -294,10 +327,11 @@ const agentExecutionResultSchema = z.object({
   followupRecordUrl: z.string().url().optional(),
   taskGuid: z.string().optional(),
   taskUrl: z.string().url().optional(),
+  ...taskReplacementFields,
   taskAction: z.enum(['created', 'updated', 'unchanged', 'skipped']).optional(),
   errorCode: z.string().optional(),
   errorMessage: z.string().optional(),
-});
+}).superRefine(validateTaskReplacementFields);
 
 const optionalFieldNameSchema = z.string().trim().min(1).optional();
 const opportunityStatusValuesSchema = z

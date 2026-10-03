@@ -81,6 +81,8 @@ export interface ExecutionTarget {
   followupRecordUrl?: string;
   taskGuid?: string;
   taskUrl?: string;
+  relatedTaskGuid?: string;
+  relation?: 'replaces';
 }
 
 export interface PendingActionPayload {
@@ -247,6 +249,8 @@ export interface AgentExecutionResult {
   followupRecordUrl?: string;
   taskGuid?: string;
   taskUrl?: string;
+  relatedTaskGuid?: string;
+  relation?: 'replaces';
   taskAction?: 'created' | 'updated' | 'unchanged' | 'skipped';
   errorCode?: string;
   errorMessage?: string;
@@ -521,6 +525,9 @@ export interface TaskPromiseFulfillmentItem {
   taskStatus: string | null;
   taskCompletedAt: string | null;
   taskDueAt: string | null;
+  replacementTaskGuid?: string;
+  replacementTaskUrl?: string | null;
+  replacementRelation?: 'replaces';
   status: TaskPromiseStatus;
   completionState: TaskPromiseCompletionState;
   suggestedAction: string;
