@@ -671,6 +671,82 @@ export interface StaleOpportunityGovernanceResponse {
   followupSourceVersion: string | null;
 }
 
+export type StaleOpportunityTriggerStatus =
+  | 'disabled'
+  | 'complete'
+  | 'incomplete';
+
+export type StaleOpportunityTriggerSkipReason =
+  | 'disabled'
+  | 'integration_disabled'
+  | 'source_unverified'
+  | 'unverified_opportunity'
+  | 'inactive'
+  | 'owner_mismatch'
+  | 'unverified_followup'
+  | 'not_stale'
+  | 'task_unverified'
+  | 'task_already_open'
+  | 'invalid_timezone'
+  | 'quiet_hours'
+  | 'stale_followup'
+  | 'tenant_unavailable'
+  | 'member_inactive'
+  | 'member_tenant_mismatch'
+  | 'authorization_denied'
+  | 'permission_missing';
+
+export interface StaleOpportunityTriggerCandidate {
+  tenantId: string;
+  memberId: string;
+  opportunityRecordId: string;
+  opportunityName: string;
+  followupRecordId: string;
+  lastEffectiveFollowupAt: string;
+  followupVersion: string;
+}
+
+export interface StaleOpportunityTriggerSkip {
+  tenantId: string | null;
+  memberId: string | null;
+  opportunityRecordId: string | null;
+  opportunityName: string | null;
+  reason: StaleOpportunityTriggerSkipReason;
+}
+
+export interface StaleOpportunityTriggerAuditEvidence {
+  scope: 'batch' | 'tenant' | 'member';
+  tenantId: string | null;
+  memberId: string | null;
+  outcome: 'completed' | 'skipped' | 'failed' | 'suppressed';
+  code: string;
+  candidateCount: number;
+  skipCount: number;
+}
+
+export interface StaleOpportunityTriggerSummary {
+  tenantCount: number;
+  memberCount: number;
+  scannedMemberCount: number;
+  skippedMemberCount: number;
+  incompleteMemberCount: number;
+  candidateCount: number;
+  suppressedCandidateCount: number;
+  skipCount: number;
+}
+
+export interface StaleOpportunityTriggerResponse {
+  traceId: string;
+  generatedAt: string;
+  mode: 'dry-run';
+  status: StaleOpportunityTriggerStatus;
+  summary: StaleOpportunityTriggerSummary;
+  candidates: StaleOpportunityTriggerCandidate[];
+  skips: StaleOpportunityTriggerSkip[];
+  audit: StaleOpportunityTriggerAuditEvidence[];
+  warnings: string[];
+}
+
 export type PlatformSectionKey =
   | 'customers'
   | 'opportunities'

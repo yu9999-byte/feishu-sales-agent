@@ -1,5 +1,26 @@
 # 商机停滞 7 天提醒 S4 触发规格（部分实现）
 
+## 2026-10-04 外部调度只读入口（cron-ready，默认关闭）
+
+- 独立 Agent 新增 `POST /internal/stale-opportunity-scan/run`，供部署环境中的外部 cron 调用。
+  该路由不使用 Web Cookie 或请求用户身份，只接受 `STALE_OPPORTUNITY_TRIGGER_TOKEN` 对应的
+  Bearer 令牌；缺失或错误令牌必须在读取 Postgres、Base 或 Task 之前拒绝，令牌不得写日志。
+- `STALE_OPPORTUNITY_SCAN_ENABLED` 默认 `false`。关闭时服务返回 `disabled` 且不枚举租户；
+  启用后仅从 Agent Postgres 的 `agent_tenants + tenant_integrations` 枚举租户有效且集成启用的
+  连接，并在扫描前按 tenant ID 重读连接状态。
+- 每个租户从 `tenant_members` 枚举成员。停用成员跳过；活跃成员必须通过
+  `getSessionByMembership` 的当前角色校验并具有 `review:read-personal`。成员与会话的 tenant、
+  member ID 或 open_id 不一致时视为来源损坏，整批 fail closed。
+- 获准成员调用现有 `StaleOpportunityScanService`，重新读取本人商机、关联跟进和任务并保留
+  原有全分页、负责人、生命周期、可信沟通时间、来源版本、7 天阈值和工作时间窗门禁。任一
+  租户读取失败、身份服务异常或成员扫描 `incomplete` 时，顶层状态为 `incomplete`，清空其他
+  成员已观察到的候选，仅保留压制数量、跳过原因、warning 和内存审计证据。
+- 响应固定为 `mode=dry-run`。本切片没有调用 `StaleOpportunityReminderService`，没有领取提醒
+  账本租约，没有飞书发送器、任务写入、Base 写入或主管通知；重复调用只重复只读计算。
+- 当前仅完成“可被 cron 安全调用”的服务边界，尚未在部署环境创建或启用 cron。配置外部 cron
+  后也必须保持业务开关关闭，直到历史数据治理、发送前二次重读、账本接线、受控本人通知和
+  `uncertain` 人工对账全部完成。
+
 ## 2026-09-29 持久提醒账本切片（未接入运行时）
 
 - 需求 S4-002：同一租户、商机、有效跟进版本和提醒类型的并发扫描只能取得一个发送租约。
@@ -76,9 +97,9 @@
    “当前进展”猜测；真实只读扫描将其全部映射为 `unknown`，以 `inactive` 跳过，未读取 Task。
    后续由用户确认产生的新商机使用租户配置的首个 active 值初始化，当前为“进行中”；更新
    已有商机时不提交生命周期字段，避免擅自覆盖空状态或重新打开终态商机。
-4. 确认外部定时触发宿主和部署方式。独立 Agent 使用 `server/agent.main.ts`，不在 Nest 启动
-   钩子中启动 `setInterval` 或长轮询。平台 `@Automation/@BindTrigger` 只有在任务已真实创建、
-   绑定并部署到适配的托管运行时后才算可用；不能凭装饰器存在宣称已调度。
+4. 外部定时触发宿主采用部署环境 cron 调用独立 Agent 的受保护 HTTP 入口；不在 Nest 启动
+   钩子中启动 `setInterval` 或长轮询。入口契约已实现但 cron 尚未创建或启用。平台
+   `@Automation/@BindTrigger` 不属于当前独立 Agent 运行时，不能凭装饰器存在宣称已调度。
 
 ## 扫描与判定
 
@@ -118,8 +139,8 @@
 供治理；新建初始化与已有状态保留也有自动化边界测试。状态聊天确认闭环已进入工作流和网关
 回归；S4 定向测试 `21/21`、全量 Agent 测试 `288/288` 通过。
 
-未完成项仍包括：既有商机状态分类、历史可信沟通时间治理、
-跨租户调度、
-持久去重并发、失败重试、确认门和真实投递。完成后再在受控测试商机、本人飞书 UI、控制库、
+未完成项仍包括：既有商机状态分类、历史可信沟通时间治理、部署环境 cron、发送前二次重读、
+提醒账本与运行入口接线、确认门和真实投递。持久账本自身的并发、冷却、失败重试和结果未知
+保护已经完成自动化，但尚未由 dry-run 入口调用。完成后再在受控测试商机、本人飞书 UI、控制库、
 Task 和 Base 对账，并观察错误提醒率、重复提醒率和用户确认率。未完成这些证据前不推送真实
 提醒。

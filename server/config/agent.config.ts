@@ -36,6 +36,10 @@ export interface AgentRuntimeConfig {
     appId?: string;
     appSecret?: string;
   };
+  staleOpportunityScan?: {
+    enabled: boolean;
+    triggerToken: string | undefined;
+  };
   longTermMemory?: LongTermMemoryRuntimeConfig;
 }
 
@@ -107,6 +111,13 @@ const loadAgentConfig = (): AgentRuntimeConfig => ({
     receiveMode: parseFeishuReceiveMode(),
     appId: optionalEnvironment('FEISHU_APP_ID'),
     appSecret: optionalEnvironment('FEISHU_APP_SECRET'),
+  },
+  staleOpportunityScan: {
+    enabled: parseBoolean(
+      process.env.STALE_OPPORTUNITY_SCAN_ENABLED,
+      false,
+    ),
+    triggerToken: optionalEnvironment('STALE_OPPORTUNITY_TRIGGER_TOKEN'),
   },
   longTermMemory: {
     enabled: parseBoolean(process.env.MEM0_ENABLED, false),

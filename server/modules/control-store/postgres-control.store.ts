@@ -166,6 +166,35 @@ export class PostgresControlStore
     return this.mapIntegration(rows[0]);
   }
 
+  async listActiveIntegrations(): Promise<TenantIntegration[]> {
+    const rows: IntegrationRow[] = await this.sql<IntegrationRow[]>`
+      SELECT
+        tenant.id AS tenant_id,
+        tenant.feishu_tenant_key,
+        tenant.name,
+        tenant.status,
+        integration.app_id,
+        integration.app_secret_env,
+        integration.app_type,
+        integration.base_mapping
+      FROM agent_tenants AS tenant
+      INNER JOIN tenant_integrations AS integration
+        ON integration.tenant_id = tenant.id
+      WHERE tenant.status = 'active'
+        AND integration.enabled = true
+      ORDER BY tenant.id ASC
+    `;
+    const integrations: TenantIntegration[] = [];
+    for (const row of rows) {
+      const integration: TenantIntegration | null =
+        this.mapIntegration(row);
+      if (integration !== null) {
+        integrations.push(integration);
+      }
+    }
+    return integrations;
+  }
+
   async claimMessage(
     tenantId: string,
     messageId: string,

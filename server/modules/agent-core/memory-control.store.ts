@@ -71,6 +71,22 @@ export class MemoryControlStore implements ControlStore {
     return integration ? structuredClone(integration) : null;
   }
 
+  async listActiveIntegrations(): Promise<TenantIntegration[]> {
+    return Array.from(this.tenantsByKey.values())
+      .filter(
+        (integration: TenantIntegration): boolean =>
+          integration.status === 'active',
+      )
+      .sort(
+        (left: TenantIntegration, right: TenantIntegration): number =>
+          left.tenantId.localeCompare(right.tenantId),
+      )
+      .map(
+        (integration: TenantIntegration): TenantIntegration =>
+          clone(integration),
+      );
+  }
+
   async claimMessage(
     tenantId: string,
     messageId: string,

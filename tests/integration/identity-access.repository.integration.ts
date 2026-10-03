@@ -81,6 +81,94 @@ describe('PostgresIdentityAccessRepository', (): void => {
         )
     `;
     await sql`
+      INSERT INTO tenant_integrations (
+        tenant_id,
+        app_id,
+        app_secret_env,
+        app_type,
+        base_mapping,
+        enabled
+      ) VALUES
+        (
+          ${TENANT_A}::uuid,
+          'cli_integration_tenant_a',
+          'TEST_SECRET_A',
+          'selfBuild',
+          ${sql.json({
+            appToken: 'base-integration-a',
+            customers: {
+              tableId: 'customers',
+              primaryField: '客户名称',
+              fields: { customerName: '客户名称' },
+            },
+            opportunities: {
+              tableId: 'opportunities',
+              primaryField: '商机名称',
+              fields: {
+                opportunityName: '商机名称',
+                customerLink: '关联客户',
+                status: '商机状态',
+                ownerOpenId: '负责人',
+              },
+              statusValues: { active: ['进行中'] },
+            },
+            followups: {
+              tableId: 'followups',
+              primaryField: '跟进标题',
+              fields: {
+                sourceMessageId: '来源消息ID',
+                customerLink: '关联客户',
+                opportunityLink: '关联商机',
+                rawText: '跟进原文',
+                summary: '跟进摘要',
+                communicationAt: '本次沟通发生时间',
+                ownerOpenId: '负责人',
+              },
+            },
+          })},
+          true
+        ),
+        (
+          ${TENANT_B}::uuid,
+          'cli_integration_tenant_b',
+          'TEST_SECRET_B',
+          'selfBuild',
+          ${sql.json({
+            appToken: 'base-integration-b',
+            customers: {
+              tableId: 'customers',
+              primaryField: '客户名称',
+              fields: { customerName: '客户名称' },
+            },
+            opportunities: {
+              tableId: 'opportunities',
+              primaryField: '商机名称',
+              fields: {
+                opportunityName: '商机名称',
+                customerLink: '关联客户',
+                status: '商机状态',
+                ownerOpenId: '负责人',
+              },
+              statusValues: { active: ['进行中'] },
+            },
+            followups: {
+              tableId: 'followups',
+              primaryField: '跟进标题',
+              fields: {
+                sourceMessageId: '来源消息ID',
+                customerLink: '关联客户',
+                opportunityLink: '关联商机',
+                rawText: '跟进原文',
+                summary: '跟进摘要',
+                communicationAt: '本次沟通发生时间',
+                ownerOpenId: '负责人',
+              },
+            },
+          })},
+          false
+        )
+    `;
+    await sql`
       INSERT INTO tenant_members (
         tenant_id,
         id,
@@ -219,6 +307,18 @@ describe('PostgresIdentityAccessRepository', (): void => {
       TENANT_B,
       'ou_clarification_user',
     )).resolves.toBeNull();
+  });
+
+  it('enumerates only active enabled tenant integrations', async (): Promise<void> => {
+    const control: PostgresControlStore = new PostgresControlStore(sql);
+    const integrations = await control.listActiveIntegrations();
+    const fixtureTenantIds: string[] = integrations
+      .map((item): string => item.tenantId)
+      .filter((tenantId: string): boolean =>
+        tenantId === TENANT_A || tenantId === TENANT_B,
+      );
+
+    expect(fixtureTenantIds).toEqual([TENANT_A]);
   });
 
   it('returns tenant-scoped roles, relations and grants', async (): Promise<void> => {

@@ -1,5 +1,26 @@
 # 当前工程说明
 
+## 2026-10-04 S4 外部调度只读入口（默认关闭、未绑定调度器）
+
+- 新增 `POST /internal/stale-opportunity-scan/run` 作为独立 Agent 的外部 cron 调用契约。
+  入口使用独立 Bearer 令牌，不依赖浏览器会话；令牌未配置或无效时在任何 Postgres、Base、
+  Task 读取前拒绝。`STALE_OPPORTUNITY_SCAN_ENABLED` 默认 `false`，关闭时扫描服务不枚举租户。
+- 批次从 Agent Postgres 枚举“租户有效且集成启用”的连接，再逐租户读取成员，并用
+  `getSessionByMembership` 重新校验活跃成员、有效角色和 `review:read-personal` 权限。停用、
+  无角色和无权限成员只记录跳过原因；跨租户成员、身份服务异常、租户重读失败或任一成员扫描
+  不完整会使整批 `incomplete`，并压制其他成员已观察到的候选，防止部分结果被误用。
+- 每个获准成员复用现有 `StaleOpportunityScanService`，重新完整读取本人商机、关联跟进和任务，
+  校验当前负责人、生命周期、可信沟通时间、来源版本、7 天阈值和工作时间窗。响应仅包含候选、
+  跳过原因、warning、统计和审计证据，固定为 `dry-run`；没有接入提醒账本或发送器，不发飞书
+  消息、不建/改任务、不写客户、商机或跟进，也不通知主管。
+- 已覆盖默认关闭、令牌前置拒绝、租户/成员枚举、停用/无角色/无权限跳过、跨租户隔离、成员
+  来源失败整批压制、重复调用确定性和 Nest 模块接线。S4 定向测试 `32/32`、全量 Agent
+  `323/323`、Postgres 集成 `14/14`、三套 TypeScript、ESLint、统一 Lint、Stylelint、
+  Agent/Web 构建、`git diff --check` 和 GitHub publisher dry-run 已通过。
+- 当前状态为 `Automated Green / cron-ready dry-run / disabled / no delivery / UI not required`。
+  尚未创建或启用外部 cron，也没有真实提醒投递；历史状态/可信时间治理、发送前二次重读、
+  持久账本接线、受控本人通知和 `uncertain` 人工对账仍是后续门禁。
+
 ## 2026-10-04 飞书机器人成员与角色入口门禁（自动化完成，UI 待验收）
 
 - 机器人入口现在在租户解析后、进入模型调用、客户/商机读取、草稿生成、消息领取和确认执行前，

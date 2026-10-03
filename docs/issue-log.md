@@ -25,6 +25,24 @@
 - 下一动作：后续补四类真实角色账号和第二真实租户的验收；在此之前不得把自动化验证表述为
   真实飞书 UI 或多账号权限验收。
 
+## 2026-10-04 S4 外部 cron 调用边界
+
+- 原风险：S4 只有可注入的只读扫描器，没有独立 Agent 可被外部调度器安全调用的入口；直接在
+  Nest 启动钩子中加循环会混淆部署生命周期，也无法证明跨租户成员授权、默认关闭和部分失败
+  的 fail-closed 行为。
+- 处理：新增专用令牌保护的 `POST /internal/stale-opportunity-scan/run`。批次只从 Agent
+  Postgres 枚举有效集成和成员，逐成员重建授权会话并要求 `review:read-personal`，随后复用
+  商机/跟进/Task 完整扫描。令牌错误在任何读取前停止；任一租户或成员来源不完整会清空整批
+  候选，仅返回跳过原因、warning、统计和审计证据。
+- 边界：功能开关默认关闭，响应固定为 `dry-run`；没有绑定外部 cron、提醒账本或发送器，
+  不发消息、不建/改任务、不写 Base、不通知主管。重复调用只重复只读评估，不领取发送租约。
+- 证据：S4 触发/扫描/准备度/账本定向 `32/32`、全量 Agent `323/323`、Postgres 集成
+  `14/14`、三套 TypeScript、ESLint、统一 Lint、Stylelint、Agent/Web 构建和
+  `git diff --check`、GitHub publisher dry-run 通过。
+- 状态：`Resolved / cron-ready dry-run / default disabled / no delivery`。
+- 下一动作：由部署环境配置外部 cron 和密钥管理，但继续保持开关关闭；完成历史数据治理、
+  发送前二次重读、账本接线、受控本人投递和结果未知对账后，才允许开启真实发送。
+
 ## 2026-10-03 飞书任务事件回执已接入，历史覆盖仍未证明
 
 - 原风险：把 `listRelatedTask` 当前列表、任务订阅或单一任务事件误读为可回溯的全量历史，
@@ -202,9 +220,10 @@
 | `ISS-CARD-013` | 跟进输入卡因沟通原文 `max_length=5000` 被飞书 Card 2.0 接口拒绝 | Resolved / API E2E verified / UI pending | 2026-09-28 位置 101 的真实消息复现 400；修正为协议上限 1000，新增回归断言；重启后位置 104→106 输入卡、位置 107→109 草案卡均成功发送；确认前无业务写入 | 保持 Card 2.0 schema 回归；执行确认链仍需 API 回调或 UI 证据 |
 | `ISS-EXE-014` | 回调解析、确认执行和终态修订此前分层验证，缺少贯通证据 | Resolved / isolated callback E2E / UI pending | SDK EventDispatcher 进入真实 Bridge、Workflow、Executor、MemoryStore 的两条隔离回放覆盖同卡执行中与唯一成功/失败终态、编辑原记录和失败重试；外部网关全为替身；全量 `242/242`、Postgres `8/8` 通过 | 保持跨层回归；真实 UI 及真实 Base/Task 回读仍待独立验收，不能用隔离结果代替 |
 | `ISS-UI-003` | Codex 标签可控但没有可验证的“销售agent”会话和输入框，无法完成 S1 真实 UI 复验 | Open / blocked on target session | 用户已明确允许 Codex 右侧浏览器、禁止本地 Chrome。2026-09-30 已取得 Codex In-app Browser 标签 4 的控制句柄，但页面实际为“消息 - 轮动”空白首页；刷新、等待和无障碍回读均无目标会话，搜索入口触发 `dispatchSearchSetInputEvent not impl on web`，未发送消息。3100 运行态返回 200，不能替代 UI 证据 | 在同一 Codex 标签恢复已登录并可见“销售agent”消息输入框；确认标题后再做最小受控验证。不得用本地浏览器或 API 冒充 UI |
-| `ISS-S4-001` | “商机超过 7 天未更新”的主动提醒尚未形成闭环 | Partial / ledger green / readiness API green / workbench UI pending / disabled / production prerequisites open | 默认关闭的只读 `StaleOpportunityScanService` 已串联商机、跟进、Task 全分页和保守判定；新增只读准备度报告及 Web 工作台，逐条列出状态未确认和沟通时间缺失，不从当前进展或修改时间推断；无效跟进会保留记录 ID/版本、阻断扫描并在读取 Task 前停止；工作台在商机/跟进版本不可验证时禁用后端必然拒绝的操作。Task 权限、沟通时间映射及独立商机状态字段/四类值映射均已补齐。新建商机在用户确认后按租户配置初始化为“进行中”，更新已有商机不触碰生命周期状态；真实只读扫描完整读取 5 条历史空状态商机并全部安全跳过。已完成持久提醒账本的并发/冷却/结果未知测试，但尚无历史状态分类、可信时间、调度或提醒 | 销售依据工作台逐条确认历史状态并处理历史可信时间；恢复浏览器句柄后完成页面验收，再绑定默认关闭触发器和本人提醒 |
+| `ISS-S4-001` | “商机超过 7 天未更新”的主动提醒尚未形成闭环 | Partial / cron-ready dry-run green / ledger green / workbench UI pending / disabled / production prerequisites open | 默认关闭的只读扫描已串联商机、跟进、Task 全分页和保守判定；专用令牌内部入口从 Agent Postgres 枚举有效租户/成员并重验角色权限，任一来源不完整会整批压制候选。准备度工作台、逐条治理和持久提醒账本均已有自动化，但入口固定 dry-run，尚未绑定外部 cron、账本投递或发送器；历史状态/可信时间也未全部治理 | 配置但保持关闭的外部 cron；完成历史治理、发送前二次重读、账本接线、受控本人提醒和 `uncertain` 对账后再开启投递 |
 | `ISS-S4-002` | 既有商机生命周期状态缺少真实飞书端到端验收 | Resolved / UI Verified | 受控商机“P0测试-销售系统采购”真实消息位置 94、确认卡位置 96；用户确认后原卡显示“未设置 → 进行中”，Base 回读记录 `recvvyZqewDQwe` 为“进行中”；审计为 `card.confirm` → `card.processing_sent` → `action.succeeded` → `card.source_finalized`，执行结果没有客户/跟进/任务写入 | 保持回归；其余 4 条历史商机继续逐条人工确认，不批量猜测或回填 |
 | `ISS-S4-003` | 历史商机状态和可信沟通时间缺少 Web 人工确认闭环 | Resolved / automated green / UI pending | 新增逐条治理契约、负责人/状态/商机版本/跟进版本校验、写后回读、幂等键和 accepted/succeeded/failed 审计；工作台新增 Select、Calendar、二次确认和明确错误状态；定向治理测试通过 | 恢复 Codex 右侧浏览器控制句柄后，用当前销售只处理一条受控记录并回读 Base/审计；真实 UI 前不启用 S4 调度或提醒 |
+| `ISS-S4-004` | 独立 Agent 缺少可被外部 cron 安全调用的停滞扫描入口 | Resolved / cron-ready dry-run / disabled | 新增专用令牌内部 POST 入口；从 Agent Postgres 枚举有效租户/成员并重验角色权限，错误令牌读取前拒绝，任一来源不完整整批压制候选。全量 Agent `323/323`、Postgres `14/14` 和完整静态/构建门通过；未接发送器或业务写入 | 部署外部 cron 与密钥管理但保持关闭；完成历史治理、发送前重读、账本接线和受控本人通知后再开启投递 |
 
 更新规则：发现问题时先补复现证据；修复后记录对应测试或运行证据；没有真实 UI 证据时不得把
 `Open` 改为 `Resolved`，也不得把 `Automated Green / UI pending` 写成 `UI Verified`。

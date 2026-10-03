@@ -52,6 +52,7 @@ export const SALES_CONTEXT_READER = Symbol('SALES_CONTEXT_READER');
 export interface ControlStore {
   resolveTenant(feishuTenantKey: string): Promise<TenantIntegration | null>;
   resolveTenantById(tenantId: string): Promise<TenantIntegration | null>;
+  listActiveIntegrations?(): Promise<TenantIntegration[]>;
   claimMessage(tenantId: string, messageId: string): Promise<boolean>;
   getOpenSession(
     tenantId: string,
