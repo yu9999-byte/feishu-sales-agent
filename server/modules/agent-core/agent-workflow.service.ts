@@ -62,8 +62,12 @@ import {
   LONG_TERM_MEMORY,
   type LongTermMemoryPort,
 } from '@server/modules/llm/long-term-memory.port';
-import { PlatformSessionService } from
-  '@server/modules/platform-shell/platform-session.service';
+import {
+  PlatformAccessDeniedError,
+  PlatformSessionService,
+} from '@server/modules/platform-shell/platform-session.service';
+import type { PlatformMember } from
+  '@server/modules/identity-access/identity-access.types';
 
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const ACTION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -113,7 +117,7 @@ export class AgentWorkflowService {
       return;
     }
 
-    const memberAllowed: boolean = await this.hasActiveMember(
+    const memberAllowed: boolean = await this.hasAuthorizedMember(
       integration,
       message.senderOpenId,
       message.messageId,
@@ -166,7 +170,7 @@ export class AgentWorkflowService {
       return this.createAccessDeniedCard('当前企业尚未配置销售 Agent。');
     }
 
-    const memberAllowed: boolean = await this.hasActiveMember(
+    const memberAllowed: boolean = await this.hasAuthorizedMember(
       integration,
       action.operatorOpenId,
       action.eventId,
@@ -2175,28 +2179,18 @@ export class AgentWorkflowService {
     };
   }
 
-  private async hasActiveMember(
+  private async hasAuthorizedMember(
     integration: TenantIntegration,
     actorOpenId: string,
     traceId: string,
     entrypoint: 'message' | 'card',
   ): Promise<boolean> {
+    let member: PlatformMember | null;
     try {
-      const member = await this.sessions.getActiveMember(
+      member = await this.sessions.getActiveMember(
         integration.tenantId,
         actorOpenId,
       );
-      if (member !== null) {
-        return true;
-      }
-      await this.appendMemberGateAudit(
-        integration,
-        actorOpenId,
-        traceId,
-        `${entrypoint}.member_forbidden`,
-        { reason: 'inactive_or_unknown_member' },
-      );
-      return false;
     } catch (error: unknown) {
       const normalized: Error = this.toError(error);
       this.logger.error(
@@ -2204,7 +2198,7 @@ export class AgentWorkflowService {
           redactErrorMessage(normalized),
         redactErrorStack(normalized),
       );
-      await this.appendMemberGateAudit(
+      await this.appendEntrypointAuthorizationAudit(
         integration,
         actorOpenId,
         traceId,
@@ -2213,9 +2207,53 @@ export class AgentWorkflowService {
       );
       return false;
     }
+
+    if (member === null) {
+      await this.appendEntrypointAuthorizationAudit(
+        integration,
+        actorOpenId,
+        traceId,
+        `${entrypoint}.member_forbidden`,
+        { reason: 'inactive_or_unknown_member' },
+      );
+      return false;
+    }
+
+    try {
+      await this.sessions.getSessionByMembership(
+        integration.tenantId,
+        member.id,
+      );
+      return true;
+    } catch (error: unknown) {
+      if (error instanceof PlatformAccessDeniedError) {
+        await this.appendEntrypointAuthorizationAudit(
+          integration,
+          actorOpenId,
+          traceId,
+          `${entrypoint}.role_forbidden`,
+          { reason: 'no_active_role' },
+        );
+        return false;
+      }
+      const normalized: Error = this.toError(error);
+      this.logger.error(
+        `Role check failed for ${entrypoint} ${traceId}: ` +
+          redactErrorMessage(normalized),
+        redactErrorStack(normalized),
+      );
+      await this.appendEntrypointAuthorizationAudit(
+        integration,
+        actorOpenId,
+        traceId,
+        `${entrypoint}.role_check_unavailable`,
+        { errorCode: this.errorCode(error) },
+      );
+      return false;
+    }
   }
 
-  private async appendMemberGateAudit(
+  private async appendEntrypointAuthorizationAudit(
     integration: TenantIntegration,
     actorOpenId: string,
     traceId: string,
@@ -2234,7 +2272,7 @@ export class AgentWorkflowService {
     } catch (error: unknown) {
       const normalized: Error = this.toError(error);
       this.logger.error(
-        `Member gate audit failed for ${traceId}: ` +
+        `Entrypoint authorization audit failed for ${traceId}: ` +
           redactErrorMessage(normalized),
         redactErrorStack(normalized),
       );

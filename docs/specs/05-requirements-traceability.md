@@ -168,7 +168,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | 需求范围 | 阶段 | 规格状态 | 自动化证据 | UI 证据 |
 | --- | --- | --- | --- | --- |
 | `SIA-000..000D` 对话入口、意图与安全路由 | B0 | Implemented / UI partial, clean-state retest pending | LangGraph 主分类覆盖普通态、澄清态和补充态；明确跟进命令确定性直达，24 小时 checkpoint TTL 具备保留/删除回归；进入 168 项全量回归 | WebSocket 已收到并完成两条真实私聊工作流；卡片内容与补充态仍待干净状态重放 |
-| `PLT-001..006` 多租户、身份、授权、审计 | A | Partial / member gate implemented / platform role design blocked | 机器人消息与卡片动作均在租户解析后校验活跃成员；未知、停用和身份查询异常均 fail closed，阻断模型、上下文读取、草稿、领取和确认执行，并写入审计。成员入口定向 `74/74`、全量 Agent `310/310`、类型检查、Lint、构建通过；既有 OAuth/RBAC/审计回归继续保留 | 本轮未做机器人 UI 验收；此前 Web OAuth/页面权限证据不等同于机器人角色授权。真实平台角色映射尚未配置，不能声称销售、主管或管理员角色在机器人入口已生效 |
+| `PLT-001..006` 多租户、身份、授权、审计 | A | Implemented / automated green / UI pending | 独立 Agent 以自身 Postgres 为租户、成员、角色和策略事实源；机器人消息与卡片动作在租户解析后依次校验活跃成员和当前有效角色。未知、停用、无角色、成员查询故障和角色查询故障均 fail closed，在模型、上下文读取、草稿、领取和确认执行前停止，并写入分类审计。角色恢复后的同消息重试可继续处理。工作流 `66/66`、全量 Agent `314/314`、Postgres `13/13`、三套 TypeScript、Lint 和双构建通过 | 本轮未做机器人 UI 或运行态部署验收；此前 Web OAuth/页面权限证据不等同于机器人多账号授权。旧妙搭应用角色未接入目标运行时，仍需四类真实角色账号和第二真实企业验收 |
 | `WEB-001..003` 页面授权、状态和飞书深链 | A | Implementing | OAuth 缺 state Cookie、不一致和重放均拒绝；Session/导航/页面 API 边界通过；深链签名尚未实现 | 桌面、390px 窄屏、角色导航及 forbidden 已通过；最新 OAuth 回归和卡片详情深链待验收 |
 | `ING-001..002` 表单与文本输入 | B1 | Implementing / API E2E verified / UI pending | Web 创建 API、同键并发与租户归属通过；最新真实 API E2E 已验证普通“帮我写跟进”输入卡、带原文跟进草案和确认前无写入 | 本轮不要求手工 UI；视觉和按钮点击仍未声明 UI Verified，其他输入来源待验收 |
 | `FUP-001..003` 提取、生成和证据 | B1 | Implemented / UI verified | 来源 quote、生成正文与版本通过；本次沟通方式/时间/主题、`nowLocal` 与显式 offset 契约已进入 126 项回归 | 真实飞书卡片已正确区分本次“飞书”与下一步“飞书会议”，时间为 `2026-09-21T10:15:00+08:00`，主题为“试点方案” |

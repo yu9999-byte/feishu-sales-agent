@@ -22,7 +22,10 @@ import { FollowupQualityService } from '@server/modules/sales-behavior/followup-
 import {
   FollowupProjectRiskService,
 } from '@server/modules/insight/followup-project-risk.service';
-import type { PlatformSessionService } from '@server/modules/platform-shell/platform-session.service';
+import {
+  PlatformAccessDeniedError,
+  type PlatformSessionService,
+} from '@server/modules/platform-shell/platform-session.service';
 import type { PlatformMember } from
   '@server/modules/identity-access/identity-access.types';
 import type {
@@ -427,14 +430,41 @@ class FakeTasks implements TaskGateway {
 
 interface FakePlatformSessions {
   activeMember: PlatformMember | null;
+  activeRoles: PlatformSessionResponse['roles'];
   failActiveMemberLookup: boolean;
+  failRoleLookup: boolean;
   activeMemberChecks: number;
+  roleChecks: number;
   getSession(): Promise<PlatformSessionResponse>;
   getActiveMember(
     tenantId: string,
     feishuOpenId: string,
   ): Promise<PlatformMember | null>;
+  getSessionByMembership(
+    tenantId: string,
+    memberId: string,
+  ): Promise<PlatformSessionResponse>;
 }
+
+const createPlatformSession = (
+  integration: TenantIntegration,
+  roles: PlatformSessionResponse['roles'],
+): PlatformSessionResponse => ({
+  tenant: {
+    id: integration.tenantId,
+    name: integration.name,
+    timezone: 'Asia/Shanghai',
+  },
+  member: {
+    id: '00000000-0000-4000-8000-00000000000c',
+    feishuOpenId: 'ou_sales',
+    displayName: '销售',
+  },
+  roles,
+  permissions: roles.length > 0 ? ['followup:create-own'] : [],
+  navigation: [],
+  policyVersion: 'test',
+});
 
 interface TestHarness {
   integrationA: TenantIntegration;
@@ -487,24 +517,13 @@ const createHarness = (
       displayName: '销售',
       status: 'active',
     },
+    activeRoles: ['sales'],
     failActiveMemberLookup: false,
+    failRoleLookup: false,
     activeMemberChecks: 0,
-    getSession: async (): Promise<PlatformSessionResponse> => ({
-      tenant: {
-        id: integrationA.tenantId,
-        name: integrationA.name,
-        timezone: 'Asia/Shanghai',
-      },
-      member: {
-        id: '00000000-0000-4000-8000-00000000000c',
-        feishuOpenId: 'ou_sales',
-        displayName: '销售',
-      },
-      roles: ['sales'],
-      permissions: ['followup:create-own'],
-      navigation: [],
-      policyVersion: 'test',
-    }),
+    roleChecks: 0,
+    getSession: async (): Promise<PlatformSessionResponse> =>
+      createPlatformSession(integrationA, sessions.activeRoles),
     getActiveMember: async (
       tenantId: string,
       feishuOpenId: string,
@@ -523,6 +542,33 @@ const createHarness = (
         ...sessions.activeMember,
         tenantId,
         feishuOpenId,
+      };
+    },
+    getSessionByMembership: async (
+      tenantId: string,
+      memberId: string,
+    ): Promise<PlatformSessionResponse> => {
+      sessions.roleChecks += 1;
+      if (sessions.failRoleLookup) {
+        throw new Error('Injected role lookup failure');
+      }
+      if (sessions.activeRoles.length === 0) {
+        throw new PlatformAccessDeniedError();
+      }
+      const session: PlatformSessionResponse = createPlatformSession(
+        integrationA,
+        sessions.activeRoles,
+      );
+      return {
+        ...session,
+        tenant: {
+          ...session.tenant,
+          id: tenantId,
+        },
+        member: {
+          ...session.member,
+          id: memberId,
+        },
       };
     },
   };
@@ -799,6 +845,7 @@ describe('AgentWorkflowService', (): void => {
     await harness.workflow.handleMessage(message);
 
     expect(harness.sessions.activeMemberChecks).toBe(1);
+    expect(harness.sessions.roleChecks).toBe(0);
     expect(harness.conversation.calls).toBe(0);
     expect(harness.extractor.calls).toBe(0);
     expect(harness.messenger.texts).toHaveLength(0);
@@ -820,6 +867,7 @@ describe('AgentWorkflowService', (): void => {
     await harness.workflow.handleMessage(message);
 
     expect(harness.sessions.activeMemberChecks).toBe(2);
+    expect(harness.sessions.roleChecks).toBe(1);
     expect(harness.conversation.calls).toBe(0);
     expect(harness.extractor.calls).toBe(1);
     expect(harness.messenger.actions).toHaveLength(1);
@@ -848,6 +896,7 @@ describe('AgentWorkflowService', (): void => {
     );
 
     expect(JSON.stringify(response)).toContain('成员身份无效，卡片未执行。');
+    expect(harness.sessions.roleChecks).toBe(1);
     await expect(harness.store.getPendingAction(
       harness.integrationA.tenantId,
       pending.id,
@@ -878,6 +927,7 @@ describe('AgentWorkflowService', (): void => {
     await harness.workflow.handleMessage(message);
 
     expect(harness.sessions.activeMemberChecks).toBe(1);
+    expect(harness.sessions.roleChecks).toBe(0);
     expect(harness.conversation.calls).toBe(0);
     expect(harness.extractor.calls).toBe(0);
     expect(harness.messenger.texts).toHaveLength(0);
@@ -889,6 +939,149 @@ describe('AgentWorkflowService', (): void => {
         expect.objectContaining({
           eventType: 'message.member_check_unavailable',
           traceId: message.messageId,
+          outcome: 'failed',
+        }),
+      ]));
+  });
+
+  it('does not claim a message until an active role is restored', async (): Promise<void> => {
+    const reader: SalesContextReader = createReadySalesContextReader();
+    const harness: TestHarness = createHarness(completeDraft, reader);
+    const message: IncomingMessage = createMessage(
+      'tenant-a',
+      'om-role-forbidden',
+    );
+    harness.sessions.activeRoles = [];
+
+    await harness.workflow.handleMessage(message);
+
+    expect(harness.sessions.activeMemberChecks).toBe(1);
+    expect(harness.sessions.roleChecks).toBe(1);
+    expect(reader.read).not.toHaveBeenCalled();
+    expect(harness.conversation.calls).toBe(0);
+    expect(harness.extractor.calls).toBe(0);
+    expect(harness.messenger.texts).toHaveLength(0);
+    expect(harness.messenger.actions).toHaveLength(0);
+    expect(harness.records.customerCalls).toBe(0);
+    expect(harness.records.opportunityCalls).toBe(0);
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+    expect(harness.store.getAudits(harness.integrationA.tenantId))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          eventType: 'message.role_forbidden',
+          traceId: message.messageId,
+          outcome: 'failed',
+          details: { reason: 'no_active_role' },
+        }),
+      ]));
+
+    harness.sessions.activeRoles = ['sales'];
+    await harness.workflow.handleMessage(message);
+
+    expect(harness.sessions.activeMemberChecks).toBe(2);
+    expect(harness.sessions.roleChecks).toBe(2);
+    expect(reader.read).toHaveBeenCalledTimes(1);
+    expect(harness.extractor.calls).toBe(2);
+    expect(harness.messenger.actions).toHaveLength(1);
+  });
+
+  it('rejects a card action from an active member without a role', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    await harness.workflow.handleMessage(createMessage());
+    const pending: PendingAction = harness.messenger.actions[0];
+    harness.sessions.activeRoles = [];
+
+    const response: JsonObject = await harness.workflow.handleCardAction(
+      createCardAction(
+        'tenant-a',
+        pending.id,
+        'confirm',
+        'evt-role-forbidden-confirm',
+      ),
+    );
+
+    expect(JSON.stringify(response)).toContain('成员身份无效，卡片未执行。');
+    expect(harness.sessions.roleChecks).toBe(2);
+    await expect(harness.store.getPendingAction(
+      harness.integrationA.tenantId,
+      pending.id,
+    )).resolves.toMatchObject({ status: 'pendingConfirmation' });
+    expect(harness.records.customerCalls).toBe(0);
+    expect(harness.records.opportunityCalls).toBe(0);
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+    expect(harness.messenger.updates).toHaveLength(0);
+    expect(harness.store.getAudits(harness.integrationA.tenantId))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          eventType: 'card.role_forbidden',
+          traceId: 'evt-role-forbidden-confirm',
+          outcome: 'failed',
+          details: { reason: 'no_active_role' },
+        }),
+      ]));
+  });
+
+  it('fails closed when message role verification is unavailable', async (): Promise<void> => {
+    const reader: SalesContextReader = createReadySalesContextReader();
+    const harness: TestHarness = createHarness(completeDraft, reader);
+    const message: IncomingMessage = createMessage(
+      'tenant-a',
+      'om-role-check-failed',
+    );
+    harness.sessions.failRoleLookup = true;
+
+    await harness.workflow.handleMessage(message);
+
+    expect(harness.sessions.activeMemberChecks).toBe(1);
+    expect(harness.sessions.roleChecks).toBe(1);
+    expect(reader.read).not.toHaveBeenCalled();
+    expect(harness.conversation.calls).toBe(0);
+    expect(harness.extractor.calls).toBe(0);
+    expect(harness.messenger.texts).toHaveLength(0);
+    expect(harness.messenger.actions).toHaveLength(0);
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+    expect(harness.store.getAudits(harness.integrationA.tenantId))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          eventType: 'message.role_check_unavailable',
+          traceId: message.messageId,
+          outcome: 'failed',
+        }),
+      ]));
+  });
+
+  it('fails closed when card role verification is unavailable', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    await harness.workflow.handleMessage(createMessage());
+    const pending: PendingAction = harness.messenger.actions[0];
+    harness.sessions.failRoleLookup = true;
+
+    const response: JsonObject = await harness.workflow.handleCardAction(
+      createCardAction(
+        'tenant-a',
+        pending.id,
+        'confirm',
+        'evt-role-check-failed',
+      ),
+    );
+
+    expect(JSON.stringify(response)).toContain('成员身份无效，卡片未执行。');
+    expect(harness.sessions.roleChecks).toBe(2);
+    await expect(harness.store.getPendingAction(
+      harness.integrationA.tenantId,
+      pending.id,
+    )).resolves.toMatchObject({ status: 'pendingConfirmation' });
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+    expect(harness.messenger.updates).toHaveLength(0);
+    expect(harness.store.getAudits(harness.integrationA.tenantId))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          eventType: 'card.role_check_unavailable',
+          traceId: 'evt-role-check-failed',
           outcome: 'failed',
         }),
       ]));
