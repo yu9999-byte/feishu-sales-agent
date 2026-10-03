@@ -6,7 +6,7 @@
 
 2026-10-03 验证记录：项目自带 Postgres 在 `127.0.0.1:55432` 启动，迁移 014/015 成功应用，
 3 个集成测试文件共 `12/12` 通过；定向替代关系与校验测试 `49/49`、全量 Agent 测试
-`297/297`、服务端/客户端/测试 TypeScript、ESLint、Stylelint、Agent/Web 构建和
+`299/299`、服务端/客户端/测试 TypeScript、ESLint、Stylelint、Agent/Web 构建和
 `git diff --check` 均通过。该证据仅覆盖本地自动化和控制库回读，不替代真实飞书/Web UI
 验收，状态仍为 `UI pending`。
 
@@ -43,6 +43,10 @@
   不是飞书全量历史事件流，也不能证明观察窗口之外没有变化。
 - API 的 `coverage.taskHistory` 显式标记历史覆盖：当前为 `agent_observations`，事件源不可用时
   为 `unavailable`；`full` 仅作为未来可信全量历史来源接入后的保留值，当前不得返回。
+- `TaskGateway.readTaskHistory` 是可信历史来源的可选扩展口。它必须返回机器可读的
+  `coverage` 声明；只有 `coverage=full` 且没有 `warning` 时，履约服务才允许输出
+  `taskHistory=full`。`partial`、`unavailable`、异常或带警告的来源一律 fail closed，
+  不得升级为全量历史。当前飞书任务网关未实现该端口，因为现有 Task API 只有搜索和详情读取。
 
 ## 4. 确定性判断
 
@@ -109,6 +113,8 @@
 - 不把 Agent 事件账本当成飞书全量历史；事件仅覆盖本 Agent 实际观察到的精确任务 GUID。
 - 不把 `coverage.taskHistory=agent_observations` 解释为全量历史或完整完成率；只有未来可信
   全量历史来源通过完整性门禁后才能使用 `full`。
+- 不把可信历史扩展口的存在解释为已经接入全量事件源；当前 FeishuTaskGateway 未提供该来源，
+  因而产品仍只能展示 Agent 观察账本或不可用状态。
 - 不按标题相似、时间接近、列表缺失或普通状态变化把一个任务关联为另一个任务；没有显式
   `relatedTaskGuid + relation: replaces` 时，不恢复跨任务兑现判断。
 - 不判断没有精确任务证据的本次跟进是否完成、部分完成或变更了既有承诺；当前只对精确关联

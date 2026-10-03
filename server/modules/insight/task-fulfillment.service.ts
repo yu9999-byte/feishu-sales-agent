@@ -24,6 +24,7 @@ import type {
   PendingAction,
   TaskStatusEvent,
   TaskStatusEventResult,
+  TaskHistorySourceResult,
   TaskStatusSnapshot,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
@@ -45,6 +46,13 @@ interface TaskFulfillmentTasksReader {
     integration: TenantIntegration,
     actorOpenId: string,
   ): Promise<DailyReportTaskResult>;
+  readTaskHistory?(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    taskGuids: string[],
+    since: Date,
+    limit: number,
+  ): Promise<TaskHistorySourceResult>;
   getTaskByGuid?(
     integration: TenantIntegration,
     actorOpenId: string,
@@ -664,7 +672,7 @@ class TaskFulfillmentService {
     warnings: string[],
     now: Date,
   ): Promise<TaskHistoryResult> {
-    if (taskGuids.length === 0 || !this.controlStore.listTaskStatusEvents) {
+    if (taskGuids.length === 0) {
       return {
         changes: [],
         unavailableGuids: new Set<string>(),
@@ -684,34 +692,85 @@ class TaskFulfillmentService {
       };
     }
     let result: TaskStatusEventResult;
-    try {
-      result = await this.controlStore.listTaskStatusEvents(
-        input.integration.tenantId,
-        input.actorOpenId,
-        taskGuids,
-        new Date(now.getTime() - PROMISE_HISTORY_DAYS * 86_400_000),
-        TASK_EVENT_HISTORY_LIMIT,
-      );
-    } catch (error: unknown) {
-      this.logger.warn(
-        `Task status event read failed: ${error instanceof Error
-          ? error.message
-          : String(error)}`,
-      );
-      warnings.push('任务状态历史暂时不可读取，部分承诺待核实');
-      return {
-        changes: [],
-        unavailableGuids: new Set(missingGuids),
-        coverage: 'unavailable',
-      };
-    }
-    if (result.warning) {
-      warnings.push(`任务状态历史${sourceWarning(result.warning)}`);
-      return {
-        changes: [],
-        unavailableGuids: new Set(missingGuids),
-        coverage: 'unavailable',
-      };
+    let coverage: TaskFulfillmentResponse['coverage']['taskHistory'] =
+      'agent_observations';
+    const since: Date = new Date(
+      now.getTime() - PROMISE_HISTORY_DAYS * 86_400_000,
+    );
+    if (this.tasks.readTaskHistory) {
+      let sourceResult: TaskHistorySourceResult;
+      try {
+        sourceResult = await this.tasks.readTaskHistory(
+          input.integration,
+          input.actorOpenId,
+          taskGuids,
+          since,
+          TASK_EVENT_HISTORY_LIMIT,
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          `Trusted task history read failed: ${error instanceof Error
+            ? error.message
+            : String(error)}`,
+        );
+        warnings.push('可信任务历史来源暂时不可读取，部分承诺待核实');
+        return {
+          changes: [],
+          unavailableGuids: new Set(missingGuids),
+          coverage: 'unavailable',
+        };
+      }
+      if (sourceResult.coverage !== 'full' || sourceResult.warning) {
+        if (sourceResult.warning) {
+          warnings.push(`任务状态历史${sourceWarning(sourceResult.warning)}`);
+        } else {
+          warnings.push('可信任务历史来源未提供完整覆盖，部分承诺待核实');
+        }
+        return {
+          changes: [],
+          unavailableGuids: new Set(missingGuids),
+          coverage: 'unavailable',
+        };
+      }
+      result = sourceResult;
+      coverage = 'full';
+    } else {
+      if (!this.controlStore.listTaskStatusEvents) {
+        return {
+          changes: [],
+          unavailableGuids: new Set(missingGuids),
+          coverage: 'unavailable',
+        };
+      }
+      try {
+        result = await this.controlStore.listTaskStatusEvents(
+          input.integration.tenantId,
+          input.actorOpenId,
+          taskGuids,
+          since,
+          TASK_EVENT_HISTORY_LIMIT,
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          `Task status event read failed: ${error instanceof Error
+            ? error.message
+            : String(error)}`,
+        );
+        warnings.push('任务状态历史暂时不可读取，部分承诺待核实');
+        return {
+          changes: [],
+          unavailableGuids: new Set(missingGuids),
+          coverage: 'unavailable',
+        };
+      }
+      if (result.warning) {
+        warnings.push(`任务状态历史${sourceWarning(result.warning)}`);
+        return {
+          changes: [],
+          unavailableGuids: new Set(missingGuids),
+          coverage: 'unavailable',
+        };
+      }
     }
     const eventsByGuid: Map<string, TaskStatusEvent[]> = new Map();
     result.items.forEach((event: TaskStatusEvent): void => {
@@ -757,7 +816,7 @@ class TaskFulfillmentService {
     if (hasNewerOrdinaryEvent) {
       warnings.push('任务状态历史包含较新的普通变化，部分承诺待核实');
     }
-    return { changes, unavailableGuids, coverage: 'agent_observations' };
+    return { changes, unavailableGuids, coverage };
   }
 
   private toTaskFulfillmentChange(

@@ -33,6 +33,7 @@ import type {
   TaskStatusSnapshot,
   TaskStatusChange,
   TaskStatusEventResult,
+  TaskHistorySourceResult,
   TaskCreationResult,
   TenantIntegration,
 } from './agent.types';
@@ -268,6 +269,13 @@ export interface TaskGateway {
     integration: TenantIntegration,
     actorOpenId: string,
   ): Promise<DailyReportTaskResult>;
+  readTaskHistory?(
+    integration: TenantIntegration,
+    actorOpenId: string,
+    taskGuids: string[],
+    since: Date,
+    limit: number,
+  ): Promise<TaskHistorySourceResult>;
   getTaskByGuid?(
     integration: TenantIntegration,
     actorOpenId: string,

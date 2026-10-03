@@ -1,5 +1,15 @@
 # 当前工程说明
 
+## 2026-10-03 可信任务历史来源扩展口（真实 UI 待验收）
+
+- `TaskGateway` 新增可选的 `readTaskHistory` 端口，返回 `full`、`partial` 或
+  `unavailable` 覆盖声明；履约服务只有在来源明确声明 `full` 且没有警告时才会返回
+  `coverage.taskHistory=full`。
+- 当前 `FeishuTaskGateway` 仍只提供任务搜索和详情读取，没有实现该端口，因此现网行为
+  不变：继续使用 Agent 观察账本，或在事件读取失败时返回 `unavailable`。
+- 新增 partial 覆盖和可信来源异常的 fail-closed 单测，履约定向测试 `25/25` 通过；
+  没有发送消息、修改任务或进入真实飞书/Web UI。
+
 ## 2026-10-03 任务历史覆盖契约（真实 UI 待验收）
 
 - `/api/platform/task-fulfillment` 新增 `coverage.taskHistory`，明确区分

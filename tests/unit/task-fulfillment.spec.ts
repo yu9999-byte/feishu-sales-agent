@@ -4,6 +4,7 @@ import type {
   DailyReportTaskRecord,
   DailyReportTaskResult,
   PendingAction,
+  TaskHistorySourceResult,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
 import type {
@@ -658,6 +659,75 @@ describe('TaskFulfillmentService', (): void => {
     });
     expect(report.warnings).toContain(
       '任务状态历史暂时不可读取，部分承诺待核实',
+    );
+  });
+
+  it('uses full task history only when the trusted source declares complete coverage', async (): Promise<void> => {
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    await saveSucceeded(store, 'trusted-history-action', {
+      taskGuid: 'trusted-history-guid',
+    });
+    const sourceResult: TaskHistorySourceResult = {
+      coverage: 'full',
+      items: [{
+        eventId: 'trusted-history-event',
+        guid: 'trusted-history-guid',
+        kind: 'completed',
+        title: '确认采购预算',
+        status: 'completed',
+        completedAt: '2026-09-29T03:00:00.000Z',
+        dueAt: '2026-09-29T02:00:00.000Z',
+        url: null,
+        occurredAt: '2026-09-29T03:01:00.000Z',
+        previousTitle: '确认采购预算',
+        previousStatus: 'todo',
+        previousCompletedAt: null,
+        previousDueAt: '2026-09-29T02:00:00.000Z',
+        relatedTaskGuid: null,
+        relation: null,
+      }],
+    };
+    const tasks: TaskFulfillmentTasksReader = {
+      listOwnedTasks: async (): Promise<DailyReportTaskResult> => ({ items: [] }),
+      listCompletedTasks: async (): Promise<DailyReportTaskResult> => ({ items: [] }),
+      readTaskHistory: async (): Promise<TaskHistorySourceResult> => sourceResult,
+    };
+    const report = await new TaskFulfillmentService(tasks, store).analyze({
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    });
+
+    expect(report.coverage.taskHistory).toBe('full');
+    expect(report.promises[0]).toMatchObject({
+      status: 'completed',
+      completionState: 'completed',
+      taskGuid: 'trusted-history-guid',
+    });
+  });
+
+  it('rejects partial trusted task history instead of upgrading its coverage', async (): Promise<void> => {
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    await saveSucceeded(store, 'partial-trusted-history-action', {
+      taskGuid: 'partial-trusted-history-guid',
+    });
+    const tasks: TaskFulfillmentTasksReader = {
+      listOwnedTasks: async (): Promise<DailyReportTaskResult> => ({ items: [] }),
+      listCompletedTasks: async (): Promise<DailyReportTaskResult> => ({ items: [] }),
+      readTaskHistory: async (): Promise<TaskHistorySourceResult> => ({
+        coverage: 'partial', items: [],
+      }),
+    };
+    const report = await new TaskFulfillmentService(tasks, store).analyze({
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    });
+
+    expect(report.coverage.taskHistory).toBe('unavailable');
+    expect(report.promises[0]).toMatchObject({
+      status: 'task_lookup_unavailable', completionState: 'unknown',
+    });
+    expect(report.warnings).toContain(
+      '可信任务历史来源未提供完整覆盖，部分承诺待核实',
     );
   });
 

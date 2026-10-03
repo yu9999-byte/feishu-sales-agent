@@ -351,6 +351,15 @@ export interface TaskStatusEventResult {
   warning?: string;
 }
 
+export type TaskHistorySourceCoverage =
+  | 'full'
+  | 'partial'
+  | 'unavailable';
+
+export interface TaskHistorySourceResult extends TaskStatusEventResult {
+  coverage: TaskHistorySourceCoverage;
+}
+
 export type TaskStatusChange = TaskFulfillmentChange;
 
 export interface StaleOpportunityFollowupRecord {

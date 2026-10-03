@@ -6,6 +6,19 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-03 可信任务历史来源扩展口
+
+- 原风险：`coverage.taskHistory` 预留了 `full`，但未来接入历史源时如果只依赖调用方约定，
+  可能把 partial 或异常来源误标为全量。
+- 处理：新增 `TaskGateway.readTaskHistory` 及机器可读的 `coverage` 声明；履约服务只接受
+  `coverage=full` 且无警告的来源，partial、unavailable、异常和带警告结果全部降级为
+  `unavailable`。当前 FeishuTaskGateway 不实现该端口，因为现有 Task API 只有搜索和详情读取。
+- 证据：履约定向测试 `25/25`、服务端/客户端/测试 TypeScript 和 `git diff --check` 通过；
+  本轮未发送消息、未修改任务、未进入真实飞书/Web UI。
+- 状态：`Resolved / automated green / UI pending`。
+- 下一动作：接入能够证明查询边界和事件完整性的可信飞书历史/事件源；在此之前继续禁用
+  `taskHistory=full`，不计算全量完成率。
+
 ## 2026-10-03 跨任务替代关系必须显式声明
 
 - 原风险：任务履约只能按精确任务 GUID 对账；若后续任务承接了原承诺，缺少安全边界时容易
