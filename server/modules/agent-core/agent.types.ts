@@ -322,6 +322,35 @@ export interface TaskStatusSnapshot {
   url: string | null;
 }
 
+export type TaskStatusEventKind =
+  | 'observed'
+  | 'changed'
+  | 'completed'
+  | 'reopened';
+
+export interface TaskStatusEvent {
+  eventId: string;
+  guid: string;
+  kind: TaskStatusEventKind;
+  title: string;
+  status: string;
+  completedAt: string | null;
+  dueAt: string | null;
+  url: string | null;
+  occurredAt: string;
+  previousTitle: string | null;
+  previousStatus: string | null;
+  previousCompletedAt: string | null;
+  previousDueAt: string | null;
+  relatedTaskGuid: string | null;
+  relation: 'replaces' | null;
+}
+
+export interface TaskStatusEventResult {
+  items: TaskStatusEvent[];
+  warning?: string;
+}
+
 export type TaskStatusChange = TaskFulfillmentChange;
 
 export interface StaleOpportunityFollowupRecord {

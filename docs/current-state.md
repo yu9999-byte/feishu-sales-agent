@@ -1,5 +1,22 @@
 # 当前工程说明
 
+## 2026-10-03 任务状态事件账本切片（真实 UI 待验收）
+
+- 任务履约控制库新增任务状态事件账本，记录 `observed`、`changed`、`completed`、
+  `reopened` 四类事件，并按租户、销售和精确任务 GUID 隔离读取；首次观察只建立基线，
+  普通状态变化不会被解释成完成。
+- 当前任务不可见时，只有精确 GUID 的最新明确 `completed` 或 `reopened` 事件可以恢复完成/
+  重新开放判断；事件读取失败、事件来源不完整、只有 `observed`/`changed`，以及标题相似、
+  时间接近或列表缺失，均保持待核实。当前观察不会自动建立跨任务替代关系；只有明确的
+  `relatedTaskGuid + relation: replaces` 才允许后续扩展使用。
+- 新增迁移 `015_task_status_events.sql`，并更新迁移脚本、内存/Postgres 控制库和服务单测；
+  Agent 全量 `284/284`、服务端/测试 TypeScript、ESLint、统一 Lint、Stylelint、Agent/Web
+  构建和 `git diff --check` 通过。
+- Postgres 集成测试已执行但被本地环境阻断：`.env.local` 的 `127.0.0.1:55432` 当前无项目
+  专用实例，连接返回 `ECONNREFUSED`。本轮不冒用其他项目数据库、不声称 Postgres 集成通过，
+  也不进行飞书 UI、消息发送或真实任务修改；状态保持 `Automated Green / Web implemented /
+  UI pending`。
+
 ## 2026-10-03 飞书任务完成时间证据与零值误判修复（真实 UI 待验收）
 
 - 任务网关现在解析飞书 `completed_at`，兼容 ISO 时间、秒级和毫秒级时间戳；

@@ -22,6 +22,8 @@ import type {
   DailyReportTaskRecord,
   DailyReportTaskResult,
   PendingAction,
+  TaskStatusEvent,
+  TaskStatusEventResult,
   TaskStatusSnapshot,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
@@ -66,6 +68,11 @@ interface PromiseReconciliationResult {
   changes: TaskFulfillmentChange[];
 }
 
+interface TaskHistoryResult {
+  changes: TaskFulfillmentChange[];
+  unavailableGuids: Set<string>;
+}
+
 interface CompletedTasksResult {
   items: TaskFulfillmentCompletedItem[];
   taskItems: TaskFulfillmentItem[];
@@ -75,6 +82,7 @@ interface CompletedTasksResult {
 const DATE_PATTERN: RegExp = /^\d{4}-\d{2}-\d{2}$/u;
 const PROMISE_HISTORY_DAYS = 180 as const;
 const PROMISE_HISTORY_LIMIT: number = 500;
+const TASK_EVENT_HISTORY_LIMIT: number = 1000;
 const NO_NEXT_STEP_PATTERN: RegExp = /^(暂无|没有|无)下一步/u;
 const PARTIAL_TASK_STATUSES: ReadonlySet<string> = new Set([
   'inprogress',
@@ -518,9 +526,24 @@ class TaskFulfillmentService {
       warnings,
       now,
     );
+    const historyResult: TaskHistoryResult =
+      await this.readTaskStatusEvents(
+        input,
+        actions,
+        taskByGuid,
+        warnings,
+        now,
+      );
+    historyResult.unavailableGuids.forEach((guid: string): void => {
+      taskLookupUnavailable.add(guid);
+    });
     const changes: TaskFulfillmentChange[] = detailSnapshotResult.changes;
     const changeByGuid: Map<string, TaskFulfillmentChange> = new Map(
-      [...existingChanges, ...changes].map(
+      [
+        ...historyResult.changes,
+        ...existingChanges,
+        ...changes,
+      ].map(
         (change: TaskFulfillmentChange): [string, TaskFulfillmentChange] =>
           [change.guid, change],
       ),
@@ -539,7 +562,124 @@ class TaskFulfillmentService {
         (promise: TaskPromiseFulfillmentItem | null):
           promise is TaskPromiseFulfillmentItem => promise !== null,
       );
-    return { promises, changes };
+    return {
+      promises,
+      changes: [...historyResult.changes, ...changes],
+    };
+  }
+
+  private async readTaskStatusEvents(
+    input: TaskFulfillmentInput,
+    actions: PendingAction[],
+    taskByGuid: Map<string, TaskFulfillmentItem>,
+    warnings: string[],
+    now: Date,
+  ): Promise<TaskHistoryResult> {
+    const taskGuids: string[] = Array.from(new Set(
+      actions
+        .map((action: PendingAction): string | null =>
+          action.result.taskGuid?.trim() || null,
+        )
+        .filter(
+          (guid: string | null): guid is string => guid !== null,
+        ),
+    ));
+    if (taskGuids.length === 0 || !this.controlStore.listTaskStatusEvents) {
+      return { changes: [], unavailableGuids: new Set<string>() };
+    }
+    const missingGuids: string[] = taskGuids.filter(
+      (guid: string): boolean => !taskByGuid.has(guid),
+    );
+    if (missingGuids.length === 0) {
+      return { changes: [], unavailableGuids: new Set<string>() };
+    }
+    let result: TaskStatusEventResult;
+    try {
+      result = await this.controlStore.listTaskStatusEvents(
+        input.integration.tenantId,
+        input.actorOpenId,
+        taskGuids,
+        new Date(now.getTime() - PROMISE_HISTORY_DAYS * 86_400_000),
+        TASK_EVENT_HISTORY_LIMIT,
+      );
+    } catch (error: unknown) {
+      this.logger.warn(
+        `Task status event read failed: ${error instanceof Error
+          ? error.message
+          : String(error)}`,
+      );
+      warnings.push('任务状态历史暂时不可读取，部分承诺待核实');
+      return {
+        changes: [],
+        unavailableGuids: new Set(missingGuids),
+      };
+    }
+    if (result.warning) {
+      warnings.push(`任务状态历史${sourceWarning(result.warning)}`);
+      return {
+        changes: [],
+        unavailableGuids: new Set(missingGuids),
+      };
+    }
+    const eventsByGuid: Map<string, TaskStatusEvent[]> = new Map();
+    result.items.forEach((event: TaskStatusEvent): void => {
+      const events: TaskStatusEvent[] = eventsByGuid.get(event.guid) ?? [];
+      events.push(event);
+      eventsByGuid.set(event.guid, events);
+    });
+    const changes: TaskFulfillmentChange[] = [];
+    missingGuids.forEach((guid: string): void => {
+      const event: TaskStatusEvent | undefined = (eventsByGuid.get(guid) ?? [])
+        .filter(
+          (candidate: TaskStatusEvent): boolean =>
+            candidate.kind === 'completed' || candidate.kind === 'reopened',
+        )
+        .sort(
+          (left: TaskStatusEvent, right: TaskStatusEvent): number =>
+            Date.parse(right.occurredAt) - Date.parse(left.occurredAt),
+        )[0];
+      if (!event) return;
+      if (event.kind === 'completed' && (
+        event.completedAt === null ||
+        !Number.isFinite(Date.parse(event.completedAt))
+      )) {
+        return;
+      }
+      taskByGuid.set(
+        guid,
+        this.toTaskItem({
+          guid,
+          title: event.title,
+          status: event.status,
+          completedAt: event.completedAt,
+          dueAt: event.dueAt,
+          url: event.url,
+        }, input.timezone, input.referenceDate),
+      );
+      changes.push(this.toTaskFulfillmentChange(event));
+    });
+    return { changes, unavailableGuids: new Set<string>() };
+  }
+
+  private toTaskFulfillmentChange(
+    event: TaskStatusEvent,
+  ): TaskFulfillmentChange {
+    return {
+      guid: event.guid,
+      title: event.title,
+      kind: event.kind === 'completed' || event.kind === 'reopened'
+        ? event.kind
+        : 'changed',
+      previousTitle: event.previousTitle,
+      currentTitle: event.title,
+      previousStatus: event.previousStatus,
+      currentStatus: event.status,
+      previousCompletedAt: event.previousCompletedAt,
+      currentCompletedAt: event.completedAt,
+      previousDueAt: event.previousDueAt,
+      currentDueAt: event.dueAt,
+      observedAt: event.occurredAt,
+    };
   }
 
   private async lookupMissingTasks(

@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 
 import type { Sql } from 'postgres';
 import type {
@@ -19,6 +20,8 @@ import type {
   PendingAction,
   SaveCollectingSessionInput,
   SaveIntentClarificationSessionInput,
+  TaskStatusEvent,
+  TaskStatusEventResult,
   TenantIntegration,
   TaskStatusSnapshot,
 } from '@server/modules/agent-core/agent.types';
@@ -75,6 +78,24 @@ interface TaskSnapshotRow {
   completed_at: Date | string | null;
   due_at: Date | string | null;
   task_url: string | null;
+}
+
+interface TaskStatusEventRow {
+  event_id: string;
+  task_guid: string;
+  event_kind: TaskStatusEvent['kind'];
+  title: string;
+  status: string;
+  completed_at: Date | string | null;
+  due_at: Date | string | null;
+  task_url: string | null;
+  occurred_at: Date | string;
+  previous_title: string | null;
+  previous_status: string | null;
+  previous_completed_at: Date | string | null;
+  previous_due_at: Date | string | null;
+  related_task_guid: string | null;
+  relation: 'replaces' | null;
 }
 
 interface IdRow {
@@ -661,13 +682,24 @@ export class PostgresControlStore
       const previous: TaskStatusSnapshot | null = previousRows[0]
         ? this.mapTaskSnapshot(previousRows[0])
         : null;
-      if (previous && this.taskSnapshotChanged(previous, snapshot)) {
+      if (!previous) {
+        await this.insertTaskStatusEvent(
+          tenantId,
+          actorOpenId,
+          this.toTaskStatusEvent(snapshot, observedAt, 'observed', null),
+        );
+      } else if (this.taskSnapshotChanged(previous, snapshot)) {
         const kind: TaskFulfillmentChange['kind'] =
           previous.completedAt === null && snapshot.completedAt !== null
             ? 'completed'
             : previous.completedAt !== null && snapshot.completedAt === null
               ? 'reopened'
               : 'changed';
+        await this.insertTaskStatusEvent(
+          tenantId,
+          actorOpenId,
+          this.toTaskStatusEvent(snapshot, observedAt, kind, previous),
+        );
         changes.push({
           guid: snapshot.guid,
           title: snapshot.title,
@@ -703,6 +735,50 @@ export class PostgresControlStore
       `;
     }
     return changes;
+  }
+
+  async listTaskStatusEvents(
+    tenantId: string,
+    actorOpenId: string,
+    taskGuids: string[],
+    since: Date,
+    limit: number,
+  ): Promise<TaskStatusEventResult> {
+    if (taskGuids.length === 0 || limit <= 0) {
+      return { items: [] };
+    }
+    const safeLimit: number = Math.min(Math.max(limit, 1), 1000);
+    const rows: TaskStatusEventRow[] = await this.sql<TaskStatusEventRow[]>`
+      SELECT
+        event_id,
+        task_guid,
+        event_kind,
+        title,
+        status,
+        completed_at,
+        due_at,
+        task_url,
+        occurred_at,
+        previous_title,
+        previous_status,
+        previous_completed_at,
+        previous_due_at,
+        related_task_guid,
+        relation
+      FROM task_status_events
+      WHERE tenant_id = ${tenantId}::uuid
+        AND actor_open_id = ${actorOpenId}
+        AND task_guid = ANY(${this.sql.array(taskGuids)})
+        AND occurred_at >= ${since}
+      ORDER BY occurred_at DESC
+      LIMIT ${safeLimit}
+    `;
+    return {
+      items: rows.map(
+        (row: TaskStatusEventRow): TaskStatusEvent =>
+          this.mapTaskStatusEvent(row),
+      ),
+    };
   }
 
   async recoverStaleExecutingActions(
@@ -881,6 +957,118 @@ export class PostgresControlStore
         : this.toDate(row.completed_at).toISOString(),
       dueAt: row.due_at === null ? null : this.toDate(row.due_at).toISOString(),
       url: row.task_url,
+    };
+  }
+
+  private toTaskStatusEvent(
+    snapshot: TaskStatusSnapshot,
+    occurredAt: Date,
+    kind: TaskStatusEvent['kind'],
+    previous: TaskStatusSnapshot | null,
+  ): TaskStatusEvent {
+    return {
+      eventId: createHash('sha256')
+        .update([
+          snapshot.guid,
+          occurredAt.toISOString(),
+          kind,
+          snapshot.title,
+          snapshot.status,
+          snapshot.completedAt ?? '',
+          snapshot.dueAt ?? '',
+          previous?.title ?? '',
+          previous?.status ?? '',
+          previous?.completedAt ?? '',
+          previous?.dueAt ?? '',
+        ].join('\u0000'))
+        .digest('hex'),
+      guid: snapshot.guid,
+      kind,
+      title: snapshot.title,
+      status: snapshot.status,
+      completedAt: snapshot.completedAt,
+      dueAt: snapshot.dueAt,
+      url: snapshot.url,
+      occurredAt: occurredAt.toISOString(),
+      previousTitle: previous?.title ?? null,
+      previousStatus: previous?.status ?? null,
+      previousCompletedAt: previous?.completedAt ?? null,
+      previousDueAt: previous?.dueAt ?? null,
+      relatedTaskGuid: null,
+      relation: null,
+    };
+  }
+
+  private async insertTaskStatusEvent(
+    tenantId: string,
+    actorOpenId: string,
+    event: TaskStatusEvent,
+  ): Promise<void> {
+    await this.sql`
+      INSERT INTO task_status_events (
+        tenant_id,
+        actor_open_id,
+        event_id,
+        task_guid,
+        event_kind,
+        title,
+        status,
+        completed_at,
+        due_at,
+        task_url,
+        occurred_at,
+        previous_title,
+        previous_status,
+        previous_completed_at,
+        previous_due_at,
+        related_task_guid,
+        relation
+      ) VALUES (
+        ${tenantId}::uuid,
+        ${actorOpenId},
+        ${event.eventId},
+        ${event.guid},
+        ${event.kind},
+        ${event.title},
+        ${event.status},
+        ${event.completedAt},
+        ${event.dueAt},
+        ${event.url},
+        ${event.occurredAt},
+        ${event.previousTitle},
+        ${event.previousStatus},
+        ${event.previousCompletedAt},
+        ${event.previousDueAt},
+        ${event.relatedTaskGuid},
+        ${event.relation}
+      )
+      ON CONFLICT (tenant_id, actor_open_id, event_id) DO NOTHING
+    `;
+  }
+
+  private mapTaskStatusEvent(row: TaskStatusEventRow): TaskStatusEvent {
+    return {
+      eventId: row.event_id,
+      guid: row.task_guid,
+      kind: row.event_kind,
+      title: row.title,
+      status: row.status,
+      completedAt: row.completed_at === null
+        ? null
+        : this.toDate(row.completed_at).toISOString(),
+      dueAt: row.due_at === null ? null : this.toDate(row.due_at).toISOString(),
+      url: row.task_url,
+      occurredAt: this.toDate(row.occurred_at).toISOString(),
+      previousTitle: row.previous_title,
+      previousStatus: row.previous_status,
+      previousCompletedAt: row.previous_completed_at === null
+        ? null
+        : this.toDate(row.previous_completed_at).toISOString(),
+      previousDueAt: row.previous_due_at === null
+        ? null
+        : this.toDate(row.previous_due_at).toISOString(),
+      relatedTaskGuid: row.related_task_guid,
+      relation: row.relation,
     };
   }
 

@@ -18,6 +18,7 @@ const MIGRATION_FILES = [
   '012_stale_opportunity_delivery_state.sql',
   '013_task_status_snapshots.sql',
   '014_task_completion_evidence.sql',
+  '015_task_status_events.sql',
 ];
 
 const checksum = (content) => createHash('sha256')

@@ -453,6 +453,152 @@ describe('TaskFulfillmentService', (): void => {
     ]);
   });
 
+  it('uses an exact observed completion event when the task is no longer visible', async (): Promise<void> => {
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    await saveSucceeded(store, 'historical-action', {
+      taskGuid: 'historical-guid',
+    });
+    let openResult: DailyReportTaskResult = {
+      items: [{
+        guid: 'historical-guid', title: '准备客户回访', status: 'todo',
+        completedAt: null, dueAt: '2026-10-02T02:00:00.000Z', url: null,
+      }],
+    };
+    let completedResult: DailyReportTaskResult = { items: [] };
+    const tasks: TaskFulfillmentTasksReader = {
+      listOwnedTasks: async (): Promise<DailyReportTaskResult> => openResult,
+      listCompletedTasks: async (): Promise<DailyReportTaskResult> =>
+        completedResult,
+    };
+    const service: TaskFulfillmentService = new TaskFulfillmentService(tasks, store);
+    const input = {
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    };
+    await service.analyze(input);
+    openResult = { items: [] };
+    completedResult = {
+      items: [{
+        guid: 'historical-guid', title: '准备客户回访', status: 'completed',
+        completedAt: '2026-09-30T03:00:00.000Z',
+        dueAt: '2026-10-02T02:00:00.000Z', url: null,
+      }],
+    };
+    await service.analyze({
+      ...input,
+      now: new Date('2026-10-01T04:00:00.000Z'),
+      referenceDate: '2026-10-01',
+    });
+    completedResult = { items: [] };
+    const historical = await service.analyze({
+      ...input,
+      now: new Date('2026-10-02T04:00:00.000Z'),
+      referenceDate: '2026-10-02',
+    });
+    expect(historical.promises[0]).toMatchObject({
+      status: 'completed',
+      completionState: 'completed',
+      taskGuid: 'historical-guid',
+      taskCompletedAt: '2026-09-30T03:00:00.000Z',
+    });
+    expect(historical.changes).toEqual([
+      expect.objectContaining({
+        guid: 'historical-guid',
+        kind: 'completed',
+      }),
+    ]);
+  });
+
+  it('uses an exact reopened event when the task is no longer visible', async (): Promise<void> => {
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    await saveSucceeded(store, 'reopened-history-action', {
+      taskGuid: 'reopened-history-guid',
+    });
+    let current: DailyReportTaskResult = {
+      items: [{
+        guid: 'reopened-history-guid', title: '确认采购预算', status: 'todo',
+        completedAt: null, dueAt: '2026-10-02T02:00:00.000Z', url: null,
+      }],
+    };
+    let completed: DailyReportTaskResult = { items: [] };
+    const tasks: TaskFulfillmentTasksReader = {
+      listOwnedTasks: async (): Promise<DailyReportTaskResult> => current,
+      listCompletedTasks: async (): Promise<DailyReportTaskResult> => completed,
+    };
+    const service: TaskFulfillmentService = new TaskFulfillmentService(tasks, store);
+    const input = {
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    };
+    await service.analyze(input);
+    current = { items: [] };
+    completed = {
+      items: [{
+        guid: 'reopened-history-guid', title: '确认采购预算', status: 'completed',
+        completedAt: '2026-09-30T03:00:00.000Z', dueAt: null, url: null,
+      }],
+    };
+    await service.analyze({
+      ...input,
+      now: new Date('2026-10-01T04:00:00.000Z'),
+      referenceDate: '2026-10-01',
+    });
+    current = {
+      items: [{
+        guid: 'reopened-history-guid', title: '重新确认采购预算', status: 'todo',
+        completedAt: null, dueAt: '2026-10-05T02:00:00.000Z', url: null,
+      }],
+    };
+    completed = { items: [] };
+    await service.analyze({
+      ...input,
+      now: new Date('2026-10-02T04:00:00.000Z'),
+      referenceDate: '2026-10-02',
+    });
+    current = { items: [] };
+    const historical = await service.analyze({
+      ...input,
+      now: new Date('2026-10-03T04:00:00.000Z'),
+      referenceDate: '2026-10-03',
+    });
+    expect(historical.promises[0]).toMatchObject({
+      status: 'open_changed',
+      completionState: 'still_open',
+      taskTitle: '重新确认采购预算',
+    });
+    expect(historical.changes).toEqual([
+      expect.objectContaining({
+        guid: 'reopened-history-guid',
+        kind: 'reopened',
+      }),
+    ]);
+  });
+
+  it('fails closed when task event history cannot be read', async (): Promise<void> => {
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    await saveSucceeded(store, 'event-history-failure', {
+      taskGuid: 'event-history-missing',
+    });
+    vi.spyOn(store, 'listTaskStatusEvents').mockRejectedValueOnce(
+      new Error('event history unavailable'),
+    );
+    const tasks: TaskFulfillmentTasksReader = {
+      listOwnedTasks: async (): Promise<DailyReportTaskResult> => ({ items: [] }),
+      listCompletedTasks: async (): Promise<DailyReportTaskResult> => ({ items: [] }),
+    };
+    const report = await new TaskFulfillmentService(tasks, store).analyze({
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai', now: NOW,
+    });
+    expect(report.promises[0]).toMatchObject({
+      status: 'task_lookup_unavailable',
+      completionState: 'unknown',
+    });
+    expect(report.warnings).toContain(
+      '任务状态历史暂时不可读取，部分承诺待核实',
+    );
+  });
+
   it('classifies visible in-progress tasks as partially completed', async (): Promise<void> => {
     const store: MemoryControlStore = new MemoryControlStore([integration]);
     await saveSucceeded(store, 'partial-action', { taskGuid: 'partial-guid' });

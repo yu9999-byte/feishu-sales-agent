@@ -32,6 +32,7 @@ import type {
   StaleOpportunityRecord,
   TaskStatusSnapshot,
   TaskStatusChange,
+  TaskStatusEventResult,
   TaskCreationResult,
   TenantIntegration,
 } from './agent.types';
@@ -125,6 +126,13 @@ export interface ControlStore {
     observedAt: Date,
     snapshots: TaskStatusSnapshot[],
   ): Promise<TaskStatusChange[]>;
+  listTaskStatusEvents?(
+    tenantId: string,
+    actorOpenId: string,
+    taskGuids: string[],
+    since: Date,
+    limit: number,
+  ): Promise<TaskStatusEventResult>;
   recoverStaleExecutingActions?(
     now: Date,
     timeoutMs: number,

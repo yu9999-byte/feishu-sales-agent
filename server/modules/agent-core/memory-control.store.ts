@@ -11,6 +11,8 @@ import type {
   SaveCollectingSessionInput,
   SaveIntentClarificationSessionInput,
   TenantIntegration,
+  TaskStatusEvent,
+  TaskStatusEventResult,
   TaskStatusSnapshot,
 } from './agent.types';
 import type { ControlStore } from './agent.ports';
@@ -31,6 +33,8 @@ export class MemoryControlStore implements ControlStore {
   private readonly auditEvents: StoredAuditEvent[] = [];
   private readonly taskSnapshots: Map<string, TaskStatusSnapshot> =
     new Map<string, TaskStatusSnapshot>();
+  private readonly taskStatusEvents: Map<string, TaskStatusEvent[]> =
+    new Map<string, TaskStatusEvent[]>();
 
   constructor(integrations: TenantIntegration[]) {
     this.tenantsByKey = new Map<string, TenantIntegration>(
@@ -398,13 +402,22 @@ export class MemoryControlStore implements ControlStore {
       );
       const previous: TaskStatusSnapshot | undefined =
         this.taskSnapshots.get(key);
-      if (previous && this.taskSnapshotChanged(previous, snapshot)) {
+      if (!previous) {
+        this.appendTaskStatusEvent(
+          key,
+          this.toTaskStatusEvent(snapshot, observedAt, 'observed', null),
+        );
+      } else if (this.taskSnapshotChanged(previous, snapshot)) {
         const kind: TaskFulfillmentChange['kind'] =
           previous.completedAt === null && snapshot.completedAt !== null
             ? 'completed'
             : previous.completedAt !== null && snapshot.completedAt === null
               ? 'reopened'
               : 'changed';
+        this.appendTaskStatusEvent(
+          key,
+          this.toTaskStatusEvent(snapshot, observedAt, kind, previous),
+        );
         changes.push({
           guid: snapshot.guid,
           title: snapshot.title,
@@ -423,6 +436,38 @@ export class MemoryControlStore implements ControlStore {
       this.taskSnapshots.set(key, clone(snapshot));
     });
     return changes;
+  }
+
+  async listTaskStatusEvents(
+    tenantId: string,
+    actorOpenId: string,
+    taskGuids: string[],
+    since: Date,
+    limit: number,
+  ): Promise<TaskStatusEventResult> {
+    if (taskGuids.length === 0 || limit <= 0) {
+      return { items: [] };
+    }
+    const requestedGuids: Set<string> = new Set(taskGuids);
+    const events: TaskStatusEvent[] = [];
+    requestedGuids.forEach((taskGuid: string): void => {
+      const key: string = this.taskSnapshotKey(
+        tenantId,
+        actorOpenId,
+        taskGuid,
+      );
+      const stored: TaskStatusEvent[] = this.taskStatusEvents.get(key) ?? [];
+      stored.forEach((event: TaskStatusEvent): void => {
+        if (Date.parse(event.occurredAt) >= since.getTime()) {
+          events.push(clone(event));
+        }
+      });
+    });
+    events.sort(
+      (left: TaskStatusEvent, right: TaskStatusEvent): number =>
+        Date.parse(right.occurredAt) - Date.parse(left.occurredAt),
+    );
+    return { items: events.slice(0, Math.min(limit, 1000)) };
   }
 
   async recoverStaleExecutingActions(
@@ -513,5 +558,48 @@ export class MemoryControlStore implements ControlStore {
       previous.completedAt !== current.completedAt ||
       previous.dueAt !== current.dueAt ||
       previous.url !== current.url;
+  }
+
+  private toTaskStatusEvent(
+    snapshot: TaskStatusSnapshot,
+    occurredAt: Date,
+    kind: TaskStatusEvent['kind'],
+    previous: TaskStatusSnapshot | null,
+  ): TaskStatusEvent {
+    return {
+      eventId: [
+        snapshot.guid,
+        occurredAt.toISOString(),
+        kind,
+      ].join(':'),
+      guid: snapshot.guid,
+      kind,
+      title: snapshot.title,
+      status: snapshot.status,
+      completedAt: snapshot.completedAt,
+      dueAt: snapshot.dueAt,
+      url: snapshot.url,
+      occurredAt: occurredAt.toISOString(),
+      previousTitle: previous?.title ?? null,
+      previousStatus: previous?.status ?? null,
+      previousCompletedAt: previous?.completedAt ?? null,
+      previousDueAt: previous?.dueAt ?? null,
+      relatedTaskGuid: null,
+      relation: null,
+    };
+  }
+
+  private appendTaskStatusEvent(
+    key: string,
+    event: TaskStatusEvent,
+  ): void {
+    const events: TaskStatusEvent[] = this.taskStatusEvents.get(key) ?? [];
+    if (!events.some(
+      (candidate: TaskStatusEvent): boolean =>
+        candidate.eventId === event.eventId,
+    )) {
+      events.push(clone(event));
+      this.taskStatusEvents.set(key, events);
+    }
   }
 }

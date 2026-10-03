@@ -104,5 +104,43 @@ describe('PostgresControlStore task status snapshots', (): void => {
         currentCompletedAt: '2026-10-03T01:30:00.000Z',
       }),
     ]);
+
+    const reopenedChanges = await store.recordTaskSnapshots(
+      TENANT_ID,
+      ACTOR_OPEN_ID,
+      new Date('2026-10-04T02:00:00.000Z'),
+      [{
+        ...firstSnapshot,
+        title: '重新安排报价说明',
+        status: 'todo',
+        completedAt: null,
+        dueAt: '2026-10-06T02:00:00.000Z',
+      }],
+    );
+    expect(reopenedChanges).toEqual([
+      expect.objectContaining({
+        guid: firstSnapshot.guid,
+        kind: 'reopened',
+        previousCompletedAt: '2026-10-03T01:30:00.000Z',
+        currentCompletedAt: null,
+      }),
+    ]);
+
+    const events = await store.listTaskStatusEvents(
+      TENANT_ID,
+      ACTOR_OPEN_ID,
+      [firstSnapshot.guid],
+      new Date('2026-10-01T00:00:00.000Z'),
+      20,
+    );
+    expect(events.warning).toBeUndefined();
+    expect(events.items.map((event) => event.kind)).toEqual([
+      'reopened', 'completed', 'changed', 'observed',
+    ]);
+    expect(events.items[0]).toMatchObject({
+      guid: firstSnapshot.guid,
+      previousCompletedAt: '2026-10-03T01:30:00.000Z',
+      completedAt: null,
+    });
   });
 });
