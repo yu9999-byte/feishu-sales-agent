@@ -1,5 +1,28 @@
 # 当前工程说明
 
+## 2026-10-05 S4-014 真实环境只读放行检查（已完成，真实投递仍阻断）
+
+- 新增受执行专用 Bearer 凭证保护的
+  `GET /internal/stale-opportunity-reminder/execution-readiness`。该接口在提醒和执行开关保持关闭时，
+  只读检查独立凭证、测试白名单、租户/成员/open_id、个人 Review 权限、飞书数据源、历史治理/
+  sender 标记、uncertain 账本和当前候选；响应不返回令牌或 Secret。
+- 候选探针只解析白名单指定的租户和成员，不枚举或读取其他租户的 Base/Task。目标租户或成员在
+  检查中途消失、身份/权限不一致、来源不完整或候选不唯一时均 fail closed。服务没有协调器、
+  账本 claim 或 sender 依赖，不可能由 readiness 路径进入投递。
+- 本机忽略配置已生成互不相同的扫描/执行随机凭证并固定测试白名单。只读扫描为本次探针开启；
+  `STALE_OPPORTUNITY_REMINDER_ENABLED=false`、
+  `STALE_OPPORTUNITY_REMINDER_EXECUTION_ENABLED=false`，没有配置或启用 cron。
+- 真实探针唯一识别租户“P0 演示企业”和销售“李胜彬”；租户/成员均 active，本人 open_id 完全
+  匹配，具有 `review:read-personal`，飞书 Base/Task 只读来源完整，uncertain 账本为空。候选扫描
+  完整但当前为 0 条；探针后数据库回读确认该租户提醒账本仍为 0 条。
+- 当前机器结果为 `blocked`，明确阻断项是 `history_governance_incomplete`、
+  `sender_unconfigured` 和 `candidate_not_found`。这表示身份和只读来源已经可用，但不能开启真实
+  发送；不得为了变绿而伪造历史治理/sender 标记或创建测试业务记录。
+- 定向只读链 `37/37`、全量 Agent `428/428`、完整 Postgres `19/19`、统一 Lint、三套类型检查、
+  Agent/Web 构建、迁移连续两次全量 skip 和 `git diff --check` 已通过；GitHub milestone 证据在
+  发布完成后记录。
+  本轮未调用 `/execute`、未发送飞书消息、未修改 Base/Task/客户/商机/跟进数据，也未执行 UI。
+
 ## 2026-10-05 S4-013 受控真实提醒执行入口（自动化完成，真实投递关闭）
 
 - 新增受专用 Bearer 凭证保护的 `POST /internal/stale-opportunity-reminder/execute`。

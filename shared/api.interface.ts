@@ -827,6 +827,81 @@ export interface StaleOpportunityReminderExecutionResponse {
   warnings: string[];
 }
 
+export type StaleOpportunityReminderExecutionReadinessBlocker =
+  | 'execution_enabled'
+  | 'reminder_enabled'
+  | 'execution_token_missing'
+  | 'execution_token_reused'
+  | 'scan_disabled'
+  | 'scan_token_missing'
+  | 'execution_allowlist_incomplete'
+  | 'target_tenant_unavailable'
+  | 'target_tenant_inactive'
+  | 'target_member_unavailable'
+  | 'target_member_inactive'
+  | 'recipient_open_id_mismatch'
+  | 'permission_missing'
+  | 'data_source_unconfigured'
+  | 'history_governance_incomplete'
+  | 'sender_unconfigured'
+  | 'uncertain_delivery_present'
+  | 'reconciliation_unavailable'
+  | 'candidate_probe_incomplete'
+  | 'candidate_not_found'
+  | 'candidate_ambiguous'
+  | 'candidate_not_allowed';
+
+export interface StaleOpportunityReminderExecutionReadinessConfiguration {
+  executionEnabled: boolean;
+  reminderEnabled: boolean;
+  scanEnabled: boolean;
+  executionTokenConfigured: boolean;
+  scanTokenConfigured: boolean;
+  executionTokenDistinctFromScan: boolean;
+  allowlistConfigured: boolean;
+  historyGovernanceReady: boolean;
+  senderConfigured: boolean;
+}
+
+export interface StaleOpportunityReminderExecutionReadinessTarget {
+  tenantId: string | null;
+  tenantName: string | null;
+  tenantStatus: 'active' | 'inactive' | 'unavailable' | 'not_configured';
+  memberId: string | null;
+  memberDisplayName: string | null;
+  memberStatus: 'active' | 'inactive' | 'unavailable' | 'not_configured';
+  recipientOpenId: string | null;
+  recipientOpenIdMatches: boolean | null;
+  permissionGranted: boolean | null;
+  dataSourceConfigured: boolean | null;
+}
+
+export interface StaleOpportunityReminderExecutionReadinessLedger {
+  status: 'clear' | 'uncertain' | 'unavailable' | 'not_checked';
+  uncertainDeliveryFound: boolean;
+}
+
+export interface StaleOpportunityReminderExecutionReadinessCandidateProbe {
+  status: 'complete' | 'incomplete' | 'disabled' | 'not_checked';
+  traceId: string | null;
+  candidateCount: number;
+  matchingCandidateCount: number;
+  items: StaleOpportunityTriggerCandidate[];
+  warnings: string[];
+}
+
+export interface StaleOpportunityReminderExecutionReadinessResponse {
+  mode: 'read-only';
+  status: 'blocked' | 'ready_for_manual_activation';
+  checkedAt: string;
+  configuration: StaleOpportunityReminderExecutionReadinessConfiguration;
+  target: StaleOpportunityReminderExecutionReadinessTarget;
+  ledger: StaleOpportunityReminderExecutionReadinessLedger;
+  candidateProbe: StaleOpportunityReminderExecutionReadinessCandidateProbe;
+  blockers: StaleOpportunityReminderExecutionReadinessBlocker[];
+  warnings: string[];
+}
+
 export type StaleOpportunityReminderKind = 'stale_followup';
 
 export type StaleOpportunityReminderReconciliationDecision =

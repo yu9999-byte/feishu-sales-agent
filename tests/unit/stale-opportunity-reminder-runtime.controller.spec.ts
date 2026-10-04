@@ -7,6 +7,7 @@ import { MODULE_METADATA } from '@nestjs/common/constants';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
+  StaleOpportunityReminderExecutionReadinessResponse,
   StaleOpportunityReminderExecutionResponse,
   StaleOpportunityReminderPlanResponse,
 } from '@shared/api.interface';
@@ -98,6 +99,47 @@ const executionRunner = (): StaleOpportunityReminderRuntimeExecutionRunner => ({
       executionResponse,
   ),
 });
+
+const executionReadinessResponse:
+  StaleOpportunityReminderExecutionReadinessResponse = {
+    mode: 'read-only',
+    status: 'blocked',
+    checkedAt: NOW,
+    configuration: {
+      executionEnabled: false,
+      reminderEnabled: false,
+      scanEnabled: false,
+      executionTokenConfigured: true,
+      scanTokenConfigured: false,
+      executionTokenDistinctFromScan: false,
+      allowlistConfigured: false,
+      historyGovernanceReady: false,
+      senderConfigured: false,
+    },
+    target: {
+      tenantId: null,
+      tenantName: null,
+      tenantStatus: 'not_configured',
+      memberId: null,
+      memberDisplayName: null,
+      memberStatus: 'not_configured',
+      recipientOpenId: null,
+      recipientOpenIdMatches: null,
+      permissionGranted: null,
+      dataSourceConfigured: null,
+    },
+    ledger: { status: 'not_checked', uncertainDeliveryFound: false },
+    candidateProbe: {
+      status: 'disabled',
+      traceId: null,
+      candidateCount: 0,
+      matchingCandidateCount: 0,
+      items: [],
+      warnings: [],
+    },
+    blockers: ['scan_disabled'],
+    warnings: [],
+  };
 
 describe('StaleOpportunityReminderRuntimeController', (): void => {
   it('registers the protected preflight controller in the insight module', (): void => {
@@ -264,5 +306,56 @@ describe('StaleOpportunityReminderRuntimeController', (): void => {
     await expect(controller.execute(request, 'Bearer execution-token'))
       .resolves.toEqual(executionResponse);
     expect(execute).toHaveBeenCalledWith(request);
+  });
+
+  it('rejects scan and invalid credentials before readiness inspection', async (): Promise<void> => {
+    const config: AgentRuntimeConfig = runtimeConfig('scan-token');
+    config.staleOpportunityReminder!.execution!.triggerToken =
+      'execution-token';
+    const inspect = vi.fn(
+      async (): Promise<StaleOpportunityReminderExecutionReadinessResponse> =>
+        executionReadinessResponse,
+    );
+    const controller = new StaleOpportunityReminderRuntimeController(
+      config,
+      { prepare: vi.fn() },
+      planRunner(),
+      executionRunner(),
+      { inspect },
+    );
+
+    await expect(controller.executionReadinessCheck()).rejects
+      .toBeInstanceOf(UnauthorizedException);
+    await expect(controller.executionReadinessCheck('Bearer scan-token'))
+      .rejects.toBeInstanceOf(UnauthorizedException);
+    expect(inspect).not.toHaveBeenCalled();
+  });
+
+  it('inspects readiness with the execution credential while delivery is off', async (): Promise<void> => {
+    const config: AgentRuntimeConfig = runtimeConfig('scan-token');
+    config.staleOpportunityReminder!.execution!.triggerToken =
+      'execution-token';
+    const inspect = vi.fn(
+      async (): Promise<StaleOpportunityReminderExecutionReadinessResponse> =>
+        executionReadinessResponse,
+    );
+    const execute = vi.fn(
+      async (): Promise<StaleOpportunityReminderExecutionResponse> =>
+        executionResponse,
+    );
+    const controller = new StaleOpportunityReminderRuntimeController(
+      config,
+      { prepare: vi.fn() },
+      planRunner(),
+      { execute },
+      { inspect },
+    );
+
+    await expect(
+      controller.executionReadinessCheck('Bearer execution-token'),
+    ).resolves.toEqual(executionReadinessResponse);
+    expect(config.staleOpportunityReminder?.execution?.enabled).toBe(false);
+    expect(inspect).toHaveBeenCalledTimes(1);
+    expect(execute).not.toHaveBeenCalled();
   });
 });

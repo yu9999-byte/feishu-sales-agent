@@ -1,5 +1,27 @@
 # 商机停滞 7 天提醒 S4 触发规格（部分实现）
 
+## 2026-10-05 S4-014 真实环境只读执行准备度
+
+- 新增 `GET /internal/stale-opportunity-reminder/execution-readiness`，复用执行专用 Bearer 凭证，
+  但不要求打开执行开关。凭证缺失/错误在 readiness 服务前拒绝；响应设置 `no-store` 且不返回
+  任一令牌、应用 Secret 或数据库连接信息。
+- 准备度要求真实提醒和执行开关均保持关闭；检查扫描/执行凭证已配置且不同、三项白名单完整、
+  历史治理与 sender 标记，并只读解析精确租户、成员和当前有效角色权限。飞书数据源检查同时要求
+  租户集成、应用 Secret 引用、Base 映射完整，候选探针再用真实 Base/Task 读取验证来源可用性。
+- 候选探针通过 `tenantId + memberId` 限制 `StaleOpportunityTriggerService` 的运行范围。目标租户/
+  成员在二次读取时消失、session 身份/open_id 不一致、缺少 `review:read-personal`、分页/外部来源
+  不完整、零候选、非白名单候选或多候选均返回机器可读 blocker，不产生部分可执行结果。
+- uncertain 账本只按白名单租户读取 1 条；任何记录或查询异常均阻断。readiness 服务不注入
+  `StaleOpportunityReminderCoordinatorService`、提醒账本 claim 服务或 sender，因此所有路径均无投递
+  副作用，也不会修改 Base、Task、客户、商机或跟进。
+- 真实本机探针确认唯一租户“P0 演示企业”和销售“李胜彬”的 active 状态、本人 open_id、个人
+  Review 权限、数据源和空 uncertain 账本。候选扫描 `complete` 但为 0 条，最终 blockers 为
+  `history_governance_incomplete`、`sender_unconfigured`、`candidate_not_found`；提醒/执行保持关闭，
+  探针后该租户提醒账本仍为空，未调用 `/execute`，未创建 cron。
+- 自动化覆盖凭证拒绝、开关意外开启、凭证复用、白名单/身份/open_id/权限/数据源失败、账本异常、
+  来源不完整、零/非白名单/多/单候选、目标中途消失及模块装配。完整质量门与发布证据以当前状态
+  和需求追踪矩阵为准。
+
 ## 2026-10-05 S4-013 受控真实执行入口（自动化完成，真实投递关闭）
 
 - 新增 `POST /internal/stale-opportunity-reminder/execute`，使用独立于扫描入口的

@@ -42,6 +42,8 @@ import {
 interface StaleOpportunityTriggerRunInput {
   now?: Date;
   traceId?: string;
+  tenantId?: string;
+  memberId?: string;
 }
 
 interface StaleOpportunityTriggerControlReader {
@@ -119,11 +121,17 @@ class StaleOpportunityTriggerService {
       return this.disabled(traceId, now);
     }
 
-    const integrations: TenantIntegration[] | null =
-      await this.listIntegrations();
-    if (integrations === null) {
+    const listedIntegrations: TenantIntegration[] | null =
+      await this.listIntegrations(input.tenantId);
+    if (listedIntegrations === null) {
       return this.integrationEnumerationFailure(traceId, now);
     }
+    const integrations: TenantIntegration[] = input.tenantId
+      ? listedIntegrations.filter(
+          (integration: TenantIntegration): boolean =>
+            integration.tenantId === input.tenantId,
+        )
+      : listedIntegrations;
 
     const state: TriggerAccumulator = {
       candidates: [],
@@ -133,13 +141,28 @@ class StaleOpportunityTriggerService {
       summary: createSummary(integrations.length),
       incomplete: false,
     };
+    if (input.tenantId && integrations.length === 0) {
+      this.failTenant(input.tenantId, state);
+      return this.finalize(traceId, now, state);
+    }
     for (const integration of integrations) {
-      await this.scanTenant(integration, now, state);
+      await this.scanTenant(integration, now, state, input.memberId);
     }
     return this.finalize(traceId, now, state);
   }
 
-  private async listIntegrations(): Promise<TenantIntegration[] | null> {
+  private async listIntegrations(
+    tenantId?: string,
+  ): Promise<TenantIntegration[] | null> {
+    if (tenantId) {
+      try {
+        const integration: TenantIntegration | null =
+          await this.controlStore.resolveTenantById(tenantId);
+        return integration?.tenantId === tenantId ? [integration] : [];
+      } catch (_error: unknown) {
+        return [];
+      }
+    }
     if (!this.controlStore.listActiveIntegrations) {
       return null;
     }
@@ -159,6 +182,7 @@ class StaleOpportunityTriggerService {
     listedIntegration: TenantIntegration,
     now: Date,
     state: TriggerAccumulator,
+    targetMemberId?: string,
   ): Promise<void> {
     let integration: TenantIntegration | null;
     try {
@@ -180,8 +204,25 @@ class StaleOpportunityTriggerService {
       this.failTenant(integration.tenantId, state);
       return;
     }
-    state.summary.memberCount += members.length;
-    const orderedMembers: PlatformMember[] = [...members].sort(
+    const selectedMembers: PlatformMember[] = targetMemberId
+      ? members.filter(
+          (member: PlatformMember): boolean => member.id === targetMemberId,
+        )
+      : members;
+    if (targetMemberId && selectedMembers.length === 0) {
+      state.incomplete = true;
+      state.summary.incompleteMemberCount += 1;
+      this.addMemberSkip(
+        integration.tenantId,
+        targetMemberId,
+        'source_unverified',
+        'failed',
+        state,
+      );
+      return;
+    }
+    state.summary.memberCount += selectedMembers.length;
+    const orderedMembers: PlatformMember[] = [...selectedMembers].sort(
       (left: PlatformMember, right: PlatformMember): number =>
         left.id.localeCompare(right.id),
     );

@@ -11,6 +11,7 @@ import {
   HttpStatus,
   Inject,
   Post,
+  Optional,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import {
 import {
   type StaleOpportunityReminderExecutionRequest,
   type StaleOpportunityReminderExecutionResponse,
+  type StaleOpportunityReminderExecutionReadinessResponse,
   type StaleOpportunityReminderPlanResponse,
   type StaleOpportunityReminderPreflightResponse,
 } from '@shared/api.interface';
@@ -32,6 +34,8 @@ import { StaleOpportunityReminderPlanService } from
   './stale-opportunity-reminder-plan.service';
 import { StaleOpportunityReminderExecutionService } from
   './stale-opportunity-reminder-execution.service';
+import { StaleOpportunityReminderExecutionReadinessService } from
+  './stale-opportunity-reminder-execution-readiness.service';
 
 interface StaleOpportunityReminderRuntimePreflightRunner {
   prepare(): Promise<StaleOpportunityReminderPreflightResponse>;
@@ -45,6 +49,10 @@ interface StaleOpportunityReminderRuntimeExecutionRunner {
   execute(
     input: StaleOpportunityReminderExecutionRequest,
   ): Promise<StaleOpportunityReminderExecutionResponse>;
+}
+
+interface StaleOpportunityReminderExecutionReadinessRunner {
+  inspect(): Promise<StaleOpportunityReminderExecutionReadinessResponse>;
 }
 
 const TOKEN_PATTERN: RegExp = /^Bearer ([^\s]+)$/iu;
@@ -63,6 +71,10 @@ class StaleOpportunityReminderRuntimeController {
     private readonly planner: StaleOpportunityReminderRuntimePlanRunner,
     @Inject(StaleOpportunityReminderExecutionService)
     private readonly execution: StaleOpportunityReminderRuntimeExecutionRunner,
+    @Optional()
+    @Inject(StaleOpportunityReminderExecutionReadinessService)
+    private readonly executionReadiness?:
+      StaleOpportunityReminderExecutionReadinessRunner,
   ) {}
 
   @Get('preflight')
@@ -93,6 +105,21 @@ class StaleOpportunityReminderRuntimeController {
   ): Promise<StaleOpportunityReminderExecutionResponse> {
     this.assertExecutionAuthorized(authorization);
     return this.execution.execute(this.parseExecutionRequest(body));
+  }
+
+  @Get('execution-readiness')
+  @Header('Cache-Control', 'no-store')
+  async executionReadinessCheck(
+    @Headers('authorization') authorization?: string,
+  ): Promise<StaleOpportunityReminderExecutionReadinessResponse> {
+    this.assertExecutionAuthorized(authorization);
+    if (!this.executionReadiness) {
+      throw new ServiceUnavailableException({
+        code: 'EXECUTION_READINESS_UNAVAILABLE',
+        message: '商机提醒执行准备度检查未装配',
+      });
+    }
+    return this.executionReadiness.inspect();
   }
 
   private assertAuthorized(authorization: string | undefined): void {
@@ -178,6 +205,7 @@ class StaleOpportunityReminderRuntimeController {
 
 export { StaleOpportunityReminderRuntimeController };
 export type {
+  StaleOpportunityReminderExecutionReadinessRunner,
   StaleOpportunityReminderRuntimeExecutionRunner,
   StaleOpportunityReminderRuntimePlanRunner,
   StaleOpportunityReminderRuntimePreflightRunner,

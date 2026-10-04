@@ -476,6 +476,83 @@ describe('StaleOpportunityTriggerService', (): void => {
     ]);
   });
 
+  it('limits a readiness probe to one configured tenant and member', async (): Promise<void> => {
+    const harness: TriggerHarness = createHarness({
+      integrations: [integration(TENANT_A), integration(TENANT_B)],
+      members: [
+        member('member-a', 'ou-sales-a', TENANT_A),
+        member('member-other', 'ou-sales-other', TENANT_A),
+        member('member-b', 'ou-sales-b', TENANT_B),
+      ],
+    });
+
+    const result: StaleOpportunityTriggerResponse =
+      await harness.service.run({
+        now: NOW,
+        traceId: TRACE_ID,
+        tenantId: TENANT_A,
+        memberId: 'member-a',
+      });
+
+    expect(result.summary).toMatchObject({
+      tenantCount: 1,
+      memberCount: 1,
+      scannedMemberCount: 1,
+      candidateCount: 1,
+    });
+    expect(result.candidates).toEqual([
+      expect.objectContaining({
+        tenantId: TENANT_A,
+        memberId: 'member-a',
+        ownerOpenId: 'ou-sales-a',
+      }),
+    ]);
+    expect(harness.listActiveIntegrations).not.toHaveBeenCalled();
+    expect(harness.resolveTenantById).toHaveBeenCalledTimes(2);
+    expect(harness.listMembers).toHaveBeenCalledTimes(1);
+    expect(harness.listMembers).toHaveBeenCalledWith(TENANT_A);
+    expect(harness.getSessionByMembership).toHaveBeenCalledTimes(1);
+    expect(harness.getSessionByMembership).toHaveBeenCalledWith(
+      TENANT_A,
+      'member-a',
+      NOW,
+    );
+  });
+
+  it('fails closed when a targeted tenant or member disappears', async (): Promise<void> => {
+    const missingTenant: TriggerHarness = createHarness();
+    const missingMember: TriggerHarness = createHarness({ members: [] });
+
+    const tenantResult: StaleOpportunityTriggerResponse =
+      await missingTenant.service.run({
+        now: NOW,
+        traceId: TRACE_ID,
+        tenantId: TENANT_B,
+        memberId: 'member-b',
+      });
+    const memberResult: StaleOpportunityTriggerResponse =
+      await missingMember.service.run({
+        now: NOW,
+        traceId: TRACE_ID,
+        tenantId: TENANT_A,
+        memberId: 'member-a',
+      });
+
+    expect(tenantResult.status).toBe('incomplete');
+    expect(tenantResult.skips).toContainEqual(expect.objectContaining({
+      tenantId: TENANT_B,
+      reason: 'tenant_unavailable',
+    }));
+    expect(memberResult.status).toBe('incomplete');
+    expect(memberResult.skips).toContainEqual(expect.objectContaining({
+      tenantId: TENANT_A,
+      memberId: 'member-a',
+      reason: 'source_unverified',
+    }));
+    expect(missingTenant.readStaleOpportunityPage).not.toHaveBeenCalled();
+    expect(missingMember.readStaleOpportunityPage).not.toHaveBeenCalled();
+  });
+
   it('is deterministic and read-only for a duplicate dry-run invocation', async (): Promise<void> => {
     const harness: TriggerHarness = createHarness();
 

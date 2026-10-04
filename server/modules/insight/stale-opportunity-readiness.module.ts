@@ -32,6 +32,8 @@ import { StaleOpportunityReminderCoordinatorService } from
   './stale-opportunity-reminder-coordinator.service';
 import { StaleOpportunityReminderExecutionService } from
   './stale-opportunity-reminder-execution.service';
+import { StaleOpportunityReminderExecutionReadinessService } from
+  './stale-opportunity-reminder-execution-readiness.service';
 import { StaleOpportunityReminderService } from
   './stale-opportunity-reminder.service';
 import { StaleOpportunityScanService } from
@@ -80,6 +82,7 @@ import {
     StaleOpportunityTriggerService,
     StaleOpportunityReminderRuntimeService,
     StaleOpportunityReminderPlanService,
+    StaleOpportunityReminderExecutionReadinessService,
     {
       provide: FeishuStaleOpportunityReminderSender,
       useFactory: (

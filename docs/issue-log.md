@@ -6,6 +6,21 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-05 S4 受控执行入口缺少关闭状态下的真实准备度证据
+
+- 原风险：旧 preflight 在提醒开关关闭时直接返回 `disabled`，无法在零投递状态下核对执行凭证、
+  精确白名单、真实成员权限、Base/Task 来源、uncertain 账本和当前候选；人工拼接检查容易漏项，
+  也容易误把“配置存在”解释成“可以发送”。
+- 处理：新增执行专用凭证保护的 read-only readiness；目标扫描只访问白名单租户/成员，响应输出
+  配置、目标、账本、候选和机器可读 blockers。目标变化、权限/来源异常、零/多候选均 fail closed；
+  readiness 服务不依赖执行协调器或 sender。
+- 真实证据：唯一目标为“P0 演示企业”/“李胜彬”，租户成员 active、open_id 和个人 Review 权限
+  匹配，数据源完整，uncertain 账本为空；候选扫描完整但为 0。检查前后提醒/执行均关闭，租户提醒
+  账本回读仍为空，未调用 `/execute`。
+- 状态：`Resolved / read-only probe green / real delivery blocked`。
+- 阻断与下一动作：完成剩余历史治理；核验并记录 sender 真实权限；等待真实停滞候选后再单独确认
+  一次本人投递。当前不得启提醒、执行或 cron，不得造业务记录制造候选。
+
 ## 2026-10-05 S4 未知投递缺少人工裁决与安全恢复
 
 - 原风险：uncertain 账本只能读取，运营人员无法记录“已发送”“未发送可重试”或“继续冻结”；
@@ -321,6 +336,7 @@
 | `ISS-S4-006` | 未知投递只能停止重试，缺少可审计的只读对账清单 | Resolved / offline automated green / runtime disabled | 新增账本 uncertain 只读查询与对账服务，支持租户过滤、最多 100 条限制、最小失败证据和 fail-closed；单测与 Postgres 集成通过。无自动重发、状态修改、真实发送或 UI | 接入受控运营入口后由人工核对飞书消息结果，再单独设计明确的人工恢复动作；不得把查询结果直接变成重试 |
 | `ISS-S4-007` | 提醒投递缺少运行前统一安全门 | Resolved / automated green / runtime disabled | 新增默认关闭的运行时准备服务；静态条件缺失、未知投递存在或对账源异常均阻断，关闭时零业务读取；定向测试 `6/6` | 完成历史治理、真实 sender 和人工对账后，再把安全门接入受控投递运行时；继续禁止 cron 和真实消息 |
 | `ISS-S4-013` | 真实提醒链已有扫描、账本和 sender，但缺少受控执行入口 | Resolved / automated green / real delivery disabled | 新增独立执行令牌、单候选请求、测试租户/成员/本人 open_id 三重白名单、执行前重跑 plan、唯一候选匹配和已注册 Nest sender/协调层；冷却重复幂等，未知投递停止。定向 `29/29`、全量 Agent `409/409`、Postgres `19/19`、Lint、三套类型检查、双构建及迁移幂等通过 | 仍需历史治理、部署密钥管理和单独确认后的一次真实测试租户消息回读；不启用 cron，不把自动化假 SDK 结果当真实投递证据 |
+| `ISS-S4-014` | 受控执行入口缺少关闭状态下的真实租户/销售放行检查 | Resolved / real read-only probe / delivery blocked | 新增 execution readiness，使用独立执行凭证并将探针限制为精确白名单；真实核验租户/销售/open_id/权限/数据源/空 uncertain 账本通过，候选完整扫描为 0，探针后账本仍为空；提醒和执行关闭，未调用 execute | 完成历史治理、核验 sender 权限并等待真实停滞候选；三项齐备前不启执行、提醒或 cron，不造业务数据 |
 
 更新规则：发现问题时先补复现证据；修复后记录对应测试或运行证据；没有真实 UI 证据时不得把
 `Open` 改为 `Resolved`，也不得把 `Automated Green / UI pending` 写成 `UI Verified`。
