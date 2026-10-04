@@ -404,6 +404,22 @@ describe('PostgresStaleOpportunityReminderStore', (): void => {
       failureCode: 'TEST_UNKNOWN',
       failureMessage: 'Network outcome not verified',
     })).resolves.toBe(true);
+    await expect(store.listUncertain({
+      tenantId: first.tenantId,
+      limit: 10,
+    })).resolves.toEqual([{
+      tenantId: first.tenantId,
+      opportunityRecordId: first.opportunityRecordId,
+      followupVersion: first.followupVersion,
+      reminderKind: 'stale_followup',
+      opportunityName: first.opportunityName,
+      ownerOpenId: first.ownerOpenId,
+      attemptCount: 1,
+      dispatchStartedAt: NOW.toISOString(),
+      failureCode: 'TEST_UNKNOWN',
+      failureMessage: 'Network outcome not verified',
+      updatedAt: afterLease.toISOString(),
+    }]);
     await expect(store.claim({ ...first, now: afterLease }))
       .resolves.toEqual({ status: 'delivery_unknown' });
   });

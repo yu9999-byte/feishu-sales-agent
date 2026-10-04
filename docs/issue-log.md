@@ -224,7 +224,7 @@
 | `ISS-S4-002` | 既有商机生命周期状态缺少真实飞书端到端验收 | Resolved / UI Verified | 受控商机“P0测试-销售系统采购”真实消息位置 94、确认卡位置 96；用户确认后原卡显示“未设置 → 进行中”，Base 回读记录 `recvvyZqewDQwe` 为“进行中”；审计为 `card.confirm` → `card.processing_sent` → `action.succeeded` → `card.source_finalized`，执行结果没有客户/跟进/任务写入 | 保持回归；其余 4 条历史商机继续逐条人工确认，不批量猜测或回填 |
 | `ISS-S4-003` | 历史商机状态和可信沟通时间缺少 Web 人工确认闭环 | Resolved / automated green / UI pending | 新增逐条治理契约、负责人/状态/商机版本/跟进版本校验、写后回读、幂等键和 accepted/succeeded/failed 审计；工作台新增 Select、Calendar、二次确认和明确错误状态；定向治理测试通过 | 恢复 Codex 右侧浏览器控制句柄后，用当前销售只处理一条受控记录并回读 Base/审计；真实 UI 前不启用 S4 调度或提醒 |
 | `ISS-S4-004` | 独立 Agent 缺少可被外部 cron 安全调用的停滞扫描入口 | Resolved / cron-ready dry-run / disabled | 新增专用令牌内部 POST 入口；从 Agent Postgres 枚举有效租户/成员并重验角色权限，错误令牌读取前拒绝，任一来源不完整整批压制候选。全量 Agent `323/323`、Postgres `14/14` 和完整静态/构建门通过；未接发送器或业务写入 | 部署外部 cron 与密钥管理但保持关闭；完成历史治理、发送前重读、账本接线和受控本人通知后再开启投递 |
-| `ISS-S4-005` | 停滞候选与账本间缺少发送前二次核验 | Resolved / offline automated green / runtime disabled | 独立协调层重新校验租户、成员、角色、个人权限、完整扫描与六字段证据；异常、变化或重复候选不领取账本。单测及 Postgres + 假发送器联测覆盖冷却和证据变化；无真实飞书投递 | 完成历史数据治理、受控运行时接线与本人真实通知，建立结果未知的人工对账；UI 待环境恢复 |
+| `ISS-S4-006` | 未知投递只能停止重试，缺少可审计的只读对账清单 | Resolved / offline automated green / runtime disabled | 新增账本 uncertain 只读查询与对账服务，支持租户过滤、最多 100 条限制、最小失败证据和 fail-closed；单测与 Postgres 集成通过。无自动重发、状态修改、真实发送或 UI | 接入受控运营入口后由人工核对飞书消息结果，再单独设计明确的人工恢复动作；不得把查询结果直接变成重试 |
 
 更新规则：发现问题时先补复现证据；修复后记录对应测试或运行证据；没有真实 UI 证据时不得把
 `Open` 改为 `Resolved`，也不得把 `Automated Green / UI pending` 写成 `UI Verified`。

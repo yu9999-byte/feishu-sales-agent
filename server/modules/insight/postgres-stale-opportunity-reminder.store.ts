@@ -10,6 +10,7 @@ import type {
   StaleOpportunityReminderMarkSentInput,
   StaleOpportunityReminderMarkUnknownInput,
   StaleOpportunityReminderStore,
+  StaleOpportunityReminderUncertainRecord,
 } from './stale-opportunity-reminder.service';
 
 interface ReminderRow {
@@ -23,6 +24,20 @@ interface ReminderRow {
 
 interface UpdatedRow {
   claim_token: string;
+}
+
+interface UncertainReminderRow {
+  tenant_id: string;
+  opportunity_record_id: string;
+  followup_version: string;
+  reminder_kind: 'stale_followup';
+  opportunity_name: string;
+  owner_open_id: string;
+  attempt_count: number;
+  dispatch_started_at: Date | string | null;
+  failure_code: string | null;
+  failure_message: string | null;
+  updated_at: Date | string;
 }
 
 const toDate = (value: Date | string): Date =>
@@ -249,6 +264,71 @@ implements StaleOpportunityReminderStore {
       RETURNING claim_token
     `;
     return rows.length === 1;
+  }
+
+  async listUncertain(input: {
+    tenantId?: string;
+    limit?: number;
+  }): Promise<StaleOpportunityReminderUncertainRecord[]> {
+    const limit: number = input.limit ?? 50;
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new Error('Uncertain reminder limit must be between 1 and 100');
+    }
+    const rows: UncertainReminderRow[] = input.tenantId
+      ? await this.sql`
+          SELECT
+            tenant_id,
+            opportunity_record_id,
+            followup_version,
+            reminder_kind,
+            opportunity_name,
+            owner_open_id,
+            attempt_count,
+            dispatch_started_at,
+            failure_code,
+            failure_message,
+            updated_at
+          FROM stale_opportunity_reminders
+          WHERE status = 'uncertain'
+            AND tenant_id = ${input.tenantId}::uuid
+          ORDER BY updated_at ASC
+          LIMIT ${limit}
+        `
+      : await this.sql`
+          SELECT
+            tenant_id,
+            opportunity_record_id,
+            followup_version,
+            reminder_kind,
+            opportunity_name,
+            owner_open_id,
+            attempt_count,
+            dispatch_started_at,
+            failure_code,
+            failure_message,
+            updated_at
+          FROM stale_opportunity_reminders
+          WHERE status = 'uncertain'
+          ORDER BY updated_at ASC
+          LIMIT ${limit}
+        `;
+    return rows.map(
+      (row: UncertainReminderRow): StaleOpportunityReminderUncertainRecord => ({
+        tenantId: row.tenant_id,
+        opportunityRecordId: row.opportunity_record_id,
+        followupVersion: row.followup_version,
+        reminderKind: row.reminder_kind,
+        opportunityName: row.opportunity_name,
+        ownerOpenId: row.owner_open_id,
+        attemptCount: row.attempt_count,
+        dispatchStartedAt: row.dispatch_started_at === null
+          ? null
+          : toDate(row.dispatch_started_at).toISOString(),
+        failureCode: row.failure_code,
+        failureMessage: row.failure_message,
+        updatedAt: toDate(row.updated_at).toISOString(),
+      }),
+    );
   }
 }
 

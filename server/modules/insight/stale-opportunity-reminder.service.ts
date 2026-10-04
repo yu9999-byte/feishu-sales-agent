@@ -83,6 +83,29 @@ interface StaleOpportunityReminderStore {
   ): Promise<boolean>;
 }
 
+interface StaleOpportunityReminderUncertainRecord {
+  tenantId: string;
+  opportunityRecordId: string;
+  followupVersion: string;
+  reminderKind: StaleOpportunityReminderKind;
+  opportunityName: string;
+  ownerOpenId: string;
+  attemptCount: number;
+  dispatchStartedAt: string | null;
+  failureCode: string | null;
+  failureMessage: string | null;
+  updatedAt: string;
+}
+
+interface StaleOpportunityReminderUncertainReader {
+  listUncertain(
+    input: {
+      tenantId?: string;
+      limit?: number;
+    },
+  ): Promise<StaleOpportunityReminderUncertainRecord[]>;
+}
+
 interface StaleOpportunityReminderMessage {
   recipientOpenId: string;
   opportunityRecordId: string;
@@ -326,4 +349,6 @@ export type {
   StaleOpportunityReminderMessage,
   StaleOpportunityReminderSender,
   StaleOpportunityReminderStore,
+  StaleOpportunityReminderUncertainReader,
+  StaleOpportunityReminderUncertainRecord,
 };
