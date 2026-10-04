@@ -1,5 +1,20 @@
 # 商机停滞 7 天提醒 S4 触发规格（部分实现）
 
+## 2026-10-05 S4-013 受控真实执行入口（自动化完成，真实投递关闭）
+
+- 新增 `POST /internal/stale-opportunity-reminder/execute`，使用独立于扫描入口的
+  `STALE_OPPORTUNITY_REMINDER_EXECUTION_TOKEN`。请求严格只含 `opportunityRecordId` 和
+  `followupVersion`；服务端不接受调用方提供的 tenant、member、recipient 或 message。
+- 新增 `STALE_OPPORTUNITY_REMINDER_EXECUTION_ENABLED`，默认 `false`，并要求明确配置一个
+  `allowedTenantId`、一个 `allowedMemberId` 和该销售本人的 `allowedRecipientOpenId`。执行器
+  先调用现有安全门和 plan-only 扫描，再要求唯一匹配候选同时命中三项白名单。
+- 受控链已在 Nest 注册 sender、协调层和执行服务；每次请求最多处理一个候选。发送前仍完整
+  重验租户、成员、角色、权限、商机/跟进/Task 证据和账本状态。冷却/在途/待重试重复请求不重发，
+  `delivery_unknown` 或来源/权限/版本变化统一停止并返回机器可读 halted 结果。
+- 本阶段只验证 fake SDK、拒绝路径、token 隔离、唯一候选、幂等和模块装配；不启 cron、不调用
+  真实端点、不发送飞书消息。真实投递必须在历史治理、密钥管理、日志与消息回读准备完成后由人
+  单独确认。
+
 ## 2026-10-05 飞书本人提醒适配器（未接运行时）
 
 - `FeishuStaleOpportunityReminderSender` 重新按 `tenantId` 解析有效租户集成，使用该租户飞书应用

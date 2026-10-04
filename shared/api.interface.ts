@@ -777,6 +777,56 @@ export interface StaleOpportunityReminderPlanResponse {
   warnings: string[];
 }
 
+export interface StaleOpportunityReminderExecutionRequest {
+  opportunityRecordId: string;
+  followupVersion: string;
+}
+
+export type StaleOpportunityReminderExecutionStatus =
+  | 'disabled'
+  | 'blocked'
+  | 'incomplete'
+  | 'candidate_not_found'
+  | 'candidate_ambiguous'
+  | 'candidate_not_allowed'
+  | 'completed'
+  | 'halted';
+
+export type StaleOpportunityReminderExecutionReason =
+  | 'delivered'
+  | 'cooling_down'
+  | 'in_flight'
+  | 'retry_scheduled'
+  | 'delivery_unknown'
+  | 'disabled'
+  | 'owner_mismatch'
+  | 'invalid_evidence'
+  | 'delivery_failed'
+  | 'finalization_conflict'
+  | 'source_unverified'
+  | 'tenant_unavailable'
+  | 'authorization_denied'
+  | 'permission_missing'
+  | 'candidate_changed'
+  | 'execution_unavailable';
+
+export interface StaleOpportunityReminderExecutionOutcome {
+  status: 'sent' | 'skipped' | 'failed';
+  reason: StaleOpportunityReminderExecutionReason;
+  messageId?: string;
+  retryAt?: string;
+}
+
+export interface StaleOpportunityReminderExecutionResponse {
+  mode: 'controlled-delivery';
+  status: StaleOpportunityReminderExecutionStatus;
+  generatedAt: string;
+  planTraceId: string | null;
+  candidate: StaleOpportunityTriggerCandidate | null;
+  outcome: StaleOpportunityReminderExecutionOutcome | null;
+  warnings: string[];
+}
+
 export type StaleOpportunityReminderKind = 'stale_followup';
 
 export type StaleOpportunityReminderReconciliationDecision =

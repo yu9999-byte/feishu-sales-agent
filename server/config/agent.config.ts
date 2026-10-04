@@ -44,6 +44,13 @@ export interface AgentRuntimeConfig {
     enabled: boolean;
     historyGovernanceReady: boolean;
     senderConfigured: boolean;
+    execution?: {
+      enabled: boolean;
+      triggerToken: string | undefined;
+      allowedTenantId: string | undefined;
+      allowedMemberId: string | undefined;
+      allowedRecipientOpenId: string | undefined;
+    };
   };
   longTermMemory?: LongTermMemoryRuntimeConfig;
 }
@@ -137,6 +144,24 @@ const loadAgentConfig = (): AgentRuntimeConfig => ({
       process.env.STALE_OPPORTUNITY_REMINDER_SENDER_CONFIGURED,
       false,
     ),
+    execution: {
+      enabled: parseBoolean(
+        process.env.STALE_OPPORTUNITY_REMINDER_EXECUTION_ENABLED,
+        false,
+      ),
+      triggerToken: optionalEnvironment(
+        'STALE_OPPORTUNITY_REMINDER_EXECUTION_TOKEN',
+      ),
+      allowedTenantId: optionalEnvironment(
+        'STALE_OPPORTUNITY_REMINDER_ALLOWED_TENANT_ID',
+      ),
+      allowedMemberId: optionalEnvironment(
+        'STALE_OPPORTUNITY_REMINDER_ALLOWED_MEMBER_ID',
+      ),
+      allowedRecipientOpenId: optionalEnvironment(
+        'STALE_OPPORTUNITY_REMINDER_ALLOWED_RECIPIENT_OPEN_ID',
+      ),
+    },
   },
   longTermMemory: {
     enabled: parseBoolean(process.env.MEM0_ENABLED, false),

@@ -1,13 +1,18 @@
 import type {
+  StaleOpportunityReminderExecutionOutcome,
+  StaleOpportunityReminderExecutionRequest,
+  StaleOpportunityReminderExecutionResponse,
   StaleOpportunityReminderPlanResponse,
   StaleOpportunityTriggerCandidate,
 } from '@shared/api.interface';
+import type { AgentRuntimeConfig } from '@server/config/agent.config';
 import type {
   StaleOpportunityReminderPreparationInput,
   StaleOpportunityReminderPreparationResult,
 } from './stale-opportunity-reminder-coordinator.service';
 
-interface StaleOpportunityReminderExecutionInput {
+interface StaleOpportunityReminderExecutionInput
+extends StaleOpportunityReminderExecutionRequest {
   now?: Date;
   traceId?: string;
 }
@@ -25,107 +30,95 @@ interface StaleOpportunityReminderExecutionCoordinator {
   ): Promise<StaleOpportunityReminderPreparationResult>;
 }
 
-type StaleOpportunityReminderExecutionItemResult =
-  | StaleOpportunityReminderPreparationResult
-  | {
-      status: 'failed';
-      reason: 'execution_unavailable';
-    };
-
-interface StaleOpportunityReminderExecutionOutcome {
-  candidate: StaleOpportunityTriggerCandidate;
-  result: StaleOpportunityReminderExecutionItemResult;
-}
-
-interface StaleOpportunityReminderExecutionSummary {
-  plannedCount: number;
-  processedCount: number;
-  sentCount: number;
-  skippedCount: number;
-  failedCount: number;
-  remainingCount: number;
-}
-
-interface StaleOpportunityReminderExecutionResult {
-  status: 'disabled' | 'blocked' | 'incomplete' | 'completed' | 'halted';
-  generatedAt: string;
-  plan: StaleOpportunityReminderPlanResponse | null;
-  summary: StaleOpportunityReminderExecutionSummary;
-  outcomes: StaleOpportunityReminderExecutionOutcome[];
-  warnings: string[];
-}
+const IDEMPOTENT_SKIP_REASONS: Set<string> = new Set([
+  'cooling_down',
+  'in_flight',
+  'retry_scheduled',
+]);
 
 class StaleOpportunityReminderExecutionService {
   constructor(
+    private readonly config: AgentRuntimeConfig,
     private readonly planner: StaleOpportunityReminderExecutionPlanRunner,
     private readonly coordinator: StaleOpportunityReminderExecutionCoordinator,
   ) {}
 
   async execute(
-    input: StaleOpportunityReminderExecutionInput = {},
-  ): Promise<StaleOpportunityReminderExecutionResult> {
+    input: StaleOpportunityReminderExecutionInput,
+  ): Promise<StaleOpportunityReminderExecutionResponse> {
     const now: Date = input.now ?? new Date();
+    const execution = this.config.staleOpportunityReminder?.execution;
+    if (execution?.enabled !== true) {
+      return this.empty('disabled', now);
+    }
+    if (!this.hasCompleteExecutionConfig()) {
+      return this.empty('blocked', now, [
+        'stale_opportunity_reminder_execution_config_incomplete',
+      ]);
+    }
+    if (!input.opportunityRecordId.trim() || !input.followupVersion.trim()) {
+      return this.empty('incomplete', now, [
+        'stale_opportunity_reminder_execution_request_invalid',
+      ]);
+    }
+
     let plan: StaleOpportunityReminderPlanResponse;
     try {
-      plan = await this.planner.plan({ now, traceId: input.traceId });
-    } catch (_error: unknown) {
-      return this.empty(
-        'incomplete',
+      plan = await this.planner.plan({
         now,
-        null,
-        ['stale_opportunity_reminder_execution_plan_unavailable'],
-      );
+        traceId: input.traceId,
+      });
+    } catch (_error: unknown) {
+      return this.empty('incomplete', now, [
+        'stale_opportunity_reminder_execution_plan_unavailable',
+      ]);
     }
     if (plan.status !== 'ready') {
-      return this.empty(plan.status, now, plan);
+      return this.empty(plan.status, now, plan.warnings, plan.scanTraceId);
     }
-    if (!this.isReadyPlanConsistent(plan)) {
-      return this.empty(
-        'incomplete',
-        now,
-        plan,
-        ['stale_opportunity_reminder_execution_invalid_plan'],
-      );
-    }
-    if (this.hasDuplicateCandidate(plan.items)) {
-      return this.empty(
-        'incomplete',
-        now,
-        plan,
-        ['stale_opportunity_reminder_execution_duplicate_candidate'],
-      );
+    const planTraceId: string | null = plan.scanTraceId;
+    if (!this.isReadyPlanConsistent(plan) || planTraceId === null) {
+      return this.empty('incomplete', now, [
+        'stale_opportunity_reminder_execution_invalid_plan',
+      ], planTraceId);
     }
 
-    const outcomes: StaleOpportunityReminderExecutionOutcome[] = [];
-    const warnings: string[] = [];
-    let halted: boolean = false;
-    for (const item of plan.items) {
-      const result: StaleOpportunityReminderExecutionItemResult =
-        await this.executeItem(item, now, warnings);
-      outcomes.push({ candidate: item, result });
-      if (this.shouldHalt(result)) {
-        halted = true;
-        warnings.push('stale_opportunity_reminder_execution_halted');
-        break;
-      }
+    const matches: StaleOpportunityTriggerCandidate[] = plan.items.filter(
+      (candidate: StaleOpportunityTriggerCandidate): boolean =>
+        candidate.opportunityRecordId === input.opportunityRecordId &&
+        candidate.followupVersion === input.followupVersion,
+    );
+    if (matches.length === 0) {
+      return this.empty('candidate_not_found', now, [], planTraceId);
     }
-    return {
-      status: halted ? 'halted' : 'completed',
-      generatedAt: now.toISOString(),
-      plan,
-      summary: this.summarize(plan.items.length, outcomes),
-      outcomes,
-      warnings: Array.from(new Set<string>(warnings)).sort(),
-    };
+    if (matches.length !== 1) {
+      return this.empty('candidate_ambiguous', now, [
+        'stale_opportunity_reminder_execution_candidate_ambiguous',
+      ], planTraceId);
+    }
+
+    const candidate: StaleOpportunityTriggerCandidate = matches[0];
+    if (!this.isAllowedCandidate(candidate)) {
+      return this.result(
+        'candidate_not_allowed',
+        now,
+        planTraceId,
+        candidate,
+        null,
+        ['stale_opportunity_reminder_execution_candidate_not_allowed'],
+      );
+    }
+    return this.deliver(candidate, now, planTraceId);
   }
 
-  private async executeItem(
+  private async deliver(
     candidate: StaleOpportunityTriggerCandidate,
     now: Date,
-    warnings: string[],
-  ): Promise<StaleOpportunityReminderExecutionItemResult> {
+    planTraceId: string,
+  ): Promise<StaleOpportunityReminderExecutionResponse> {
+    let outcome: StaleOpportunityReminderExecutionOutcome;
     try {
-      return await this.coordinator.prepareAndDeliver({
+      outcome = await this.coordinator.prepareAndDeliver({
         enabled: true,
         tenantId: candidate.tenantId,
         memberId: candidate.memberId,
@@ -140,21 +133,46 @@ class StaleOpportunityReminderExecutionService {
         now,
       });
     } catch (_error: unknown) {
-      warnings.push('stale_opportunity_reminder_execution_unavailable');
-      return { status: 'failed', reason: 'execution_unavailable' };
+      outcome = {
+        status: 'failed',
+        reason: 'execution_unavailable',
+      };
     }
+    const completed: boolean = outcome.status === 'sent' || (
+      outcome.status === 'skipped' &&
+      IDEMPOTENT_SKIP_REASONS.has(outcome.reason)
+    );
+    return this.result(
+      completed ? 'completed' : 'halted',
+      now,
+      planTraceId,
+      candidate,
+      outcome,
+      completed ? [] : ['stale_opportunity_reminder_execution_halted'],
+    );
   }
 
-  private shouldHalt(
-    result: StaleOpportunityReminderExecutionItemResult,
+  private hasCompleteExecutionConfig(): boolean {
+    const execution = this.config.staleOpportunityReminder?.execution;
+    const executionToken: string | undefined = execution?.triggerToken?.trim();
+    const scanToken: string | undefined =
+      this.config.staleOpportunityScan?.triggerToken?.trim();
+    return Boolean(
+      executionToken &&
+      executionToken !== scanToken &&
+      execution.allowedTenantId?.trim() &&
+      execution.allowedMemberId?.trim() &&
+      execution.allowedRecipientOpenId?.trim(),
+    );
+  }
+
+  private isAllowedCandidate(
+    candidate: StaleOpportunityTriggerCandidate,
   ): boolean {
-    if (result.status === 'failed') return true;
-    return result.reason === 'source_unverified' ||
-      result.reason === 'tenant_unavailable' ||
-      result.reason === 'delivery_unknown' ||
-      result.reason === 'invalid_evidence' ||
-      result.reason === 'owner_mismatch' ||
-      result.reason === 'disabled';
+    const execution = this.config.staleOpportunityReminder?.execution;
+    return candidate.tenantId === execution?.allowedTenantId &&
+      candidate.memberId === execution.allowedMemberId &&
+      candidate.ownerOpenId === execution.allowedRecipientOpenId;
   }
 
   private isReadyPlanConsistent(
@@ -167,66 +185,41 @@ class StaleOpportunityReminderExecutionService {
       plan.summary.suppressedCandidateCount === 0;
   }
 
-  private hasDuplicateCandidate(
-    candidates: StaleOpportunityTriggerCandidate[],
-  ): boolean {
-    const keys: Set<string> = new Set();
-    for (const candidate of candidates) {
-      const key: string = JSON.stringify([
-        candidate.tenantId,
-        candidate.opportunityRecordId,
-        candidate.followupVersion,
-      ]);
-      if (keys.has(key)) return true;
-      keys.add(key);
-    }
-    return false;
-  }
-
-  private summarize(
-    plannedCount: number,
-    outcomes: StaleOpportunityReminderExecutionOutcome[],
-  ): StaleOpportunityReminderExecutionSummary {
-    return {
-      plannedCount,
-      processedCount: outcomes.length,
-      sentCount: outcomes.filter(
-        (outcome: StaleOpportunityReminderExecutionOutcome): boolean =>
-          outcome.result.status === 'sent',
-      ).length,
-      skippedCount: outcomes.filter(
-        (outcome: StaleOpportunityReminderExecutionOutcome): boolean =>
-          outcome.result.status === 'skipped',
-      ).length,
-      failedCount: outcomes.filter(
-        (outcome: StaleOpportunityReminderExecutionOutcome): boolean =>
-          outcome.result.status === 'failed',
-      ).length,
-      remainingCount: plannedCount - outcomes.length,
-    };
-  }
-
   private empty(
-    status: 'disabled' | 'blocked' | 'incomplete',
+    status: Exclude<
+      StaleOpportunityReminderExecutionResponse['status'],
+      'completed' | 'halted' | 'candidate_not_allowed'
+    >,
     now: Date,
-    plan: StaleOpportunityReminderPlanResponse | null,
     warnings: string[] = [],
-  ): StaleOpportunityReminderExecutionResult {
-    const plannedCount: number = plan?.items.length ?? 0;
+    planTraceId: string | null = null,
+  ): StaleOpportunityReminderExecutionResponse {
+    return this.result(
+      status,
+      now,
+      planTraceId,
+      null,
+      null,
+      warnings,
+    );
+  }
+
+  private result(
+    status: StaleOpportunityReminderExecutionResponse['status'],
+    now: Date,
+    planTraceId: string | null,
+    candidate: StaleOpportunityTriggerCandidate | null,
+    outcome: StaleOpportunityReminderExecutionOutcome | null,
+    warnings: string[],
+  ): StaleOpportunityReminderExecutionResponse {
     return {
+      mode: 'controlled-delivery',
       status,
       generatedAt: now.toISOString(),
-      plan,
-      summary: {
-        plannedCount,
-        processedCount: 0,
-        sentCount: 0,
-        skippedCount: 0,
-        failedCount: 0,
-        remainingCount: plannedCount,
-      },
-      outcomes: [],
-      warnings,
+      planTraceId,
+      candidate,
+      outcome,
+      warnings: Array.from(new Set<string>(warnings)).sort(),
     };
   }
 }
@@ -235,9 +228,5 @@ export { StaleOpportunityReminderExecutionService };
 export type {
   StaleOpportunityReminderExecutionCoordinator,
   StaleOpportunityReminderExecutionInput,
-  StaleOpportunityReminderExecutionItemResult,
-  StaleOpportunityReminderExecutionOutcome,
   StaleOpportunityReminderExecutionPlanRunner,
-  StaleOpportunityReminderExecutionResult,
-  StaleOpportunityReminderExecutionSummary,
 };

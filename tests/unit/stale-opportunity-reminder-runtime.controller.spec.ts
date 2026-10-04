@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -6,11 +7,13 @@ import { MODULE_METADATA } from '@nestjs/common/constants';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
+  StaleOpportunityReminderExecutionResponse,
   StaleOpportunityReminderPlanResponse,
 } from '@shared/api.interface';
 import type { AgentRuntimeConfig } from '@server/config/agent.config';
 import {
   StaleOpportunityReminderRuntimeController,
+  type StaleOpportunityReminderRuntimeExecutionRunner,
   type StaleOpportunityReminderRuntimePlanRunner,
   type StaleOpportunityReminderRuntimePreflightRunner,
 } from '@server/modules/insight/stale-opportunity-reminder-runtime.controller';
@@ -46,6 +49,13 @@ const runtimeConfig = (
     enabled: false,
     historyGovernanceReady: false,
     senderConfigured: false,
+    execution: {
+      enabled: false,
+      triggerToken: undefined,
+      allowedTenantId: undefined,
+      allowedMemberId: undefined,
+      allowedRecipientOpenId: undefined,
+    },
   },
 });
 
@@ -72,6 +82,23 @@ const planRunner = (): StaleOpportunityReminderRuntimePlanRunner => ({
     planResponse),
 });
 
+const executionResponse: StaleOpportunityReminderExecutionResponse = {
+  mode: 'controlled-delivery',
+  status: 'disabled',
+  generatedAt: NOW,
+  planTraceId: null,
+  candidate: null,
+  outcome: null,
+  warnings: [],
+};
+
+const executionRunner = (): StaleOpportunityReminderRuntimeExecutionRunner => ({
+  execute: vi.fn(
+    async (): Promise<StaleOpportunityReminderExecutionResponse> =>
+      executionResponse,
+  ),
+});
+
 describe('StaleOpportunityReminderRuntimeController', (): void => {
   it('registers the protected preflight controller in the insight module', (): void => {
     const controllers: unknown = Reflect.getMetadata(
@@ -92,6 +119,7 @@ describe('StaleOpportunityReminderRuntimeController', (): void => {
       runtimeConfig(),
       runner,
       planRunner(),
+      executionRunner(),
     );
 
     await expect(controller.preflight('Bearer supplied-token')).rejects
@@ -107,6 +135,7 @@ describe('StaleOpportunityReminderRuntimeController', (): void => {
       runtimeConfig('correct-trigger-token'),
       runner,
       planRunner(),
+      executionRunner(),
     );
 
     await expect(controller.preflight()).rejects
@@ -124,6 +153,7 @@ describe('StaleOpportunityReminderRuntimeController', (): void => {
       runtimeConfig('correct-trigger-token'),
       runner,
       planRunner(),
+      executionRunner(),
     );
 
     await expect(controller.preflight('Bearer correct-trigger-token'))
@@ -140,6 +170,7 @@ describe('StaleOpportunityReminderRuntimeController', (): void => {
       runtimeConfig('correct-trigger-token'),
       { prepare },
       { plan },
+      executionRunner(),
     );
 
     await expect(controller.plan('Bearer wrong-trigger-token')).rejects
@@ -157,11 +188,81 @@ describe('StaleOpportunityReminderRuntimeController', (): void => {
       runtimeConfig('correct-trigger-token'),
       { prepare },
       { plan },
+      executionRunner(),
     );
 
     await expect(controller.plan('Bearer correct-trigger-token'))
       .resolves.toEqual(planResponse);
     expect(plan).toHaveBeenCalledTimes(1);
     expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it('uses a separate execution credential before parsing input', async (): Promise<void> => {
+    const config: AgentRuntimeConfig = runtimeConfig('scan-token');
+    config.staleOpportunityReminder!.execution!.triggerToken =
+      'execution-token';
+    const execute = vi.fn(
+      async (): Promise<StaleOpportunityReminderExecutionResponse> =>
+        executionResponse,
+    );
+    const controller = new StaleOpportunityReminderRuntimeController(
+      config,
+      { prepare: vi.fn() },
+      planRunner(),
+      { execute },
+    );
+
+    await expect(controller.execute({}, 'Bearer scan-token')).rejects
+      .toBeInstanceOf(UnauthorizedException);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('rejects extra caller-controlled execution fields', async (): Promise<void> => {
+    const config: AgentRuntimeConfig = runtimeConfig();
+    config.staleOpportunityReminder!.execution!.triggerToken =
+      'execution-token';
+    const execute = vi.fn(
+      async (): Promise<StaleOpportunityReminderExecutionResponse> =>
+        executionResponse,
+    );
+    const controller = new StaleOpportunityReminderRuntimeController(
+      config,
+      { prepare: vi.fn() },
+      planRunner(),
+      { execute },
+    );
+
+    await expect(controller.execute({
+      opportunityRecordId: 'opportunity-1',
+      followupVersion: 'version-1',
+      recipientOpenId: 'ou_attacker',
+    }, 'Bearer execution-token')).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('accepts only the exact candidate key for execution', async (): Promise<void> => {
+    const config: AgentRuntimeConfig = runtimeConfig();
+    config.staleOpportunityReminder!.execution!.triggerToken =
+      'execution-token';
+    const execute = vi.fn(
+      async (): Promise<StaleOpportunityReminderExecutionResponse> =>
+        executionResponse,
+    );
+    const controller = new StaleOpportunityReminderRuntimeController(
+      config,
+      { prepare: vi.fn() },
+      planRunner(),
+      { execute },
+    );
+    const request = {
+      opportunityRecordId: 'opportunity-1',
+      followupVersion: 'version-1',
+    };
+
+    await expect(controller.execute(request, 'Bearer execution-token'))
+      .resolves.toEqual(executionResponse);
+    expect(execute).toHaveBeenCalledWith(request);
   });
 });

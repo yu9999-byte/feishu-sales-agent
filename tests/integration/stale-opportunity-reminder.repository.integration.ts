@@ -7,6 +7,7 @@ import type {
   PlatformSessionResponse,
   StaleOpportunityTriggerResponse,
 } from '@shared/api.interface';
+import type { AgentRuntimeConfig } from '@server/config/agent.config';
 import type {
   StaleOpportunityFollowupPage,
   StaleOpportunityPage,
@@ -227,51 +228,70 @@ describe('Stale opportunity preparation with persistent reminder ledger', (): vo
         uncertainDeliveryFound: false,
       })),
     }, { run });
+    const executionConfig: AgentRuntimeConfig = {
+      host: '127.0.0.1',
+      port: 3100,
+      databaseUrl: 'postgres://test',
+      llm: {
+        baseUrl: 'https://llm.example.test',
+        apiKey: 'test-key',
+        model: 'test-model',
+      },
+      feishu: {
+        verificationToken: 'verification-token',
+        encryptKey: undefined,
+      },
+      staleOpportunityReminder: {
+        enabled: true,
+        historyGovernanceReady: true,
+        senderConfigured: true,
+        execution: {
+          enabled: true,
+          triggerToken: 'execution-token',
+          allowedTenantId: COORDINATOR_TENANT_ID,
+          allowedMemberId: 'member-sales-a',
+          allowedRecipientOpenId: 'ou_sales_a',
+        },
+      },
+    };
     const execution = new StaleOpportunityReminderExecutionService(
+      executionConfig,
       planner,
       coordinator,
     );
 
-    await expect(execution.execute({ now: NOW })).resolves.toMatchObject({
+    const originalRequest = {
+      opportunityRecordId: evidence.opportunityRecordId,
+      followupVersion: evidence.followupVersion,
+      now: NOW,
+    };
+    await expect(execution.execute(originalRequest)).resolves.toMatchObject({
       status: 'completed',
-      summary: {
-        plannedCount: 1,
-        processedCount: 1,
-        sentCount: 1,
-        remainingCount: 0,
+      outcome: {
+        status: 'sent',
+        reason: 'delivered',
+        messageId: 'om_fake_coordinator_1',
       },
-      outcomes: [{
-        result: {
-          status: 'sent',
-          reason: 'delivered',
-          messageId: 'om_fake_coordinator_1',
-        },
-      }],
     });
-    await expect(execution.execute({ now: NOW })).resolves.toMatchObject({
+    await expect(execution.execute(originalRequest)).resolves.toMatchObject({
       status: 'completed',
-      summary: {
-        plannedCount: 1,
-        processedCount: 1,
-        skippedCount: 1,
+      outcome: {
+        status: 'skipped',
+        reason: 'cooling_down',
+        retryAt: new Date(NOW.getTime() + 7 * DAY_MS).toISOString(),
       },
-      outcomes: [{
-        result: {
-          status: 'skipped',
-          reason: 'cooling_down',
-          retryAt: new Date(NOW.getTime() + 7 * DAY_MS).toISOString(),
-        },
-      }],
     });
     plannedVersion = 'changed-source-version';
-    await expect(execution.execute({ now: NOW })).resolves.toMatchObject({
-      status: 'completed',
-      outcomes: [{
-        result: {
-          status: 'skipped',
-          reason: 'candidate_changed',
-        },
-      }],
+    await expect(execution.execute({
+      opportunityRecordId: evidence.opportunityRecordId,
+      followupVersion: plannedVersion,
+      now: NOW,
+    })).resolves.toMatchObject({
+      status: 'halted',
+      outcome: {
+        status: 'skipped',
+        reason: 'candidate_changed',
+      },
     });
     expect(run).toHaveBeenCalledTimes(3);
     expect(sender.send).toHaveBeenCalledTimes(1);
