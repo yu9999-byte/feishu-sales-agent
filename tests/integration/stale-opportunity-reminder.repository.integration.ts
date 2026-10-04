@@ -1,15 +1,31 @@
 import { config as loadEnvironment } from 'dotenv';
 import postgres from 'postgres';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import type { Sql } from 'postgres';
+import type { PlatformSessionResponse } from '@shared/api.interface';
+import type {
+  StaleOpportunityFollowupPage,
+  StaleOpportunityPage,
+  TenantIntegration,
+} from '@server/modules/agent-core/agent.types';
 import {
   PostgresStaleOpportunityReminderStore,
 } from '@server/modules/insight/postgres-stale-opportunity-reminder.store';
+import {
+  StaleOpportunityReminderCoordinatorService,
+} from '@server/modules/insight/stale-opportunity-reminder-coordinator.service';
 import type {
   StaleOpportunityReminderClaimInput,
   StaleOpportunityReminderClaimResult,
+  StaleOpportunityReminderSender,
 } from '@server/modules/insight/stale-opportunity-reminder.service';
+import {
+  StaleOpportunityReminderService,
+} from '@server/modules/insight/stale-opportunity-reminder.service';
+import {
+  StaleOpportunityScanService,
+} from '@server/modules/insight/stale-opportunity-scan.service';
 
 loadEnvironment({
   path: ['.env.local', '.env'],
@@ -17,6 +33,8 @@ loadEnvironment({
 });
 
 const TENANT_ID: string = '10000000-0000-4000-8000-00000000000c';
+const COORDINATOR_TENANT_ID: string =
+  '10000000-0000-4000-8000-00000000000e';
 const NOW: Date = new Date('2026-09-29T02:00:00.000Z');
 const DAY_MS: number = 24 * 60 * 60 * 1_000;
 const databaseUrl: string | undefined = process.env.DATABASE_URL;
@@ -29,6 +47,183 @@ const sql: Sql = postgres(databaseUrl, {
   connect_timeout: 10,
   idle_timeout: 5,
   onnotice: (): void => undefined,
+});
+
+describe('Stale opportunity preparation with persistent reminder ledger', (): void => {
+  beforeAll(async (): Promise<void> => {
+    await sql`
+      DELETE FROM agent_tenants
+      WHERE id = ${COORDINATOR_TENANT_ID}::uuid
+    `;
+    await sql`
+      INSERT INTO agent_tenants (
+        id,
+        feishu_tenant_key,
+        name,
+        status
+      ) VALUES (
+        ${COORDINATOR_TENANT_ID}::uuid,
+        'reminder-coordinator-test-tenant',
+        '提醒协调集成测试企业',
+        'active'
+      )
+    `;
+  });
+
+  afterAll(async (): Promise<void> => {
+    await sql`
+      DELETE FROM agent_tenants
+      WHERE id = ${COORDINATOR_TENANT_ID}::uuid
+    `;
+  });
+
+  it('sends only through a fake sender, cools duplicates and never claims changed evidence', async (): Promise<void> => {
+    const integration: TenantIntegration = {
+      tenantId: COORDINATOR_TENANT_ID,
+      feishuTenantKey: 'reminder-coordinator-test-tenant',
+      name: '提醒协调集成测试企业',
+      status: 'active',
+      appId: 'cli_test',
+      appSecretEnv: 'TEST_APP_SECRET',
+      appType: 'selfBuild',
+      base: {
+        appToken: 'base-token',
+        customers: {
+          tableId: 'customers',
+          primaryField: '客户名称',
+          fields: { customerName: '客户名称' },
+        },
+        opportunities: {
+          tableId: 'opportunities',
+          primaryField: '商机名称',
+          fields: {
+            opportunityName: '商机名称',
+            customerLink: '关联客户',
+          },
+        },
+        followups: {
+          tableId: 'followups',
+          primaryField: '跟进记录',
+          fields: {
+            sourceMessageId: '来源消息',
+            customerLink: '关联客户',
+            opportunityLink: '关联商机',
+            rawText: '原始内容',
+            summary: '摘要',
+          },
+        },
+      },
+    };
+    const session: PlatformSessionResponse = {
+      tenant: {
+        id: COORDINATOR_TENANT_ID,
+        name: '提醒协调集成测试企业',
+        timezone: 'Asia/Shanghai',
+      },
+      member: {
+        id: 'member-sales-a',
+        feishuOpenId: 'ou_sales_a',
+        displayName: '销售 A',
+      },
+      roles: ['sales'],
+      permissions: ['review:read-personal'],
+      navigation: [],
+      policyVersion: 'platform-authz-v1',
+    };
+    const readOpportunities = vi.fn(
+      async (): Promise<StaleOpportunityPage> => ({
+        items: [{
+          recordId: 'coordinator-opportunity-record-1',
+          name: '北辰数字化项目',
+          status: 'active',
+          ownerOpenId: 'ou_sales_a',
+          sourceVersion: 'opportunity-version-1',
+          recordUrl: null,
+        }],
+        nextPageToken: null,
+      }),
+    );
+    const readFollowups = vi.fn(
+      async (): Promise<StaleOpportunityFollowupPage> => ({
+        items: [{
+          recordId: 'coordinator-followup-record-1',
+          opportunityRecordId: 'coordinator-opportunity-record-1',
+          communicationAt: '2026-09-20T02:00:00.000Z',
+          sourceVersion: 'coordinator-followup-version-1',
+        }],
+        nextPageToken: null,
+      }),
+    );
+    const sender: StaleOpportunityReminderSender = {
+      send: vi.fn(async () => ({ messageId: 'om_fake_coordinator_1' })),
+    };
+    const scanner = new StaleOpportunityScanService({
+      readStaleOpportunityPage: readOpportunities,
+      readStaleOpportunityFollowupPage: readFollowups,
+    }, {
+      searchOwnedTasks: vi.fn(async () => ({ items: [] })),
+    });
+    const coordinator = new StaleOpportunityReminderCoordinatorService(
+      { resolveTenantById: vi.fn(async () => integration) },
+      { getSessionByMembership: vi.fn(async () => session) },
+      scanner,
+      new StaleOpportunityReminderService(
+        new PostgresStaleOpportunityReminderStore(sql),
+        sender,
+      ),
+    );
+    const evidence = {
+      opportunityRecordId: 'coordinator-opportunity-record-1',
+      opportunityName: '北辰数字化项目',
+      ownerOpenId: 'ou_sales_a',
+      followupRecordId: 'coordinator-followup-record-1',
+      lastEffectiveFollowupAt: '2026-09-20T02:00:00.000Z',
+      followupVersion: 'coordinator-followup-version-1',
+    };
+    const input = {
+      enabled: true,
+      tenantId: COORDINATOR_TENANT_ID,
+      memberId: 'member-sales-a',
+      evidence,
+      now: NOW,
+    };
+
+    await expect(coordinator.prepareAndDeliver(input)).resolves.toEqual({
+      status: 'sent',
+      reason: 'delivered',
+      messageId: 'om_fake_coordinator_1',
+    });
+    await expect(coordinator.prepareAndDeliver(input)).resolves.toEqual({
+      status: 'skipped',
+      reason: 'cooling_down',
+      retryAt: new Date(NOW.getTime() + 7 * DAY_MS).toISOString(),
+    });
+    await expect(coordinator.prepareAndDeliver({
+      ...input,
+      evidence: {
+        ...evidence,
+        followupVersion: 'changed-source-version',
+      },
+    })).resolves.toEqual({
+      status: 'skipped',
+      reason: 'candidate_changed',
+    });
+    expect(sender.send).toHaveBeenCalledTimes(1);
+    expect(readOpportunities).toHaveBeenCalledTimes(3);
+    expect(readFollowups).toHaveBeenCalledTimes(3);
+
+    const rows: Array<{ followup_version: string; message_id: string }> =
+      await sql`
+        SELECT followup_version, message_id
+        FROM stale_opportunity_reminders
+        WHERE tenant_id = ${COORDINATOR_TENANT_ID}::uuid
+          AND opportunity_record_id = 'coordinator-opportunity-record-1'
+      `;
+    expect(rows).toEqual([{
+      followup_version: 'coordinator-followup-version-1',
+      message_id: 'om_fake_coordinator_1',
+    }]);
+  });
 });
 
 const claimInput = (
