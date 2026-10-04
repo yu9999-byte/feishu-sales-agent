@@ -6,6 +6,23 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-05 S4 未知投递缺少人工裁决与安全恢复
+
+- 原风险：uncertain 账本只能读取，运营人员无法记录“已发送”“未发送可重试”或“继续冻结”；
+  若直接改主账本会丢失原始失败证据，并可能被两名操作者并发覆盖。
+- 处理：新增飞书 Web 会话与 `admin:manage-policies` 保护的对账 API。tenant/operator 由服务端
+  会话注入；裁决必须携带理由和 `expectedUpdatedAt`，确认已发送还必须有 message ID 和发送时间。
+  数据库以原子 CTE 同时更新账本和追加 reconciliation 审计，冲突或跨租户请求零写入。
+- 恢复规则：`confirm_sent -> sent`；`authorize_retry -> failed + retry_after=裁决时间`，由既有
+  claim 只领取一次并增加 attempt；`keep_frozen -> uncertain`。三种动作都保留原 dispatch 和
+  failure 证据，不自动调用飞书查询或发送。
+- 证据：迁移 017 已应用并通过幂等复跑；单元/接口 `22/22`、S4 定向 `36/36`、全量 Agent
+  `396/396`、完整 Postgres `19/19`、统一 Lint、三套类型检查和 `git diff --check` 通过；
+  Agent 构建成功编译 104 个文件，Web 构建通过；发布证据在本轮结束时补充。
+- 状态：`Resolved / automated green / manual API / real delivery disabled`。
+- 下一动作：完成剩余历史数据治理后，单独设计只允许受控测试租户和本人收件人的真实执行入口；
+  不得因为人工对账已存在就自动启用 sender、cron 或真实提醒。
+
 ## 2026-10-05 S4 批次执行链缺少飞书本人提醒适配器
 
 - 原风险：离线链只有通用 sender 契约和假 sender，没有定义如何按租户取得应用身份、如何发送

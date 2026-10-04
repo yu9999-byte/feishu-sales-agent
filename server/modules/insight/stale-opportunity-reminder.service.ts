@@ -106,6 +106,46 @@ interface StaleOpportunityReminderUncertainReader {
   ): Promise<StaleOpportunityReminderUncertainRecord[]>;
 }
 
+type StaleOpportunityReminderReconciliationDecision =
+  | 'confirm_sent'
+  | 'authorize_retry'
+  | 'keep_frozen';
+
+interface StaleOpportunityReminderReconcileInput
+extends StaleOpportunityReminderKey {
+  operatorMemberId: string;
+  expectedUpdatedAt: Date;
+  decision: StaleOpportunityReminderReconciliationDecision;
+  note: string;
+  messageId?: string;
+  sentAt?: Date;
+  reconciledAt: Date;
+}
+
+type StaleOpportunityReminderReconcileResult =
+  | {
+      status: 'reconciled';
+      reconciliationId: string;
+      previousStatus: 'uncertain';
+      currentStatus: 'sent' | 'failed' | 'uncertain';
+      updatedAt: Date;
+    }
+  | {
+      status: 'conflict';
+      currentStatus: 'claimed' | 'dispatching' | 'sent' | 'failed' |
+        'uncertain';
+      currentUpdatedAt: Date;
+    }
+  | {
+      status: 'not_found';
+    };
+
+interface StaleOpportunityReminderReconciler {
+  reconcile(
+    input: StaleOpportunityReminderReconcileInput,
+  ): Promise<StaleOpportunityReminderReconcileResult>;
+}
+
 interface StaleOpportunityReminderMessage {
   tenantId: string;
   recipientOpenId: string;
@@ -356,6 +396,10 @@ export type {
   StaleOpportunityReminderMarkSentInput,
   StaleOpportunityReminderMarkUnknownInput,
   StaleOpportunityReminderMessage,
+  StaleOpportunityReminderReconcileInput,
+  StaleOpportunityReminderReconcileResult,
+  StaleOpportunityReminderReconciler,
+  StaleOpportunityReminderReconciliationDecision,
   StaleOpportunityReminderSender,
   StaleOpportunityReminderStore,
   StaleOpportunityReminderUncertainReader,

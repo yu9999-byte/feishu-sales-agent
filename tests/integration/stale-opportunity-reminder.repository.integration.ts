@@ -42,6 +42,10 @@ loadEnvironment({
 });
 
 const TENANT_ID: string = '10000000-0000-4000-8000-00000000000c';
+const OPERATOR_MEMBER_ID: string =
+  '20000000-0000-4000-8000-00000000000c';
+const SECOND_OPERATOR_MEMBER_ID: string =
+  '20000000-0000-4000-8000-00000000000d';
 const COORDINATOR_TENANT_ID: string =
   '10000000-0000-4000-8000-00000000000e';
 const NOW: Date = new Date('2026-09-29T02:00:00.000Z');
@@ -303,6 +307,44 @@ const claimInput = (
   cooldownMs: 7 * DAY_MS,
 });
 
+const createUncertainReminder = async (
+  store: PostgresStaleOpportunityReminderStore,
+  opportunityRecordId: string,
+  failedAt: Date,
+): Promise<StaleOpportunityReminderClaimInput> => {
+  const input: StaleOpportunityReminderClaimInput = {
+    ...claimInput(NOW),
+    opportunityRecordId,
+  };
+  const claim: StaleOpportunityReminderClaimResult =
+    await store.claim(input);
+  if (claim.status !== 'claimed') {
+    throw new Error('Expected a claim before uncertain delivery');
+  }
+  const dispatchStarted: boolean = await store.markDispatchStarted({
+    tenantId: input.tenantId,
+    opportunityRecordId: input.opportunityRecordId,
+    followupVersion: input.followupVersion,
+    reminderKind: input.reminderKind,
+    claimToken: claim.claimToken,
+    startedAt: NOW,
+  });
+  const markedUnknown: boolean = await store.markDeliveryUnknown({
+    tenantId: input.tenantId,
+    opportunityRecordId: input.opportunityRecordId,
+    followupVersion: input.followupVersion,
+    reminderKind: input.reminderKind,
+    claimToken: claim.claimToken,
+    failedAt,
+    failureCode: 'TEST_UNKNOWN',
+    failureMessage: 'Network outcome not verified',
+  });
+  if (!dispatchStarted || !markedUnknown) {
+    throw new Error('Expected uncertain delivery state to be persisted');
+  }
+  return input;
+};
+
 describe('PostgresStaleOpportunityReminderStore', (): void => {
   beforeAll(async (): Promise<void> => {
     await sql`
@@ -320,6 +362,29 @@ describe('PostgresStaleOpportunityReminderStore', (): void => {
         '提醒集成测试企业',
         'active'
       )
+    `;
+    await sql`
+      INSERT INTO tenant_members (
+        tenant_id,
+        id,
+        feishu_open_id,
+        display_name,
+        status
+      ) VALUES
+        (
+          ${TENANT_ID}::uuid,
+          ${OPERATOR_MEMBER_ID}::uuid,
+          'ou_reminder_operator_a',
+          '提醒运营管理员甲',
+          'active'
+        ),
+        (
+          ${TENANT_ID}::uuid,
+          ${SECOND_OPERATOR_MEMBER_ID}::uuid,
+          'ou_reminder_operator_b',
+          '提醒运营管理员乙',
+          'active'
+        )
     `;
   });
 
@@ -514,5 +579,196 @@ describe('PostgresStaleOpportunityReminderStore', (): void => {
       claimToken: claimed.claimToken,
       startedAt: NOW,
     })).resolves.toBe(false);
+  });
+
+  it('confirms a sent reminder and preserves original failure evidence in audit', async (): Promise<void> => {
+    const store = new PostgresStaleOpportunityReminderStore(sql);
+    const uncertainAt: Date = new Date(NOW.getTime() + DAY_MS);
+    const reconciledAt: Date = new Date(uncertainAt.getTime() + 60_000);
+    const input: StaleOpportunityReminderClaimInput =
+      await createUncertainReminder(
+        store,
+        'opportunity-record-confirm-sent',
+        uncertainAt,
+      );
+
+    await expect(store.reconcile({
+      tenantId: COORDINATOR_TENANT_ID,
+      opportunityRecordId: input.opportunityRecordId,
+      followupVersion: input.followupVersion,
+      reminderKind: input.reminderKind,
+      operatorMemberId: OPERATOR_MEMBER_ID,
+      expectedUpdatedAt: uncertainAt,
+      decision: 'keep_frozen',
+      note: '跨租户请求不得读取或修改提醒记录',
+      reconciledAt,
+    })).resolves.toEqual({ status: 'not_found' });
+
+    await expect(store.reconcile({
+      tenantId: input.tenantId,
+      opportunityRecordId: input.opportunityRecordId,
+      followupVersion: input.followupVersion,
+      reminderKind: input.reminderKind,
+      operatorMemberId: OPERATOR_MEMBER_ID,
+      expectedUpdatedAt: uncertainAt,
+      decision: 'confirm_sent',
+      note: '已通过飞书消息记录确认发送成功',
+      messageId: 'om_verified_delivery',
+      sentAt: new Date(NOW.getTime() + 1_000),
+      reconciledAt,
+    })).resolves.toMatchObject({
+      status: 'reconciled',
+      previousStatus: 'uncertain',
+      currentStatus: 'sent',
+      updatedAt: reconciledAt,
+    });
+
+    const ledgerRows: Array<{
+      status: string;
+      message_id: string;
+      failure_code: string;
+    }> = await sql`
+      SELECT status, message_id, failure_code
+      FROM stale_opportunity_reminders
+      WHERE tenant_id = ${TENANT_ID}::uuid
+        AND opportunity_record_id = ${input.opportunityRecordId}
+    `;
+    expect(ledgerRows).toEqual([{
+      status: 'sent',
+      message_id: 'om_verified_delivery',
+      failure_code: 'TEST_UNKNOWN',
+    }]);
+    const auditRows: Array<{
+      decision: string;
+      operator_member_id: string;
+      original_failure_code: string;
+      original_failure_message: string;
+    }> = await sql`
+      SELECT
+        decision,
+        operator_member_id,
+        original_failure_code,
+        original_failure_message
+      FROM stale_opportunity_reminder_reconciliations
+      WHERE tenant_id = ${TENANT_ID}::uuid
+        AND opportunity_record_id = ${input.opportunityRecordId}
+    `;
+    expect(auditRows).toEqual([{
+      decision: 'confirm_sent',
+      operator_member_id: OPERATOR_MEMBER_ID,
+      original_failure_code: 'TEST_UNKNOWN',
+      original_failure_message: 'Network outcome not verified',
+    }]);
+  });
+
+  it('authorizes one controlled retry after confirming no delivery', async (): Promise<void> => {
+    const store = new PostgresStaleOpportunityReminderStore(sql);
+    const uncertainAt: Date = new Date(NOW.getTime() + 2 * DAY_MS);
+    const reconciledAt: Date = new Date(uncertainAt.getTime() + 60_000);
+    const input: StaleOpportunityReminderClaimInput =
+      await createUncertainReminder(
+        store,
+        'opportunity-record-authorize-retry',
+        uncertainAt,
+      );
+
+    await expect(store.reconcile({
+      tenantId: input.tenantId,
+      opportunityRecordId: input.opportunityRecordId,
+      followupVersion: input.followupVersion,
+      reminderKind: input.reminderKind,
+      operatorMemberId: OPERATOR_MEMBER_ID,
+      expectedUpdatedAt: uncertainAt,
+      decision: 'authorize_retry',
+      note: '确认消息没有送达，允许重新尝试一次',
+      reconciledAt,
+    })).resolves.toMatchObject({
+      status: 'reconciled',
+      currentStatus: 'failed',
+    });
+    await expect(store.claim({ ...input, now: reconciledAt }))
+      .resolves.toMatchObject({
+        status: 'claimed',
+        attemptCount: 2,
+      });
+  });
+
+  it('records a frozen decision without making the reminder retryable', async (): Promise<void> => {
+    const store = new PostgresStaleOpportunityReminderStore(sql);
+    const uncertainAt: Date = new Date(NOW.getTime() + 3 * DAY_MS);
+    const reconciledAt: Date = new Date(uncertainAt.getTime() + 60_000);
+    const input: StaleOpportunityReminderClaimInput =
+      await createUncertainReminder(
+        store,
+        'opportunity-record-keep-frozen',
+        uncertainAt,
+      );
+
+    await expect(store.reconcile({
+      tenantId: input.tenantId,
+      opportunityRecordId: input.opportunityRecordId,
+      followupVersion: input.followupVersion,
+      reminderKind: input.reminderKind,
+      operatorMemberId: OPERATOR_MEMBER_ID,
+      expectedUpdatedAt: uncertainAt,
+      decision: 'keep_frozen',
+      note: '现有证据不足，继续冻结等待进一步核查',
+      reconciledAt,
+    })).resolves.toMatchObject({
+      status: 'reconciled',
+      currentStatus: 'uncertain',
+      updatedAt: reconciledAt,
+    });
+    await expect(store.claim({ ...input, now: reconciledAt }))
+      .resolves.toEqual({ status: 'delivery_unknown' });
+  });
+
+  it('accepts only one of two concurrent conflicting decisions', async (): Promise<void> => {
+    const store = new PostgresStaleOpportunityReminderStore(sql);
+    const uncertainAt: Date = new Date(NOW.getTime() + 4 * DAY_MS);
+    const reconciledAt: Date = new Date(uncertainAt.getTime() + 60_000);
+    const input: StaleOpportunityReminderClaimInput =
+      await createUncertainReminder(
+        store,
+        'opportunity-record-concurrent-reconciliation',
+        uncertainAt,
+      );
+    const key = {
+      tenantId: input.tenantId,
+      opportunityRecordId: input.opportunityRecordId,
+      followupVersion: input.followupVersion,
+      reminderKind: input.reminderKind,
+      expectedUpdatedAt: uncertainAt,
+      reconciledAt,
+    };
+
+    const results = await Promise.all([
+      store.reconcile({
+        ...key,
+        operatorMemberId: OPERATOR_MEMBER_ID,
+        decision: 'confirm_sent',
+        note: '管理员甲确认消息已经发送成功',
+        messageId: 'om_concurrent_verified',
+        sentAt: new Date(NOW.getTime() + 1_000),
+      }),
+      store.reconcile({
+        ...key,
+        operatorMemberId: SECOND_OPERATOR_MEMBER_ID,
+        decision: 'authorize_retry',
+        note: '管理员乙确认没有发送并允许重试',
+      }),
+    ]);
+
+    expect(results.filter((result) => result.status === 'reconciled'))
+      .toHaveLength(1);
+    expect(results.filter((result) => result.status === 'conflict'))
+      .toHaveLength(1);
+    const auditRows: Array<{ decision: string }> = await sql`
+      SELECT decision
+      FROM stale_opportunity_reminder_reconciliations
+      WHERE tenant_id = ${TENANT_ID}::uuid
+        AND opportunity_record_id = ${input.opportunityRecordId}
+    `;
+    expect(auditRows).toHaveLength(1);
   });
 });

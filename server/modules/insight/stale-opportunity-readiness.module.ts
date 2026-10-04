@@ -14,6 +14,12 @@ import { StaleOpportunityReadinessController } from
   './stale-opportunity-readiness.controller';
 import { StaleOpportunityReminderPlanService } from
   './stale-opportunity-reminder-plan.service';
+import {
+  STALE_OPPORTUNITY_REMINDER_RECONCILER,
+  StaleOpportunityReminderReconciliationService,
+} from './stale-opportunity-reminder-reconciliation.service';
+import { StaleOpportunityReminderReconciliationController } from
+  './stale-opportunity-reminder-reconciliation.controller';
 import { StaleOpportunityReminderRuntimeController } from
   './stale-opportunity-reminder-runtime.controller';
 import { StaleOpportunityReadinessService } from
@@ -39,6 +45,7 @@ import {
     StaleOpportunityReadinessController,
     StaleOpportunityTriggerController,
     StaleOpportunityReminderRuntimeController,
+    StaleOpportunityReminderReconciliationController,
   ],
   providers: [
     agentConfigProvider,
@@ -48,6 +55,11 @@ import {
     StaleOpportunityTriggerService,
     StaleOpportunityReminderRuntimeService,
     StaleOpportunityReminderPlanService,
+    StaleOpportunityReminderReconciliationService,
+    {
+      provide: STALE_OPPORTUNITY_REMINDER_RECONCILER,
+      useExisting: PostgresStaleOpportunityReminderStore,
+    },
     {
       provide: STALE_OPPORTUNITY_REMINDER_UNCERTAIN_READER,
       useExisting: PostgresStaleOpportunityReminderStore,

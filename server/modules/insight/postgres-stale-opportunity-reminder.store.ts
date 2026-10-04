@@ -12,6 +12,9 @@ import type {
   StaleOpportunityReminderMarkFailedInput,
   StaleOpportunityReminderMarkSentInput,
   StaleOpportunityReminderMarkUnknownInput,
+  StaleOpportunityReminderReconcileInput,
+  StaleOpportunityReminderReconcileResult,
+  StaleOpportunityReminderReconciler,
   StaleOpportunityReminderStore,
   StaleOpportunityReminderUncertainRecord,
 } from './stale-opportunity-reminder.service';
@@ -43,12 +46,25 @@ interface UncertainReminderRow {
   updated_at: Date | string;
 }
 
+interface ReconciledReminderRow {
+  reconciliation_id: string;
+  previous_status: 'uncertain';
+  resulting_status: 'sent' | 'failed' | 'uncertain';
+  reconciled_at: Date | string;
+}
+
+interface ReminderStateRow {
+  status: 'claimed' | 'dispatching' | 'sent' | 'failed' | 'uncertain';
+  updated_at: Date | string;
+}
+
 const toDate = (value: Date | string): Date =>
   value instanceof Date ? value : new Date(value);
 
 @Injectable()
 class PostgresStaleOpportunityReminderStore
-implements StaleOpportunityReminderStore {
+implements StaleOpportunityReminderStore,
+StaleOpportunityReminderReconciler {
   constructor(
     @Inject(AGENT_DATABASE)
     private readonly sql: Sql,
@@ -336,6 +352,147 @@ implements StaleOpportunityReminderStore {
         updatedAt: toDate(row.updated_at).toISOString(),
       }),
     );
+  }
+
+  async reconcile(
+    input: StaleOpportunityReminderReconcileInput,
+  ): Promise<StaleOpportunityReminderReconcileResult> {
+    const resultingStatus: 'sent' | 'failed' | 'uncertain' =
+      input.decision === 'confirm_sent'
+        ? 'sent'
+        : input.decision === 'authorize_retry'
+          ? 'failed'
+          : 'uncertain';
+    const rows: ReconciledReminderRow[] =
+      await this.sql<ReconciledReminderRow[]>`
+        WITH candidate AS (
+          SELECT
+            tenant_id,
+            opportunity_record_id,
+            followup_version,
+            reminder_kind,
+            status AS previous_status,
+            dispatch_started_at,
+            failure_code,
+            failure_message
+          FROM stale_opportunity_reminders
+          WHERE tenant_id = ${input.tenantId}::uuid
+            AND opportunity_record_id = ${input.opportunityRecordId}
+            AND followup_version = ${input.followupVersion}
+            AND reminder_kind = ${input.reminderKind}
+            AND status = 'uncertain'
+            AND updated_at = ${input.expectedUpdatedAt}
+          FOR UPDATE
+        ), updated AS (
+          UPDATE stale_opportunity_reminders AS reminder
+          SET
+            status = ${resultingStatus},
+            message_id = CASE
+              WHEN ${input.decision} = 'confirm_sent'
+                THEN ${input.messageId ?? null}
+              ELSE reminder.message_id
+            END,
+            sent_at = CASE
+              WHEN ${input.decision} = 'confirm_sent'
+                THEN ${input.sentAt ?? null}
+              ELSE reminder.sent_at
+            END,
+            retry_after = CASE
+              WHEN ${input.decision} = 'authorize_retry'
+                THEN ${input.reconciledAt}
+              WHEN ${input.decision} = 'confirm_sent'
+                THEN NULL
+              ELSE reminder.retry_after
+            END,
+            updated_at = ${input.reconciledAt}
+          FROM candidate
+          WHERE reminder.tenant_id = candidate.tenant_id
+            AND reminder.opportunity_record_id =
+              candidate.opportunity_record_id
+            AND reminder.followup_version = candidate.followup_version
+            AND reminder.reminder_kind = candidate.reminder_kind
+          RETURNING
+            reminder.tenant_id,
+            reminder.opportunity_record_id,
+            reminder.followup_version,
+            reminder.reminder_kind,
+            candidate.previous_status,
+            reminder.status AS resulting_status,
+            candidate.dispatch_started_at,
+            candidate.failure_code,
+            candidate.failure_message
+        )
+        INSERT INTO stale_opportunity_reminder_reconciliations (
+          tenant_id,
+          opportunity_record_id,
+          followup_version,
+          reminder_kind,
+          expected_updated_at,
+          previous_status,
+          decision,
+          resulting_status,
+          operator_member_id,
+          note,
+          evidence_message_id,
+          evidence_sent_at,
+          original_dispatch_started_at,
+          original_failure_code,
+          original_failure_message,
+          reconciled_at
+        )
+        SELECT
+          updated.tenant_id,
+          updated.opportunity_record_id,
+          updated.followup_version,
+          updated.reminder_kind,
+          ${input.expectedUpdatedAt},
+          updated.previous_status,
+          ${input.decision},
+          updated.resulting_status,
+          ${input.operatorMemberId}::uuid,
+          ${input.note},
+          ${input.messageId ?? null},
+          ${input.sentAt ?? null},
+          updated.dispatch_started_at,
+          updated.failure_code,
+          updated.failure_message,
+          ${input.reconciledAt}
+        FROM updated
+        RETURNING
+          id AS reconciliation_id,
+          previous_status,
+          resulting_status,
+          reconciled_at
+      `;
+    const reconciled: ReconciledReminderRow | undefined = rows[0];
+    if (reconciled) {
+      return {
+        status: 'reconciled',
+        reconciliationId: reconciled.reconciliation_id,
+        previousStatus: reconciled.previous_status,
+        currentStatus: reconciled.resulting_status,
+        updatedAt: toDate(reconciled.reconciled_at),
+      };
+    }
+
+    const existing: ReminderStateRow | undefined =
+      (await this.sql<ReminderStateRow[]>`
+        SELECT status, updated_at
+        FROM stale_opportunity_reminders
+        WHERE tenant_id = ${input.tenantId}::uuid
+          AND opportunity_record_id = ${input.opportunityRecordId}
+          AND followup_version = ${input.followupVersion}
+          AND reminder_kind = ${input.reminderKind}
+        LIMIT 1
+      `)[0];
+    if (!existing) {
+      return { status: 'not_found' };
+    }
+    return {
+      status: 'conflict',
+      currentStatus: existing.status,
+      currentUpdatedAt: toDate(existing.updated_at),
+    };
   }
 }
 

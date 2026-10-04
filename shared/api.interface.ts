@@ -777,6 +777,55 @@ export interface StaleOpportunityReminderPlanResponse {
   warnings: string[];
 }
 
+export type StaleOpportunityReminderKind = 'stale_followup';
+
+export type StaleOpportunityReminderReconciliationDecision =
+  | 'confirm_sent'
+  | 'authorize_retry'
+  | 'keep_frozen';
+
+export interface StaleOpportunityReminderReconciliationItem {
+  tenantId: string;
+  opportunityRecordId: string;
+  followupVersion: string;
+  reminderKind: StaleOpportunityReminderKind;
+  opportunityName: string;
+  ownerOpenId: string;
+  attemptCount: number;
+  dispatchStartedAt: string | null;
+  failureCode: string | null;
+  failureMessage: string | null;
+  updatedAt: string;
+}
+
+export interface StaleOpportunityReminderReconciliationListResponse {
+  status: 'ready' | 'unavailable';
+  items: StaleOpportunityReminderReconciliationItem[];
+  warnings: string[];
+}
+
+export interface StaleOpportunityReminderReconciliationRequest {
+  opportunityRecordId: string;
+  followupVersion: string;
+  reminderKind: StaleOpportunityReminderKind;
+  expectedUpdatedAt: string;
+  decision: StaleOpportunityReminderReconciliationDecision;
+  note: string;
+  messageId?: string;
+  sentAt?: string;
+}
+
+export interface StaleOpportunityReminderReconciliationResponse {
+  reconciliationId: string;
+  opportunityRecordId: string;
+  followupVersion: string;
+  reminderKind: StaleOpportunityReminderKind;
+  decision: StaleOpportunityReminderReconciliationDecision;
+  previousStatus: 'uncertain';
+  currentStatus: 'sent' | 'failed' | 'uncertain';
+  updatedAt: string;
+}
+
 export type PlatformSectionKey =
   | 'customers'
   | 'opportunities'
