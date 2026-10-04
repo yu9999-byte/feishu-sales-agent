@@ -16,7 +16,8 @@
   readiness 服务不依赖执行协调器或 sender。
 - 真实证据：唯一目标为“P0 演示企业”/“李胜彬”，租户成员 active、open_id 和个人 Review 权限
   匹配，数据源完整，uncertain 账本为空；候选扫描完整但为 0。检查前后提醒/执行均关闭，租户提醒
-  账本回读仍为空，未调用 `/execute`。
+  账本回读仍为空，未调用 `/execute`。功能 checkpoint
+  `324ce163dbccc32e7d2586a8cba27c0d293c3976` 已发布到 `github/main`。
 - 状态：`Resolved / read-only probe green / real delivery blocked`。
 - 阻断与下一动作：完成剩余历史治理；核验并记录 sender 真实权限；等待真实停滞候选后再单独确认
   一次本人投递。当前不得启提醒、执行或 cron，不得造业务记录制造候选。

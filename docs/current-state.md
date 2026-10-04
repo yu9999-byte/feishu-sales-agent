@@ -19,8 +19,8 @@
   `sender_unconfigured` 和 `candidate_not_found`。这表示身份和只读来源已经可用，但不能开启真实
   发送；不得为了变绿而伪造历史治理/sender 标记或创建测试业务记录。
 - 定向只读链 `37/37`、全量 Agent `428/428`、完整 Postgres `19/19`、统一 Lint、三套类型检查、
-  Agent/Web 构建、迁移连续两次全量 skip 和 `git diff --check` 已通过；GitHub milestone 证据在
-  发布完成后记录。
+  Agent/Web 构建、迁移连续两次全量 skip 和 `git diff --check` 已通过；功能与本节文档已由
+  publisher 提交 `324ce163dbccc32e7d2586a8cba27c0d293c3976` 发布到 `github/main`。
   本轮未调用 `/execute`、未发送飞书消息、未修改 Base/Task/客户/商机/跟进数据，也未执行 UI。
 
 ## 2026-10-05 S4-013 受控真实提醒执行入口（自动化完成，真实投递关闭）
