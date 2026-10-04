@@ -12,6 +12,8 @@ import { PostgresStaleOpportunityReminderStore } from
   './postgres-stale-opportunity-reminder.store';
 import { StaleOpportunityReadinessController } from
   './stale-opportunity-readiness.controller';
+import { StaleOpportunityReminderPlanService } from
+  './stale-opportunity-reminder-plan.service';
 import { StaleOpportunityReminderRuntimeController } from
   './stale-opportunity-reminder-runtime.controller';
 import { StaleOpportunityReadinessService } from
@@ -45,6 +47,7 @@ import {
     StaleOpportunityReadinessService,
     StaleOpportunityTriggerService,
     StaleOpportunityReminderRuntimeService,
+    StaleOpportunityReminderPlanService,
     {
       provide: STALE_OPPORTUNITY_REMINDER_UNCERTAIN_READER,
       useExisting: PostgresStaleOpportunityReminderStore,

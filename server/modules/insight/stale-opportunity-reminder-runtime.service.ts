@@ -1,5 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import type {
+  StaleOpportunityReminderPreflightResponse,
+  StaleOpportunityReminderRuntimeBlockReason,
+} from '@shared/api.interface';
 import {
   AGENT_CONFIG,
   type AgentRuntimeConfig,
@@ -12,24 +16,12 @@ const STALE_OPPORTUNITY_REMINDER_UNCERTAIN_READER = Symbol(
   'STALE_OPPORTUNITY_REMINDER_UNCERTAIN_READER',
 );
 
-type StaleOpportunityReminderRuntimeBlockReason =
-  | 'scan_disabled'
-  | 'trigger_token_missing'
-  | 'history_governance_incomplete'
-  | 'sender_unconfigured'
-  | 'uncertain_delivery_present'
-  | 'reconciliation_unavailable';
-
 interface StaleOpportunityReminderRuntimePreparationInput {
   now?: Date;
 }
 
-interface StaleOpportunityReminderRuntimePreparationResult {
-  status: 'disabled' | 'blocked' | 'ready';
-  checkedAt: string;
-  reasons: StaleOpportunityReminderRuntimeBlockReason[];
-  uncertainDeliveryFound: boolean;
-}
+type StaleOpportunityReminderRuntimePreparationResult =
+  StaleOpportunityReminderPreflightResponse;
 
 @Injectable()
 class StaleOpportunityReminderRuntimeService {

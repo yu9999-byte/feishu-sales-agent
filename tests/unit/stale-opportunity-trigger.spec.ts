@@ -379,6 +379,10 @@ describe('StaleOpportunityTriggerService', (): void => {
       skippedMemberCount: 3,
       candidateCount: 1,
     });
+    expect(result.candidates[0]).toMatchObject({
+      memberId: 'member-a',
+      ownerOpenId: 'ou-sales-a',
+    });
     expect(result.skips.map((item) => item.reason)).toEqual([
       'member_inactive',
       'authorization_denied',

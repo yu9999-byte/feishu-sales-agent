@@ -341,6 +341,7 @@ class StaleOpportunityTriggerService {
         memberId,
         opportunityRecordId: candidate.opportunityRecordId,
         opportunityName: candidate.opportunityName,
+        ownerOpenId: candidate.ownerOpenId,
         followupRecordId: candidate.followupRecordId,
         lastEffectiveFollowupAt: candidate.lastEffectiveFollowupAt,
         followupVersion: candidate.followupVersion,

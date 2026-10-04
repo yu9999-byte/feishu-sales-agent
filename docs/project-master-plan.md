@@ -1,6 +1,6 @@
 # 销售跟进执行 Agent 项目主计划
 
-状态：`Approved / multi-agent sales assistant direction confirmed / updated 2026-10-03`
+状态：`Approved / multi-agent sales assistant direction confirmed / updated 2026-10-04`
 
 本文把产品总纲、当前代码实现、规格文件、测试证据和真实飞书验收记录统一为后续推进基线。
 它定义产品方向和阶段顺序；具体接口、状态机和字段契约仍以 `docs/specs/` 与
@@ -40,8 +40,9 @@
 产品由多个共享同一权限、上下文、确认、执行和审计底座的场景 Agent 组成：销售跟进、
 商机推进、任务履约、商机停滞提醒、销售日报、团队 Review 和 Playbook 优化。当前销售跟进、
 商机推进已有核心代码能力；任务履约 v1 已完成未完成任务的只读风险判断和 Web 产品面；
-停滞提醒已完成只读扫描；销售日报 v1 已完成只读自动化实现并进入真实 Web/UI 验收；团队
-Review v1 已完成只读 API 和 Web 产品面，Playbook 仍按阶段建设。
+停滞提醒已完成只读扫描、安全门、运行前检查和 plan-only 计划；销售日报 v1 已完成只读
+自动化实现并进入真实 Web/UI 验收；团队 Review v1 已完成只读 API 和 Web 产品面，Playbook
+仍按阶段建设。
 语音、会议纪要和文档解析作为后续输入型 Agent 扩展，不复制业务写入底座。
 
 ## 3. 完成度口径
@@ -60,7 +61,7 @@ Review v1 已完成只读 API 和 Web 产品面，Playbook 仍按阶段建设。
 
 ## 4. 当前基线
 
-截至 2026-10-03，代码仓库和文档证据形成以下判断：
+截至 2026-10-04，代码仓库和文档证据形成以下判断：
 
 本日任务履约增量只接受“成功 Agent 动作结果中的完整替代声明”：
 `relatedTaskGuid + relation: replaces` 必须成对出现，并通过当前租户、当前销售、非自替代、
@@ -83,6 +84,7 @@ Review v1 已完成只读 API 和 Web 产品面，Playbook 仍按阶段建设。
 | 任务履约 Agent v1 | `Automated Green / Web implemented / UI pending` | 已按本人范围识别未完成任务风险，并按负责人分页读取检索范围内的已完成任务；按精确 `taskGuid` 只读核对最近 180 天 Agent 已确认承诺。任务详情和持久快照保存有效完成时间，并新增按租户/销售/GUID 隔离的 `observed`/`changed`/`completed`/`reopened` 事件账本，可识别已完成、部分完成、仍未完成、变更、重新开放证据，`completed_at="0"` 不再误判为完成；任务事件回执按租户和事件 ID 去重保存，但不被误作完整历史；`/tasks` 展示关联、未关联、已完成和不可核实结果；本地 Postgres 迁移 003..016、集成 `13/13` 和 Agent 全量 `303/303` 已通过；事件账本不是全量飞书历史，不按标题/时间/列表缺失跨任务关联；全量完成历史、无任务承诺兑现判断、提醒、状态更新和主管升级未实现 |
 | 销售日报 Agent v1 | `Automated Green / API contract ready / UI pending` | `GET /api/platform/daily-report` 已按当前销售和租户权限只读汇总当天跟进、商机、未完成/逾期任务；单测、全量 Agent 回归、类型、Lint、构建通过；真实登录态内容和 Web/飞书 UI 尚未验收 |
 | 商机提醒准备度工作台 | `Automated Green / API contract ready / UI pending` | `/stale-opportunity-readiness` 复用 `review:read-personal`，只读展示商机状态、可信跟进时间、阻断原因和 Base 来源；页面不写业务数据、不发送提醒；真实登录态内容和视觉验收仍待浏览器控制句柄 |
+| 商机停滞提醒 Agent（S4） | `Partial / plan-only runtime / disabled` | 已具备默认关闭的跨租户只读扫描、运行时安全门、preflight 和 `POST /internal/stale-opportunity-reminder/plan`；只有安全门 ready 才生成带负责人及跟进证据的计划，扫描不完整或异常时返回空计划；全量 Agent `368/368`、Postgres `15/15` 及完整质量门通过。尚未领取账本、二次核验、调用真实 sender、发送消息或部署 cron |
 | 商机推进 | `Automated Green / UI pending`（当前跟进切片） | 已基于本次沟通与业务上下文生成版本化的变化、缺口、风险和行动建议；既有商机状态已具备聊天确认执行入口，主动停滞扫描仍属于 S4 |
 | 管理 Review | `Automated Green / Web implemented / UI pending` | `/api/platform/team-review` 已按主管/高管权限聚合个人日报、团队风险和管理建议；`/reviews/team` 已展示指标、关注成员、管理建议和逐人状态；真实主管 UI、管理动作执行和调度仍未验收 |
 | Playbook 优化 | `Draft` | 依赖足够赢单/丢单与阶段数据，尚未开始 |
@@ -250,6 +252,8 @@ Playbook 的共同基础，优先级高于语音、报告、RAG 和管理看板�
   发送器配置和未知投递对账；关闭或任一前置条件不满足时不读取业务数据、不领取账本、不发送消息。
 - [x] 提供受专用令牌保护的运行前检查接口：只返回安全门状态和阻断原因，不扫描商机、不领取账本、
   不调用发送器、不启动 cron。
+- [x] 提供受专用令牌保护的 plan-only 入口：安全门 ready 后才执行完整 dry-run；扫描不完整或异常时
+  返回空计划；计划保留负责人和跟进证据，但不领取账本、不二次核验、不调用 sender 或启用 cron。
 - [ ] 由销售依据工作台完成剩余历史商机分类和历史可信时间治理；无已有跟进时不得伪造历史记录。
 - [ ] 在部署环境配置外部 cron 与密钥管理并完成运行可观测性；正式门禁通过前保持开关关闭。
 - [ ] 将已验证的二次核验与持久账本接入受控运行时后，仅向本人投递带证据的提醒；

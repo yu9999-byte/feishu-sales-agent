@@ -5,22 +5,34 @@ import {
   Get,
   Headers,
   Header,
+  HttpCode,
+  HttpStatus,
   Inject,
+  Post,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 
+import {
+  type StaleOpportunityReminderPlanResponse,
+  type StaleOpportunityReminderPreflightResponse,
+} from '@shared/api.interface';
 import {
   AGENT_CONFIG,
   type AgentRuntimeConfig,
 } from '@server/config/agent.config';
 import {
   StaleOpportunityReminderRuntimeService,
-  type StaleOpportunityReminderRuntimePreparationResult,
 } from './stale-opportunity-reminder-runtime.service';
+import { StaleOpportunityReminderPlanService } from
+  './stale-opportunity-reminder-plan.service';
 
 interface StaleOpportunityReminderRuntimePreflightRunner {
-  prepare(): Promise<StaleOpportunityReminderRuntimePreparationResult>;
+  prepare(): Promise<StaleOpportunityReminderPreflightResponse>;
+}
+
+interface StaleOpportunityReminderRuntimePlanRunner {
+  plan(): Promise<StaleOpportunityReminderPlanResponse>;
 }
 
 const TOKEN_PATTERN: RegExp = /^Bearer ([^\s]+)$/iu;
@@ -35,15 +47,27 @@ class StaleOpportunityReminderRuntimeController {
     private readonly config: AgentRuntimeConfig,
     @Inject(StaleOpportunityReminderRuntimeService)
     private readonly runtime: StaleOpportunityReminderRuntimePreflightRunner,
+    @Inject(StaleOpportunityReminderPlanService)
+    private readonly planner: StaleOpportunityReminderRuntimePlanRunner,
   ) {}
 
   @Get('preflight')
   @Header('Cache-Control', 'no-store')
   async preflight(
     @Headers('authorization') authorization?: string,
-  ): Promise<StaleOpportunityReminderRuntimePreparationResult> {
+  ): Promise<StaleOpportunityReminderPreflightResponse> {
     this.assertAuthorized(authorization);
     return this.runtime.prepare();
+  }
+
+  @Post('plan')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  async plan(
+    @Headers('authorization') authorization?: string,
+  ): Promise<StaleOpportunityReminderPlanResponse> {
+    this.assertAuthorized(authorization);
+    return this.planner.plan();
   }
 
   private assertAuthorized(authorization: string | undefined): void {
@@ -71,4 +95,7 @@ class StaleOpportunityReminderRuntimeController {
 }
 
 export { StaleOpportunityReminderRuntimeController };
-export type { StaleOpportunityReminderRuntimePreflightRunner };
+export type {
+  StaleOpportunityReminderRuntimePlanRunner,
+  StaleOpportunityReminderRuntimePreflightRunner,
+};

@@ -1,5 +1,20 @@
 # 当前工程说明
 
+## 2026-10-04 S4 只读提醒计划入口（默认关闭，不投递）
+
+- 新增 `POST /internal/stale-opportunity-reminder/plan`，复用专用
+  `STALE_OPPORTUNITY_TRIGGER_TOKEN` Bearer 凭证并设置 `Cache-Control: no-store`。接口按
+  “运行前安全门 -> 只读 dry-run 扫描 -> plan-only 计划”执行，只在 preflight 返回 `ready`
+  时扫描；`disabled` 或 `blocked` 时不读取商机、跟进或 Task。
+- dry-run 扫描不完整或抛出异常时，计划统一返回 `incomplete`、空 `items` 和机器可读 warning，
+  不允许部分候选继续流转。完整计划保留租户、成员、商机、当前负责人 `ownerOpenId`、最新有效
+  跟进记录、可信沟通时间和来源版本，供下一阶段二次核验使用。
+- 响应固定为 `mode=plan-only`。本入口不领取提醒账本、不执行投递前二次核验、不调用 sender、
+  不发送飞书消息、不创建或启用 cron，也不修改客户、商机、跟进或任务。
+- 单测覆盖安全门未就绪零扫描、扫描不完整、扫描异常、完整证据、Bearer 认证、控制器转发和
+  Nest provider 装配。全量 Agent `368/368`、Postgres 集成 `15/15`、统一 Lint、测试类型检查、
+  Agent/Web 构建和 `git diff --check` 通过。真实提醒仍保持关闭，不能把计划生成解释为提醒已发送。
+
 ## 2026-10-04 S4 提醒投递运行时安全门（默认关闭，未接真实运行时）
 
 - 新增独立的提醒投递运行时准备服务。提醒投递开关

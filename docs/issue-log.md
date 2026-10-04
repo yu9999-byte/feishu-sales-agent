@@ -6,6 +6,23 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-04 S4 缺少安全门之后的只读提醒计划入口
+
+- 原风险：preflight 只能说明运行前条件，dry-run 扫描只能返回原始候选；两者没有受保护的顺序
+  编排时，未来调用方可能绕过安全门、误用部分扫描结果，或把候选列表误认为已进入投递。
+- 处理：新增 `POST /internal/stale-opportunity-reminder/plan` 和
+  `StaleOpportunityReminderPlanService`。专用 Bearer 凭证通过后先执行 preflight；只有 `ready`
+  才调用现有 dry-run。`disabled`/`blocked` 零扫描，扫描 `incomplete` 或异常时返回空计划。
+- 证据：完整计划包含租户、成员、商机、负责人 `ownerOpenId`、跟进记录、可信时间和来源版本；
+  单测覆盖零扫描、部分结果压制、异常 fail-closed、完整证据、认证、转发与 Nest provider 装配；
+  全量 Agent `368/368`、Postgres 集成 `15/15`、统一 Lint、测试类型检查、Agent/Web 构建和
+  `git diff --check` 通过。
+- 边界：固定 `mode=plan-only`；不领取提醒账本、不执行发送前二次核验、不调用 sender、不发送
+  飞书消息、不创建或启用 cron，也不修改 Base 或 Task。
+- 状态：`Resolved / automated green / plan-only / runtime disabled / UI not required`。
+- 下一动作：完成历史数据治理后，将现有二次核验协调层和持久账本接到独立的受控投递入口；在
+  真实 sender、unknown 投递人工对账和受控本人验收完成前，继续保持真实提醒关闭。
+
 ## 2026-10-04 S4 提醒投递缺少运行前统一安全门
 
 - 原风险：扫描开关、数据治理、发送器和未知投递对账状态没有统一的运行前判定，未来接线时

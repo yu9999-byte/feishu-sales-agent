@@ -701,6 +701,7 @@ export interface StaleOpportunityTriggerCandidate {
   memberId: string;
   opportunityRecordId: string;
   opportunityName: string;
+  ownerOpenId: string;
   followupRecordId: string;
   lastEffectiveFollowupAt: string;
   followupVersion: string;
@@ -744,6 +745,35 @@ export interface StaleOpportunityTriggerResponse {
   candidates: StaleOpportunityTriggerCandidate[];
   skips: StaleOpportunityTriggerSkip[];
   audit: StaleOpportunityTriggerAuditEvidence[];
+  warnings: string[];
+}
+
+export type StaleOpportunityReminderRuntimeBlockReason =
+  | 'scan_disabled'
+  | 'trigger_token_missing'
+  | 'history_governance_incomplete'
+  | 'sender_unconfigured'
+  | 'uncertain_delivery_present'
+  | 'reconciliation_unavailable';
+
+export interface StaleOpportunityReminderPreflightResponse {
+  status: 'disabled' | 'blocked' | 'ready';
+  checkedAt: string;
+  reasons: StaleOpportunityReminderRuntimeBlockReason[];
+  uncertainDeliveryFound: boolean;
+}
+
+export interface StaleOpportunityReminderPlanResponse {
+  mode: 'plan-only';
+  status: 'disabled' | 'blocked' | 'incomplete' | 'ready';
+  generatedAt: string;
+  preflight: StaleOpportunityReminderPreflightResponse;
+  scanTraceId: string | null;
+  summary: {
+    candidateCount: number;
+    suppressedCandidateCount: number;
+  };
+  items: StaleOpportunityTriggerCandidate[];
   warnings: string[];
 }
 

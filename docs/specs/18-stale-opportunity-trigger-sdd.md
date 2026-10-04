@@ -1,5 +1,22 @@
 # 商机停滞 7 天提醒 S4 触发规格（部分实现）
 
+## 2026-10-04 只读提醒计划入口（plan-only）
+
+- 新增 `POST /internal/stale-opportunity-reminder/plan`，使用已有
+  `STALE_OPPORTUNITY_TRIGGER_TOKEN` Bearer 认证并设置 `Cache-Control: no-store`。凭证未配置
+  或无效时，在 preflight 和任何业务读取前拒绝。
+- `StaleOpportunityReminderPlanService` 固定按“运行前安全门 -> 只读 dry-run 扫描 -> 计划”
+  执行。preflight 为 `disabled` 或 `blocked` 时返回同状态空计划且不扫描；只有 `ready` 才调用
+  `StaleOpportunityTriggerService`。
+- 扫描必须为 `complete` 才能输出候选。扫描 `incomplete` 或抛出异常时返回 `incomplete`、空
+  `items`、压制数量和机器可读 warning，不允许部分候选进入后续步骤。
+- 完整候选保留 `tenantId`、`memberId`、商机 ID/名称、当前负责人 `ownerOpenId`、最新有效跟进
+  ID、可信沟通时间和跟进版本；响应固定为 `mode=plan-only`，作为未来发送前二次核验的输入证据。
+- 本入口不领取提醒账本、不调用 `StaleOpportunityReminderCoordinatorService` 做投递前二次核验、
+  不调用 sender、不发送飞书消息、不创建或启用 cron，也不写客户、商机、跟进或 Task。
+- 验证证据：全量 Agent `368/368`、Postgres 集成 `15/15`、统一 Lint、测试类型检查、Agent/Web
+  构建和 `git diff --check` 通过；本轮未启动真实 Agent，未执行飞书 UI 或消息验收。
+
 ## 2026-10-04 受控运行时安全门（未接真实投递）
 
 - 新增 `StaleOpportunityReminderRuntimeService.prepare` 作为未来扫描/投递运行前的唯一安全门。
