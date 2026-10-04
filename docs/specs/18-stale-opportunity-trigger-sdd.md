@@ -1,5 +1,20 @@
 # 商机停滞 7 天提醒 S4 触发规格（部分实现）
 
+## 2026-10-05 飞书本人提醒适配器（未接运行时）
+
+- `FeishuStaleOpportunityReminderSender` 重新按 `tenantId` 解析有效租户集成，使用该租户飞书应用
+  的 bot 身份和 `receive_id_type=open_id`，只向发送前重验得到的当前销售本人发送静态文本。
+- 提醒内容固定包含商机、超过 7 天无可核实有效跟进、最近有效跟进时间和建议动作。来自 Base 的
+  业务字段压成单行并限制长度；不接受群聊 ID，不提供自动建任务、修改商机或升级主管动作。
+- `StaleOpportunityReminderService` 用 `(tenantId, reminderKind, opportunityRecordId,
+  followupVersion)` 生成稳定幂等键，适配器哈希为飞书 `uuid`；账本仍是跨小时/跨进程的最终去重源。
+- 飞书明确非零响应在请求层已被拒绝，包装成 retryable 并写 `REMINDER_DELIVERY_FAILED`；网络异常、
+  请求结果未知或成功响应缺少 `message_id` 保持 unknown，写 `REMINDER_DELIVERY_UNKNOWN` 并停止重发。
+- 适配器及跨层账本测试 `7/7`，提醒服务 + 适配器定向 `15/15`，全量 Agent `385/385`；统一
+  Lint、服务端/客户端/测试类型检查和 diff 检查通过。
+- 适配器未注册 Nest，批次执行链仍无 HTTP 入口和 cron；测试只调用假 SDK，没有真实飞书投递、
+  消息回读或运行日志，生产入口继续停留在 preflight、dry-run 和 plan-only。
+
 ## 2026-10-04 计划到持久账本的离线执行链
 
 - `StaleOpportunityReminderExecutionService` 先调用 plan-only 服务；计划不是 `ready` 时直接返回

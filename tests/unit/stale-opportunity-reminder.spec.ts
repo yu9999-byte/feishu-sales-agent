@@ -95,12 +95,19 @@ describe('StaleOpportunityReminderService', (): void => {
       messageId: 'om_reminder_1',
     });
     expect(sender.send).toHaveBeenCalledWith({
+      tenantId: '10000000-0000-4000-8000-00000000000a',
       recipientOpenId: 'ou_sales_a',
       opportunityRecordId: 'opportunity-1',
       opportunityName: '北辰数字化项目',
       followupRecordId: 'followup-1',
       lastEffectiveFollowupAt: '2026-09-20T02:00:00.000Z',
       suggestedAction: '核对客户进展并确认下一步跟进安排',
+      idempotencyKey: [
+        '10000000-0000-4000-8000-00000000000a',
+        'stale_followup',
+        'opportunity-1',
+        '2026-09-20T02:00:00.000Z',
+      ].join(':'),
     });
     expect(markSent).toHaveBeenCalledWith(expect.objectContaining({
       claimToken: 'claim-1',

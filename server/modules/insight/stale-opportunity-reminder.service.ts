@@ -107,12 +107,14 @@ interface StaleOpportunityReminderUncertainReader {
 }
 
 interface StaleOpportunityReminderMessage {
+  tenantId: string;
   recipientOpenId: string;
   opportunityRecordId: string;
   opportunityName: string;
   followupRecordId: string;
   lastEffectiveFollowupAt: string;
   suggestedAction: string;
+  idempotencyKey: string;
 }
 
 interface StaleOpportunityReminderSender {
@@ -234,12 +236,19 @@ class StaleOpportunityReminderService {
     let sent: { messageId: string };
     try {
       sent = await this.sender.send({
+        tenantId: input.tenantId,
         recipientOpenId: input.recipientOpenId,
         opportunityRecordId: input.evidence.opportunityRecordId,
         opportunityName: input.evidence.opportunityName,
         followupRecordId: input.evidence.followupRecordId,
         lastEffectiveFollowupAt: input.evidence.lastEffectiveFollowupAt,
         suggestedAction: SUGGESTED_ACTION,
+        idempotencyKey: [
+          key.tenantId,
+          key.reminderKind,
+          key.opportunityRecordId,
+          key.followupVersion,
+        ].join(':'),
       });
       if (!sent.messageId.trim()) {
         throw new Error('Reminder sender returned an empty message ID');

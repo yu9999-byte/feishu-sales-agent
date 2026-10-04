@@ -84,7 +84,7 @@
 | 任务履约 Agent v1 | `Automated Green / Web implemented / UI pending` | 已按本人范围识别未完成任务风险，并按负责人分页读取检索范围内的已完成任务；按精确 `taskGuid` 只读核对最近 180 天 Agent 已确认承诺。任务详情和持久快照保存有效完成时间，并新增按租户/销售/GUID 隔离的 `observed`/`changed`/`completed`/`reopened` 事件账本，可识别已完成、部分完成、仍未完成、变更、重新开放证据，`completed_at="0"` 不再误判为完成；任务事件回执按租户和事件 ID 去重保存，但不被误作完整历史；`/tasks` 展示关联、未关联、已完成和不可核实结果；本地 Postgres 迁移 003..016、集成 `13/13` 和 Agent 全量 `303/303` 已通过；事件账本不是全量飞书历史，不按标题/时间/列表缺失跨任务关联；全量完成历史、无任务承诺兑现判断、提醒、状态更新和主管升级未实现 |
 | 销售日报 Agent v1 | `Automated Green / API contract ready / UI pending` | `GET /api/platform/daily-report` 已按当前销售和租户权限只读汇总当天跟进、商机、未完成/逾期任务；单测、全量 Agent 回归、类型、Lint、构建通过；真实登录态内容和 Web/飞书 UI 尚未验收 |
 | 商机提醒准备度工作台 | `Automated Green / API contract ready / UI pending` | `/stale-opportunity-readiness` 复用 `review:read-personal`，只读展示商机状态、可信跟进时间、阻断原因和 Base 来源；页面不写业务数据、不发送提醒；真实登录态内容和视觉验收仍待浏览器控制句柄 |
-| 商机停滞提醒 Agent（S4） | `Partial / offline execution chain / runtime disabled` | 已具备默认关闭的跨租户只读扫描、安全门、preflight、plan-only 计划，以及未注册运行时的批次执行链；ready 计划会逐条二次重扫并通过 Postgres 账本去重，批次异常或未知投递时停止后续候选。全量 Agent `378/378`、Postgres `15/15` 及完整质量门通过；完整链只用假 sender 验证，尚无 Nest 执行入口、真实 sender、飞书消息或 cron |
+| 商机停滞提醒 Agent（S4） | `Partial / sender adapter green / runtime disabled` | 已具备默认关闭的跨租户只读扫描、安全门、preflight、plan-only 计划、未注册运行时的批次执行链，以及按租户向当前销售本人 `open_id` 发送静态提醒的飞书适配器；稳定幂等键、明确拒绝重试和未知投递停止均由假 SDK 验证。全量 Agent `385/385`、Postgres `15/15` 及质量门通过；适配器和执行链尚未注册为生产入口，无真实飞书消息或 cron |
 | 商机推进 | `Automated Green / UI pending`（当前跟进切片） | 已基于本次沟通与业务上下文生成版本化的变化、缺口、风险和行动建议；既有商机状态已具备聊天确认执行入口，主动停滞扫描仍属于 S4 |
 | 管理 Review | `Automated Green / Web implemented / UI pending` | `/api/platform/team-review` 已按主管/高管权限聚合个人日报、团队风险和管理建议；`/reviews/team` 已展示指标、关注成员、管理建议和逐人状态；真实主管 UI、管理动作执行和调度仍未验收 |
 | Playbook 优化 | `Draft` | 依赖足够赢单/丢单与阶段数据，尚未开始 |
@@ -256,10 +256,12 @@ Playbook 的共同基础，优先级高于语音、报告、RAG 和管理看板�
   返回空计划；计划保留负责人和跟进证据，但不领取账本、不二次核验、不调用 sender 或启用 cron。
 - [x] 建立未接运行时的批次执行链：ready 计划逐条进入发送前二次核验和持久账本；重复候选、
   来源不明、未知投递或执行异常停止批次；Postgres + 假 sender 完整链验证通过。
+- [x] 实现未接运行时的飞书本人提醒适配器：按租户应用身份向当前销售 `open_id` 发送静态文本，
+  使用稳定幂等键；明确拒绝可重试，传输结果未知停止自动重发。全链只用假 SDK 验证。
 - [ ] 由销售依据工作台完成剩余历史商机分类和历史可信时间治理；无已有跟进时不得伪造历史记录。
 - [ ] 在部署环境配置外部 cron 与密钥管理并完成运行可观测性；正式门禁通过前保持开关关闭。
-- [ ] 实现真实飞书本人提醒 sender，并在受控执行入口注册已验证的批次执行链；确认动作由人决定，
-  不自动建任务或升级主管；当前生产入口继续停留在 plan-only。
+- [ ] 在只允许受控测试租户和本人收件人的执行入口注册已验证的批次执行链与飞书适配器；确认动作
+  由人决定，不自动建任务或升级主管；当前生产入口继续停留在 plan-only。
 - [ ] 建立发送结果未知的人工对账恢复、受控真实投递和飞书 UI 验收。
 - 只有 S4 通过后，才扩展逾期任务和承诺未兑现等触发器。
 
