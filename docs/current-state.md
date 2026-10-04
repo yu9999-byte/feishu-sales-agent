@@ -13,6 +13,14 @@
 - 新增 6 项定向单测，覆盖默认关闭零读取、静态门阻断、未知投递、对账异常、全部通过和模块装配；
   运行时开关和三个前置标记均保持默认 `false`。
 
+## 2026-10-04 S4 受保护运行前检查接口（只读，未接真实运行时）
+
+- 新增 `GET /internal/stale-opportunity-reminder/preflight`，复用专用
+  `STALE_OPPORTUNITY_TRIGGER_TOKEN` Bearer 凭证；未配置凭证或凭证错误时，在调用安全门前拒绝。
+- 认证成功后只调用运行时安全门，返回 `disabled`、`blocked` 或 `ready` 及机器可读阻断原因，
+  响应设置 `Cache-Control: no-store`。接口不扫描商机、不读取 Task、不领取账本、不调用 sender。
+- 新增控制器认证、成功转发和 Nest 模块装配测试；本接口不等同于 cron，也不代表真实提醒已经启用。
+
 ## 2026-10-04 S4 未知投递只读对账（未接运行时）
 
 - 新增账本只读查询能力，按租户和最多 100 条限制列出状态为 uncertain 的提醒，返回商机、

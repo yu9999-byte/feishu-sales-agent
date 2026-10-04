@@ -12,6 +12,8 @@ import { PostgresStaleOpportunityReminderStore } from
   './postgres-stale-opportunity-reminder.store';
 import { StaleOpportunityReadinessController } from
   './stale-opportunity-readiness.controller';
+import { StaleOpportunityReminderRuntimeController } from
+  './stale-opportunity-reminder-runtime.controller';
 import { StaleOpportunityReadinessService } from
   './stale-opportunity-readiness.service';
 import { StaleOpportunityTriggerController } from
@@ -34,6 +36,7 @@ import {
   controllers: [
     StaleOpportunityReadinessController,
     StaleOpportunityTriggerController,
+    StaleOpportunityReminderRuntimeController,
   ],
   providers: [
     agentConfigProvider,

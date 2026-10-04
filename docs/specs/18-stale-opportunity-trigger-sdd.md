@@ -15,6 +15,15 @@
 - 安全门目前只作为受控运行时准备能力注册到 Nest，外部入口仍固定 `dry-run`，没有 cron、真实
   飞书 sender 或真实消息验收。历史治理标记必须由人工完成证据后再配置，不能视为自动治理结果。
 
+## 2026-10-04 受保护运行前检查接口（只读）
+
+- 新增 `GET /internal/stale-opportunity-reminder/preflight`，使用已有
+  `STALE_OPPORTUNITY_TRIGGER_TOKEN` 的 Bearer 认证；认证失败不得调用安全门。
+- 认证通过后只返回安全门的 `disabled`、`blocked` 或 `ready` 结果，并设置 `Cache-Control: no-store`。
+  该接口不扫描商机、不读取 Task、不领取提醒账本、不调用 sender，也不启动调度器。
+- 它只用于未来调度器/运维在运行前读取机器状态，不能作为真实消息发送成功、历史治理完成或
+  cron 已部署的证据。
+
 ## 2026-10-04 未知投递只读对账
 
 - 持久账本提供 uncertain 记录的只读查询，按租户可选过滤，单次最多返回 100 条，按
