@@ -6,6 +6,22 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-04 S4 提醒计划与二次核验/账本之间缺少批次编排
+
+- 原风险：plan-only 能生成候选，协调层能重扫单条候选，账本能安全去重，但三者没有统一批次
+  编排；调用方可能跳过计划状态、重复处理同一候选，或在未知投递后继续执行后续候选。
+- 处理：新增 `StaleOpportunityReminderExecutionService`。仅接受 `ready` 计划；先拒绝同一租户、
+  商机和跟进版本的重复候选，再逐条调用发送前协调层。来源不可核实、证据/负责人异常、未知投递、
+  任意失败或协调器异常都会停止批次，并返回已处理、剩余、成功、跳过和失败计数。
+- 证据：10 项批次单测覆盖非 ready 零执行、完整逐条核验、重复候选、来源异常停止、单候选未知
+  投递终态和异常 fail-closed；Postgres 集成覆盖完整链首次假投递、同版本冷却及证据变化不领取；
+  全量 Agent `378/378`、Postgres `15/15`、统一 Lint、类型检查、Agent/Web 构建和 diff 检查通过。
+- 边界：服务未注册 Nest、无 HTTP 执行入口、无真实 sender、无 cron；集成测试的 `sent` 和假
+  消息 ID 不是飞书投递证据，也不会触达真实用户。
+- 状态：`Resolved / offline execution chain green / runtime disabled / no real delivery`。
+- 下一动作：设计并实现真实飞书本人提醒 sender 适配器，但先以契约和假网关测试验证；在历史
+  治理、人工对账和受控验收完成前，不把执行服务注册为可调用的生产投递入口。
+
 ## 2026-10-04 S4 缺少安全门之后的只读提醒计划入口
 
 - 原风险：preflight 只能说明运行前条件，dry-run 扫描只能返回原始候选；两者没有受保护的顺序

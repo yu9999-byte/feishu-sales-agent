@@ -1,5 +1,20 @@
 # 当前工程说明
 
+## 2026-10-04 S4 计划到持久账本的离线执行链（未接运行时）
+
+- 新增 `StaleOpportunityReminderExecutionService`，把 plan-only 结果逐条交给现有发送前协调层。
+  只有计划状态为 `ready` 才执行；`disabled`、`blocked` 或 `incomplete` 均零二次核验、零账本领取。
+- 每条计划在领取账本前重新校验租户、成员、角色、个人 Review 权限，并完整重读本人商机、
+  跟进与 Task。批次发现重复候选、来源无法核实、证据无效、负责人不一致、未知投递或执行异常时，
+  标记 `incomplete`/`halted` 并停止后续候选，避免在不确定状态下继续投递。
+- Postgres 集成已覆盖“计划 -> 二次重扫 -> 持久账本 -> 假 sender”：首次写入成功、同版本冷却、
+  计划证据变化不领取旧键；假消息 ID 只写入隔离测试租户，不代表飞书消息已发送。
+- 本服务没有注册到 Nest，没有 HTTP 执行入口、真实 sender 或 cron。生产运行时仍只能调用
+  preflight 和 plan-only 接口；不会领取真实提醒账本，也不会发送飞书消息。
+- 验证证据：批次定向 `10/10`、S4 执行链定向 `46/46`、全量 Agent `378/378`、Postgres
+  `15/15`、统一 Lint、测试类型检查、Agent/Web 构建和 `git diff --check` 全部通过。本轮未
+  启动真实 Agent、未执行飞书 UI，也没有运行日志可作为投递证据。
+
 ## 2026-10-04 S4 只读提醒计划入口（默认关闭，不投递）
 
 - 新增 `POST /internal/stale-opportunity-reminder/plan`，复用专用

@@ -1,5 +1,21 @@
 # 商机停滞 7 天提醒 S4 触发规格（部分实现）
 
+## 2026-10-04 计划到持久账本的离线执行链
+
+- `StaleOpportunityReminderExecutionService` 先调用 plan-only 服务；计划不是 `ready` 时直接返回
+  原状态，不调用协调层，不重扫业务数据，也不领取提醒账本。
+- ready 计划先按 `(tenantId, opportunityRecordId, followupVersion)` 拒绝重复候选，再逐条调用
+  `StaleOpportunityReminderCoordinatorService.prepareAndDeliver`。协调层仍负责租户/成员/角色/
+  权限重验、商机/跟进/Task 全量重扫、六字段证据一致性和持久账本领取。
+- 来源无法核实、证据无效、负责人不一致、未知投递、任何失败或协调器异常都使批次进入
+  `halted`，停止后续候选；即使单候选已处理完，未知投递仍保持 `halted`，不能误报 `completed`。
+- Postgres 集成用隔离测试租户和假 sender 验证首次写入、同版本冷却与证据变化不领取旧键。
+  假 sender 的 `sent` 只证明代码链路，不是飞书消息投递证据。
+- 该服务未注册 Nest，未新增 HTTP 执行路由，也没有真实 sender 或 cron。当前可调用入口仍只有
+  preflight、dry-run 和 plan-only；生产账本不会因本切片被领取。
+- 验证证据：批次单测 `10/10`、S4 执行链定向 `46/46`、全量 Agent `378/378`、Postgres
+  `15/15`、统一 Lint、类型检查、Agent/Web 构建和 diff 检查通过；未启动 Agent 或执行飞书 UI。
+
 ## 2026-10-04 只读提醒计划入口（plan-only）
 
 - 新增 `POST /internal/stale-opportunity-reminder/plan`，使用已有
