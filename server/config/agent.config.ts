@@ -40,6 +40,11 @@ export interface AgentRuntimeConfig {
     enabled: boolean;
     triggerToken: string | undefined;
   };
+  staleOpportunityReminder?: {
+    enabled: boolean;
+    historyGovernanceReady: boolean;
+    senderConfigured: boolean;
+  };
   longTermMemory?: LongTermMemoryRuntimeConfig;
 }
 
@@ -118,6 +123,20 @@ const loadAgentConfig = (): AgentRuntimeConfig => ({
       false,
     ),
     triggerToken: optionalEnvironment('STALE_OPPORTUNITY_TRIGGER_TOKEN'),
+  },
+  staleOpportunityReminder: {
+    enabled: parseBoolean(
+      process.env.STALE_OPPORTUNITY_REMINDER_ENABLED,
+      false,
+    ),
+    historyGovernanceReady: parseBoolean(
+      process.env.STALE_OPPORTUNITY_HISTORY_GOVERNANCE_READY,
+      false,
+    ),
+    senderConfigured: parseBoolean(
+      process.env.STALE_OPPORTUNITY_REMINDER_SENDER_CONFIGURED,
+      false,
+    ),
   },
   longTermMemory: {
     enabled: parseBoolean(process.env.MEM0_ENABLED, false),

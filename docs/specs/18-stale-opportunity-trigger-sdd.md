@@ -1,5 +1,20 @@
 # 商机停滞 7 天提醒 S4 触发规格（部分实现）
 
+## 2026-10-04 受控运行时安全门（未接真实投递）
+
+- 新增 `StaleOpportunityReminderRuntimeService.prepare` 作为未来扫描/投递运行前的唯一安全门。
+  `STALE_OPPORTUNITY_REMINDER_ENABLED` 默认 `false`；关闭时返回 `disabled`，保证不读取商机、
+  Task、账本或发送器，不领取租约，不发送消息。
+- 投递开关明确开启后，依次检查 `STALE_OPPORTUNITY_SCAN_ENABLED`、专用触发令牌、历史数据治理
+  标记 `STALE_OPPORTUNITY_HISTORY_GOVERNANCE_READY` 和发送器配置
+  `STALE_OPPORTUNITY_REMINDER_SENDER_CONFIGURED`。任一条件不满足返回 `blocked`，不继续读取
+  未知投递对账。
+- 静态条件全部通过后，只读查询 `uncertain` 账本（limit=1）。存在未知投递返回
+  `uncertain_delivery_present`；查询失败返回 `reconciliation_unavailable`；只有空结果才返回
+  `ready`。该查询不改变账本、不自动重试，也不调用 sender。
+- 安全门目前只作为受控运行时准备能力注册到 Nest，外部入口仍固定 `dry-run`，没有 cron、真实
+  飞书 sender 或真实消息验收。历史治理标记必须由人工完成证据后再配置，不能视为自动治理结果。
+
 ## 2026-10-04 未知投递只读对账
 
 - 持久账本提供 uncertain 记录的只读查询，按租户可选过滤，单次最多返回 100 条，按

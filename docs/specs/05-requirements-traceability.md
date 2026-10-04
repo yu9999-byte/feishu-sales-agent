@@ -185,6 +185,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | `S4-002` 持久提醒账本与安全投递门 | S4 internal ledger | Automated Green / runtime disabled | 迁移 011/012、9 项定向单测、3 项 Postgres 集成：同键并发唯一 claim、5 分钟租约、7 天冷却、新版本、失败重试及不确定结果停止自动重发；无真实发送器或调度绑定 | 发送前重读最新状态/负责人/时间与任务完整性，受控本人通知及 `uncertain` 人工对账后再验收 |
 | `S4-004` 外部调度只读入口 | S4 internal trigger | Automated Green / cron-ready dry-run / default disabled | `POST /internal/stale-opportunity-scan/run` 使用独立 Bearer 令牌；错误令牌在数据读取前拒绝。Agent Postgres 活跃集成枚举、成员/角色/权限重验、跨租户隔离、成员失败整批候选压制和重复只读调用均有测试；全量 Agent `323/323`、Postgres `14/14` 和完整质量门通过；未接提醒账本、消息或业务写入 | 部署外部 cron 与密钥管理但保持关闭；完成真实数据治理和投递门后再接 S4-002 |
 | `S4-006` 未知投递只读对账 | S4 reconciliation | Automated Green / runtime disabled | 账本只读查询 uncertain 状态，支持租户过滤、限制和最小证据；数据源异常或参数无效返回空结果与 warning，不改变状态、不重试 | 受控人工运营入口和真实飞书消息核对；人工恢复动作需另行确认和审计 |
+| `S4-007` 提醒投递运行时安全门 | S4 runtime gate | Automated Green / runtime disabled | `StaleOpportunityReminderRuntimeService` 默认关闭时零业务读取；开启后检查扫描开关、专用令牌、历史治理标记、sender 配置和 uncertain 对账，静态条件或未知投递存在时阻断；5 项定向单测通过；无 cron、真实 sender 或消息 | 将安全门接入受控扫描/投递运行时；前置标记必须由人工证据支撑，继续保持真实投递关闭 |
 | `REV-001` 个人日报 | B7 | Automated Green / API contract ready / UI pending | 日报聚合快照 3/3；Agent 全量 `245/245`、Postgres `8/8`、服务端/客户端/测试 TypeScript、ESLint、Agent/Web 构建通过；`GET /api/platform/daily-report` 已实现登录、租户、销售范围和 `review:read-personal` 权限边界，来源不可用/分页不完整安全降级；当前租户真实只读 Task 探针返回 5 条本人未完成任务、无分页警告 | 尚未在真实登录态回读日报内容，也未完成真实 Web/飞书 UI 验收 |
 | `COP-001..007` 客户商机决策 | C | Draft | 待查询/评分/权限/评测 | 待销售/主管页面验收 |
 | `SIA-001..006` 问答、RAG 和操作 | D | Draft | 待 ACL/RAG/工具测试 | 待问答与操作验收 |

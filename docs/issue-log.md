@@ -6,6 +6,21 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-04 S4 提醒投递缺少运行前统一安全门
+
+- 原风险：扫描开关、数据治理、发送器和未知投递对账状态没有统一的运行前判定，未来接线时
+  可能在前置条件不足时读取业务数据、领取账本或调用发送器。
+- 处理：新增 `StaleOpportunityReminderRuntimeService`。提醒投递开关默认关闭；关闭时零读取。
+  开启后先检查扫描开关、专用令牌、历史治理标记和 sender 配置，再只读探测最多一条
+  `uncertain` 账本记录；任何缺失、未知投递或对账异常均返回机器可读 `blocked` 原因。
+- 边界：安全门本身不扫描商机、不读取 Task、不领取租约、不修改账本、不发送飞书消息，也不
+  启动 cron；外部入口继续固定 `dry-run`。
+- 证据：新增定向测试 `5/5`；默认配置和三个前置标记均为 `false`。本轮未启动 Agent，未做
+  飞书 UI 验收。
+- 状态：`Resolved / automated green / runtime disabled / UI not required`。
+- 下一动作：在历史治理、真实 sender、未知投递人工对账和外部调度均有证据后，单独设计并接入
+  受控运行时；不得仅因安全门返回 `ready` 就开启真实提醒。
+
 ## 2026-10-04 飞书机器人成员与角色入口门禁
 
 - 原风险：机器人收到飞书消息或卡片动作后，缺少完整的成员与角色双重校验；活跃成员即使没有
@@ -225,6 +240,7 @@
 | `ISS-S4-003` | 历史商机状态和可信沟通时间缺少 Web 人工确认闭环 | Resolved / automated green / UI pending | 新增逐条治理契约、负责人/状态/商机版本/跟进版本校验、写后回读、幂等键和 accepted/succeeded/failed 审计；工作台新增 Select、Calendar、二次确认和明确错误状态；定向治理测试通过 | 恢复 Codex 右侧浏览器控制句柄后，用当前销售只处理一条受控记录并回读 Base/审计；真实 UI 前不启用 S4 调度或提醒 |
 | `ISS-S4-004` | 独立 Agent 缺少可被外部 cron 安全调用的停滞扫描入口 | Resolved / cron-ready dry-run / disabled | 新增专用令牌内部 POST 入口；从 Agent Postgres 枚举有效租户/成员并重验角色权限，错误令牌读取前拒绝，任一来源不完整整批压制候选。全量 Agent `323/323`、Postgres `14/14` 和完整静态/构建门通过；未接发送器或业务写入 | 部署外部 cron 与密钥管理但保持关闭；完成历史治理、发送前重读、账本接线和受控本人通知后再开启投递 |
 | `ISS-S4-006` | 未知投递只能停止重试，缺少可审计的只读对账清单 | Resolved / offline automated green / runtime disabled | 新增账本 uncertain 只读查询与对账服务，支持租户过滤、最多 100 条限制、最小失败证据和 fail-closed；单测与 Postgres 集成通过。无自动重发、状态修改、真实发送或 UI | 接入受控运营入口后由人工核对飞书消息结果，再单独设计明确的人工恢复动作；不得把查询结果直接变成重试 |
+| `ISS-S4-007` | 提醒投递缺少运行前统一安全门 | Resolved / automated green / runtime disabled | 新增默认关闭的运行时准备服务；静态条件缺失、未知投递存在或对账源异常均阻断，关闭时零业务读取；定向测试 `5/5` | 完成历史治理、真实 sender 和人工对账后，再把安全门接入受控投递运行时；继续禁止 cron 和真实消息 |
 
 更新规则：发现问题时先补复现证据；修复后记录对应测试或运行证据；没有真实 UI 证据时不得把
 `Open` 改为 `Resolved`，也不得把 `Automated Green / UI pending` 写成 `UI Verified`。

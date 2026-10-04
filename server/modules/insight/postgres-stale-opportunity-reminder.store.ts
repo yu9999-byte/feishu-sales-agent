@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
+import { Inject, Injectable } from '@nestjs/common';
 import type { Sql } from 'postgres';
+
+import { AGENT_DATABASE } from '@server/modules/control-store/postgres-control.store';
 
 import type {
   StaleOpportunityReminderClaimInput,
@@ -43,9 +46,13 @@ interface UncertainReminderRow {
 const toDate = (value: Date | string): Date =>
   value instanceof Date ? value : new Date(value);
 
+@Injectable()
 class PostgresStaleOpportunityReminderStore
 implements StaleOpportunityReminderStore {
-  constructor(private readonly sql: Sql) {}
+  constructor(
+    @Inject(AGENT_DATABASE)
+    private readonly sql: Sql,
+  ) {}
 
   async claim(
     input: StaleOpportunityReminderClaimInput,
