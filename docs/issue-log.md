@@ -354,7 +354,7 @@
 | `ISS-S4-007` | 提醒投递缺少运行前统一安全门 | Resolved / automated green / runtime disabled | 新增默认关闭的运行时准备服务；静态条件缺失、未知投递存在或对账源异常均阻断，关闭时零业务读取；定向测试 `6/6` | 完成历史治理、真实 sender 和人工对账后，再把安全门接入受控投递运行时；继续禁止 cron 和真实消息 |
 | `ISS-S4-013` | 真实提醒链已有扫描、账本和 sender，但缺少受控执行入口 | Resolved / automated green / real delivery disabled | 新增独立执行令牌、单候选请求、测试租户/成员/本人 open_id 三重白名单、执行前重跑 plan、唯一候选匹配和已注册 Nest sender/协调层；冷却重复幂等，未知投递停止。定向 `29/29`、全量 Agent `409/409`、Postgres `19/19`、Lint、三套类型检查、双构建及迁移幂等通过 | 仍需历史治理、部署密钥管理和单独确认后的一次真实测试租户消息回读；不启用 cron，不把自动化假 SDK 结果当真实投递证据 |
 | `ISS-S4-014` | 受控执行入口缺少关闭状态下的真实租户/销售放行检查 | Resolved / real read-only probe / delivery blocked | 新增 execution readiness，使用独立执行凭证并将探针限制为精确白名单；真实核验租户/销售/open_id/权限/数据源/空 uncertain 账本通过，候选完整扫描为 0，探针后账本仍为空；提醒和执行关闭，未调用 execute | 完成历史治理、核验 sender 权限并等待真实停滞候选；三项齐备前不启执行、提醒或 cron，不造业务数据 |
-| `ISS-S4-015` | 历史治理门只信任人工标记，且 Base 搜索缺安全版本 | Resolved / evidence gate green / governance pending / delivery blocked | 新增真实治理证据并同时接入 readiness 与 execute；缺 `last_modified_time` 时以治理字段内容版本做并发校验。真实探针识别 5 条商机均有版本，仍有 4 条状态和 5 条可信时间缺口；账本为 0，未发消息。Agent `438/438`、Postgres `19/19` 和完整质量门通过 | 销售逐条确认状态；无已有跟进证据的记录不猜填时间。治理证据 complete 前保持提醒/执行/cron 关闭 |
+| `ISS-S4-015` | 历史治理门只信任人工标记，且 Base 搜索缺安全版本 | Resolved / evidence gate green / governance pending / delivery blocked | 新增真实治理证据并同时接入 readiness 与 execute；缺 `last_modified_time` 时以治理字段内容版本做并发校验。真实探针识别 5 条商机均有版本，仍有 4 条状态和 5 条可信时间缺口；账本为 0，未发消息。Agent `438/438`、Postgres `19/19` 和完整质量门通过；功能 checkpoint 为 `bcffd91e0e17ff4fa66e439039469957823f2d2d` | 销售逐条确认状态；无已有跟进证据的记录不猜填时间。治理证据 complete 前保持提醒/执行/cron 关闭 |
 
 更新规则：发现问题时先补复现证据；修复后记录对应测试或运行证据；没有真实 UI 证据时不得把
 `Open` 改为 `Resolved`，也不得把 `Automated Green / UI pending` 写成 `UI Verified`。

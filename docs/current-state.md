@@ -22,7 +22,8 @@
 - S4-015 定向回归 `92/92`、全量 Agent `438/438`、Postgres 集成 `19/19`、发布器测试
   `4/4` 均通过；全仓 ESLint/Stylelint、服务端/客户端/测试 TypeScript、Agent 106 文件构建、
   Web 构建、迁移全量 skip 和 `git diff --check` 也已通过。最终真实只读复验再次确认相同
-  治理缺口、0 候选与 0 账本记录；功能 checkpoint 见本轮发布证据。
+  治理缺口、0 候选与 0 账本记录；功能 checkpoint
+  `bcffd91e0e17ff4fa66e439039469957823f2d2d` 已发布到 `github/main`。
 
 ## 2026-10-05 S4-014 真实环境只读放行检查（已完成，真实投递仍阻断）
 
