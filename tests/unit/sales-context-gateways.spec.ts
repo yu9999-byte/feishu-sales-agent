@@ -284,6 +284,46 @@ describe('sales context gateways', (): void => {
     }]);
   });
 
+  it('derives a stable followup version when Base omits modification time', async (): Promise<void> => {
+    const search = vi.fn(async () => ({
+      code: 0,
+      data: {
+        items: [{
+          record_id: 'followup-without-modified-time',
+          fields: {
+            商机关联: [{ record_id: 'opportunity-1' }],
+            本次沟通发生时间: 1790128800000,
+            负责人: [{ id: 'ou_sales_a' }],
+          },
+        }],
+        has_more: false,
+      },
+    }));
+    const client = { bitable: { appTableRecord: { search } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+    const gateway = new FeishuBaseGateway(factory);
+
+    const first = await gateway.readStaleOpportunityFollowupPage(
+      integration,
+      'ou_sales_a',
+    );
+    const second = await gateway.readStaleOpportunityFollowupPage(
+      integration,
+      'ou_sales_a',
+    );
+
+    expect(first.items[0]?.sourceVersion).toMatch(
+      /^followup-content-v1:[0-9a-f]{64}$/u,
+    );
+    expect(second.items[0]?.sourceVersion).toBe(
+      first.items[0]?.sourceVersion,
+    );
+    expect(search.mock.calls[0]?.[0].data.field_names).toContain('负责人');
+  });
+
   it('reads owner-scoped opportunities only with explicit status semantics', async (): Promise<void> => {
     const search = vi.fn(async () => ({
       code: 0,
@@ -324,6 +364,46 @@ describe('sales context gateways', (): void => {
       operator: 'is',
       value: ['ou_sales_a'],
     }]);
+  });
+
+  it('derives a stable governance version when Base omits modification time', async (): Promise<void> => {
+    const search = vi.fn(async () => ({
+      code: 0,
+      data: {
+        items: [{
+          record_id: 'opportunity-without-modified-time',
+          fields: {
+            商机: [{ text: '缺少修改时间的商机' }],
+            商机状态: '进行中',
+            负责人: [{ id: 'ou_sales_a' }],
+          },
+        }],
+        has_more: false,
+      },
+    }));
+    const client = { bitable: { appTableRecord: { search } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+    const gateway = new FeishuBaseGateway(factory);
+
+    const first = await gateway.readStaleOpportunityPage(
+      integration,
+      'ou_sales_a',
+    );
+    const second = await gateway.readStaleOpportunityPage(
+      integration,
+      'ou_sales_a',
+    );
+
+    expect(first.items[0]?.sourceVersion).toMatch(
+      /^opportunity-content-v1:[0-9a-f]{64}$/u,
+    );
+    expect(second.items[0]?.sourceVersion).toBe(
+      first.items[0]?.sourceVersion,
+    );
+    expect(search.mock.calls[0]?.[0].data.field_names).toContain('负责人');
   });
 
   it('refuses opportunity scans without a lifecycle field and active values', async (): Promise<void> => {

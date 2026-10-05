@@ -1,10 +1,26 @@
 # 问题日志
 
-状态：`Active / 2026-10-05`
+状态：`Active / 2026-10-06`
 
 本文件只记录可复现的问题、当前状态、证据和下一动作。产品路线见
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
+
+## 2026-10-06 S4 历史治理只有人工标记，且真实 Base 版本缺失
+
+- 原风险：运行时只检查 `STALE_OPPORTUNITY_HISTORY_GOVERNANCE_READY`；若误配为 `true`，
+  即使真实商机仍有未确认状态或缺失可信跟进时间，计划也可能继续。同时真实 Base 搜索
+  未返回 `last_modified_time`，使工作台的商机 `sourceVersion=null`，销售无法通过已有并发门
+  完成逐条状态治理。
+- 处理：新增白名单目标的历史治理证据服务，只读复用准备度报告；准备度和真实执行在 sender
+  之前都要求非空范围、来源完整且无待治理记录。Base 有修改时间时优先使用；没有时对治理
+  相关字段生成确定性内容版本，字段变化会使旧确认冲突。
+- 真实证据：白名单销售有 5 条商机；1 条状态已确认、4 条待确认，5 条均缺可信跟进时间，
+  5 条已全部获得非空安全版本。探针仍返回 `history_governance_incomplete`、
+  `sender_unconfigured`、`candidate_not_found`；账本为 0，扫描凭证交叉访问为 `401`。
+- 状态：`Resolved / evidence gate green / real governance pending / delivery blocked`。
+- 下一动作：由销售对 4 条未知状态逐条确认；5 条无已有可验证跟进时，不猜填时间、
+  不造历史记录。完成真实治理后再核验 sender，期间保持提醒、执行和 cron 关闭。
 
 ## 2026-10-05 S4 受控执行入口缺少关闭状态下的真实准备度证据
 
@@ -338,6 +354,7 @@
 | `ISS-S4-007` | 提醒投递缺少运行前统一安全门 | Resolved / automated green / runtime disabled | 新增默认关闭的运行时准备服务；静态条件缺失、未知投递存在或对账源异常均阻断，关闭时零业务读取；定向测试 `6/6` | 完成历史治理、真实 sender 和人工对账后，再把安全门接入受控投递运行时；继续禁止 cron 和真实消息 |
 | `ISS-S4-013` | 真实提醒链已有扫描、账本和 sender，但缺少受控执行入口 | Resolved / automated green / real delivery disabled | 新增独立执行令牌、单候选请求、测试租户/成员/本人 open_id 三重白名单、执行前重跑 plan、唯一候选匹配和已注册 Nest sender/协调层；冷却重复幂等，未知投递停止。定向 `29/29`、全量 Agent `409/409`、Postgres `19/19`、Lint、三套类型检查、双构建及迁移幂等通过 | 仍需历史治理、部署密钥管理和单独确认后的一次真实测试租户消息回读；不启用 cron，不把自动化假 SDK 结果当真实投递证据 |
 | `ISS-S4-014` | 受控执行入口缺少关闭状态下的真实租户/销售放行检查 | Resolved / real read-only probe / delivery blocked | 新增 execution readiness，使用独立执行凭证并将探针限制为精确白名单；真实核验租户/销售/open_id/权限/数据源/空 uncertain 账本通过，候选完整扫描为 0，探针后账本仍为空；提醒和执行关闭，未调用 execute | 完成历史治理、核验 sender 权限并等待真实停滞候选；三项齐备前不启执行、提醒或 cron，不造业务数据 |
+| `ISS-S4-015` | 历史治理门只信任人工标记，且 Base 搜索缺安全版本 | Resolved / evidence gate green / governance pending / delivery blocked | 新增真实治理证据并同时接入 readiness 与 execute；缺 `last_modified_time` 时以治理字段内容版本做并发校验。真实探针识别 5 条商机均有版本，仍有 4 条状态和 5 条可信时间缺口；账本为 0，未发消息。Agent `438/438`、Postgres `19/19` 和完整质量门通过 | 销售逐条确认状态；无已有跟进证据的记录不猜填时间。治理证据 complete 前保持提醒/执行/cron 关闭 |
 
 更新规则：发现问题时先补复现证据；修复后记录对应测试或运行证据；没有真实 UI 证据时不得把
 `Open` 改为 `Resolved`，也不得把 `Automated Green / UI pending` 写成 `UI Verified`。

@@ -2,6 +2,7 @@ import type {
   StaleOpportunityReminderExecutionOutcome,
   StaleOpportunityReminderExecutionRequest,
   StaleOpportunityReminderExecutionResponse,
+  StaleOpportunityReminderHistoryGovernanceEvidence,
   StaleOpportunityReminderPlanResponse,
   StaleOpportunityTriggerCandidate,
 } from '@shared/api.interface';
@@ -30,6 +31,12 @@ interface StaleOpportunityReminderExecutionCoordinator {
   ): Promise<StaleOpportunityReminderPreparationResult>;
 }
 
+interface StaleOpportunityReminderExecutionGovernanceInspector {
+  inspect(input?: { now?: Date }): Promise<
+    StaleOpportunityReminderHistoryGovernanceEvidence
+  >;
+}
+
 const IDEMPOTENT_SKIP_REASONS: Set<string> = new Set([
   'cooling_down',
   'in_flight',
@@ -41,6 +48,8 @@ class StaleOpportunityReminderExecutionService {
     private readonly config: AgentRuntimeConfig,
     private readonly planner: StaleOpportunityReminderExecutionPlanRunner,
     private readonly coordinator: StaleOpportunityReminderExecutionCoordinator,
+    private readonly governance:
+      StaleOpportunityReminderExecutionGovernanceInspector,
   ) {}
 
   async execute(
@@ -60,6 +69,21 @@ class StaleOpportunityReminderExecutionService {
       return this.empty('incomplete', now, [
         'stale_opportunity_reminder_execution_request_invalid',
       ]);
+    }
+
+    let governance: StaleOpportunityReminderHistoryGovernanceEvidence;
+    try {
+      governance = await this.governance.inspect({ now });
+    } catch (_error: unknown) {
+      return this.empty('blocked', now, [
+        'stale_opportunity_history_governance_evidence_unavailable',
+      ]);
+    }
+    if (governance.status !== 'complete') {
+      const warning: string = governance.status === 'incomplete'
+        ? 'stale_opportunity_history_governance_evidence_incomplete'
+        : 'stale_opportunity_history_governance_evidence_unavailable';
+      return this.empty('blocked', now, [warning, ...governance.warnings]);
     }
 
     let plan: StaleOpportunityReminderPlanResponse;
@@ -227,6 +251,7 @@ class StaleOpportunityReminderExecutionService {
 export { StaleOpportunityReminderExecutionService };
 export type {
   StaleOpportunityReminderExecutionCoordinator,
+  StaleOpportunityReminderExecutionGovernanceInspector,
   StaleOpportunityReminderExecutionInput,
   StaleOpportunityReminderExecutionPlanRunner,
 };

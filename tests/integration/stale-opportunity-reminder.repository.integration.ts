@@ -258,6 +258,22 @@ describe('Stale opportunity preparation with persistent reminder ledger', (): vo
       executionConfig,
       planner,
       coordinator,
+      {
+        inspect: vi.fn(async () => ({
+          status: 'complete' as const,
+          checkedAt: NOW.toISOString(),
+          summary: {
+            opportunityCount: 1,
+            statusConfirmedCount: 1,
+            statusNeedsConfirmationCount: 0,
+            followupTimeConfirmedCount: 1,
+            followupTimeNeedsConfirmationCount: 0,
+            readyForScanCount: 1,
+          },
+          pendingItems: [],
+          warnings: [],
+        })),
+      },
     );
 
     const originalRequest = {

@@ -881,6 +881,14 @@ export interface StaleOpportunityReminderExecutionReadinessLedger {
   uncertainDeliveryFound: boolean;
 }
 
+export interface StaleOpportunityReminderHistoryGovernanceEvidence {
+  status: 'complete' | 'incomplete' | 'unavailable' | 'not_checked';
+  checkedAt: string;
+  summary: StaleOpportunityReadinessSummary;
+  pendingItems: StaleOpportunityReadinessItem[];
+  warnings: string[];
+}
+
 export interface StaleOpportunityReminderExecutionReadinessCandidateProbe {
   status: 'complete' | 'incomplete' | 'disabled' | 'not_checked';
   traceId: string | null;
@@ -896,6 +904,7 @@ export interface StaleOpportunityReminderExecutionReadinessResponse {
   checkedAt: string;
   configuration: StaleOpportunityReminderExecutionReadinessConfiguration;
   target: StaleOpportunityReminderExecutionReadinessTarget;
+  historyGovernance: StaleOpportunityReminderHistoryGovernanceEvidence;
   ledger: StaleOpportunityReminderExecutionReadinessLedger;
   candidateProbe: StaleOpportunityReminderExecutionReadinessCandidateProbe;
   blockers: StaleOpportunityReminderExecutionReadinessBlocker[];

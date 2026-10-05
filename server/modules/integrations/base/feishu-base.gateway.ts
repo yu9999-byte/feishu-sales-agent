@@ -576,6 +576,7 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
             field_names: [
               table.fields.opportunityLink,
               table.fields.communicationAt,
+              table.fields.ownerOpenId,
             ],
             filter: {
               conjunction: 'and',
@@ -608,7 +609,11 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
             item.fields,
             table.fields.communicationAt,
           ),
-          sourceVersion: this.sourceVersion(item.last_modified_time),
+          sourceVersion: this.staleFollowupVersion(
+            item,
+            table,
+            actorOpenId,
+          ),
         }];
       },
     );
@@ -689,6 +694,7 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
             field_names: [
               table.fields.opportunityName,
               table.fields.status,
+              table.fields.ownerOpenId,
             ],
             filter: {
               conjunction: 'and',
@@ -727,7 +733,11 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
             item.fields,
             table.fields.ownerOpenId,
           )[0] ?? actorOpenId,
-          sourceVersion: this.sourceVersion(item.last_modified_time),
+          sourceVersion: this.staleOpportunityVersion(
+            item,
+            table,
+            actorOpenId,
+          ),
           recordUrl: item.record_url ?? null,
         }];
       },
@@ -784,7 +794,11 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
         table.statusValues ?? { active: [] },
       ),
       ownerOpenId,
-      sourceVersion: this.sourceVersion(record.last_modified_time),
+      sourceVersion: this.staleOpportunityVersion(
+        record,
+        table,
+        actorOpenId,
+      ),
       recordUrl: record.record_url ?? null,
     };
   }
@@ -829,7 +843,11 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
         table.fields.communicationAt,
       ),
       ownerOpenId,
-      sourceVersion: this.sourceVersion(record.last_modified_time),
+      sourceVersion: this.staleFollowupVersion(
+        record,
+        table,
+        actorOpenId,
+      ),
       recordUrl: record.record_url ?? null,
     };
   }
@@ -1519,6 +1537,65 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     return Number.isFinite(timestamp)
       ? new Date(timestamp).toISOString()
       : null;
+  }
+
+  private staleOpportunityVersion(
+    record: BaseContextRecord,
+    table: TenantIntegration['base']['opportunities'],
+    actorOpenId: string,
+  ): string {
+    const modifiedVersion: string | null = this.sourceVersion(
+      record.last_modified_time,
+    );
+    if (modifiedVersion !== null) return modifiedVersion;
+    const ownerOpenIds: string[] = this.readUserIds(
+      record.fields,
+      table.fields.ownerOpenId,
+    ).sort();
+    return this.contentVersion('opportunity', {
+      recordId: record.record_id ?? '',
+      name: this.readText(record.fields, table.fields.opportunityName),
+      status: this.readText(record.fields, table.fields.status),
+      ownerOpenIds: ownerOpenIds.length > 0
+        ? ownerOpenIds
+        : [actorOpenId],
+    });
+  }
+
+  private staleFollowupVersion(
+    record: BaseContextRecord,
+    table: TenantIntegration['base']['followups'],
+    actorOpenId: string,
+  ): string {
+    const modifiedVersion: string | null = this.sourceVersion(
+      record.last_modified_time,
+    );
+    if (modifiedVersion !== null) return modifiedVersion;
+    const ownerOpenIds: string[] = this.readUserIds(
+      record.fields,
+      table.fields.ownerOpenId,
+    ).sort();
+    return this.contentVersion('followup', {
+      recordId: record.record_id ?? '',
+      opportunityRecordId: this.readLinkedRecordId(
+        record.fields,
+        table.fields.opportunityLink,
+      ),
+      communicationAt: this.readDate(
+        record.fields,
+        table.fields.communicationAt,
+      ),
+      ownerOpenIds: ownerOpenIds.length > 0
+        ? ownerOpenIds
+        : [actorOpenId],
+    });
+  }
+
+  private contentVersion(kind: string, value: object): string {
+    const digest: string = createHash('sha256')
+      .update(JSON.stringify(value), 'utf8')
+      .digest('hex');
+    return `${kind}-content-v1:${digest}`;
   }
 
   private sourceVersion(value: number | undefined): string | null {

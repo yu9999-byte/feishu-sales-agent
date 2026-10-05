@@ -22,6 +22,8 @@ import { PlatformShellModule } from '@server/modules/platform-shell/platform-she
 import { WebAuthModule } from '@server/modules/web-auth/web-auth.module';
 import { StaleOpportunityContextService } from
   './stale-opportunity-context.service';
+import { StaleOpportunityHistoryGovernanceEvidenceService } from
+  './stale-opportunity-history-governance-evidence.service';
 import { PostgresStaleOpportunityReminderStore } from
   './postgres-stale-opportunity-reminder.store';
 import { StaleOpportunityReadinessController } from
@@ -79,6 +81,7 @@ import {
     StaleOpportunityContextService,
     PostgresStaleOpportunityReminderStore,
     StaleOpportunityReadinessService,
+    StaleOpportunityHistoryGovernanceEvidenceService,
     StaleOpportunityTriggerService,
     StaleOpportunityReminderRuntimeService,
     StaleOpportunityReminderPlanService,
@@ -137,16 +140,19 @@ import {
         config: AgentRuntimeConfig,
         planner: StaleOpportunityReminderPlanService,
         coordinator: StaleOpportunityReminderCoordinatorService,
+        governance: StaleOpportunityHistoryGovernanceEvidenceService,
       ): StaleOpportunityReminderExecutionService =>
         new StaleOpportunityReminderExecutionService(
           config,
           planner,
           coordinator,
+          governance,
         ),
       inject: [
         AGENT_CONFIG,
         StaleOpportunityReminderPlanService,
         StaleOpportunityReminderCoordinatorService,
+        StaleOpportunityHistoryGovernanceEvidenceService,
       ],
     },
     StaleOpportunityReminderReconciliationService,

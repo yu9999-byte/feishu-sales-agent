@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type {
   PlatformPermission,
   PlatformSessionResponse,
+  StaleOpportunityReminderHistoryGovernanceEvidence,
   StaleOpportunityTriggerCandidate,
   StaleOpportunityTriggerResponse,
 } from '@shared/api.interface';
@@ -48,6 +49,7 @@ interface HarnessOptions {
   ledgerFails?: boolean;
   triggerResult?: StaleOpportunityTriggerResponse;
   triggerFails?: boolean;
+  governanceEvidence?: StaleOpportunityReminderHistoryGovernanceEvidence;
 }
 
 interface Harness {
@@ -57,6 +59,7 @@ interface Harness {
   getSessionByMembership: ReturnType<typeof vi.fn>;
   listUncertain: ReturnType<typeof vi.fn>;
   run: ReturnType<typeof vi.fn>;
+  inspectGovernance: ReturnType<typeof vi.fn>;
 }
 
 const runtimeConfig = (options: ConfigOptions = {}): AgentRuntimeConfig => ({
@@ -188,6 +191,26 @@ const triggerResponse = (
     : [],
 });
 
+const governanceEvidence = (
+  status: StaleOpportunityReminderHistoryGovernanceEvidence['status'] =
+    'complete',
+): StaleOpportunityReminderHistoryGovernanceEvidence => ({
+  status,
+  checkedAt: NOW.toISOString(),
+  summary: {
+    opportunityCount: 1,
+    statusConfirmedCount: 1,
+    statusNeedsConfirmationCount: status === 'complete' ? 0 : 1,
+    followupTimeConfirmedCount: 1,
+    followupTimeNeedsConfirmationCount: 0,
+    readyForScanCount: status === 'complete' ? 1 : 0,
+  },
+  pendingItems: [],
+  warnings: status === 'complete'
+    ? []
+    : ['stale_opportunity_history_governance_pending'],
+});
+
 const createHarness = (options: HarnessOptions = {}): Harness => {
   vi.stubEnv('TEST_FEISHU_SECRET', 'configured-secret');
   const selectedIntegration: TenantIntegration | null =
@@ -233,6 +256,9 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     if (options.triggerFails) throw new Error('source unavailable');
     return options.triggerResult ?? triggerResponse();
   });
+  const inspectGovernance = vi.fn(async (): Promise<
+    StaleOpportunityReminderHistoryGovernanceEvidence
+  > => options.governanceEvidence ?? governanceEvidence());
   const service = new StaleOpportunityReminderExecutionReadinessService(
     options.config ?? runtimeConfig(),
     { resolveTenantById },
@@ -240,6 +266,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     { getSessionByMembership },
     { listUncertain },
     { run },
+    { inspect: inspectGovernance },
   );
   return {
     service,
@@ -248,6 +275,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     getSessionByMembership,
     listUncertain,
     run,
+    inspectGovernance,
   };
 };
 
@@ -297,6 +325,7 @@ describe('StaleOpportunityReminderExecutionReadinessService', (): void => {
         permissionGranted: true,
         dataSourceConfigured: true,
       },
+      historyGovernance: governanceEvidence(),
       ledger: { status: 'clear', uncertainDeliveryFound: false },
       candidateProbe: {
         status: 'complete',
@@ -351,6 +380,19 @@ describe('StaleOpportunityReminderExecutionReadinessService', (): void => {
       'execution_enabled',
       'reminder_enabled',
     ]));
+  });
+
+  it('blocks a manual attestation that disagrees with real governance evidence', async (): Promise<void> => {
+    const current: Harness = createHarness({
+      governanceEvidence: governanceEvidence('incomplete'),
+    });
+
+    const result = await current.service.inspect({ now: NOW });
+
+    expect(result.configuration.historyGovernanceReady).toBe(true);
+    expect(result.historyGovernance.status).toBe('incomplete');
+    expect(result.blockers).toContain('history_governance_incomplete');
+    expect(result.status).toBe('blocked');
   });
 
   it.each([

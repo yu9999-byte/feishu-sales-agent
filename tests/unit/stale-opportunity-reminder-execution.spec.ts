@@ -2,6 +2,7 @@ import { MODULE_METADATA } from '@nestjs/common/constants';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
+  StaleOpportunityReminderHistoryGovernanceEvidence,
   StaleOpportunityReminderPlanResponse,
   StaleOpportunityTriggerCandidate,
 } from '@shared/api.interface';
@@ -102,6 +103,30 @@ const request = () => ({
   now: NOW,
 });
 
+const governance = (
+  status: StaleOpportunityReminderHistoryGovernanceEvidence['status'] =
+    'complete',
+) => ({
+  inspect: vi.fn(async (): Promise<
+    StaleOpportunityReminderHistoryGovernanceEvidence
+  > => ({
+    status,
+    checkedAt: NOW.toISOString(),
+    summary: {
+      opportunityCount: 1,
+      statusConfirmedCount: 1,
+      statusNeedsConfirmationCount: 0,
+      followupTimeConfirmedCount: 1,
+      followupTimeNeedsConfirmationCount: 0,
+      readyForScanCount: status === 'complete' ? 1 : 0,
+    },
+    pendingItems: [],
+    warnings: status === 'complete'
+      ? []
+      : ['stale_opportunity_history_governance_pending'],
+  })),
+});
+
 describe('StaleOpportunityReminderExecutionService', (): void => {
   it('registers the controlled execution chain in the insight module', (): void => {
     const providers: unknown[] = Reflect.getMetadata(
@@ -123,6 +148,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
       runtimeConfig({ enabled: false }),
       { plan: planRun },
       { prepareAndDeliver },
+      governance(),
     );
 
     await expect(service.execute(request())).resolves.toMatchObject({
@@ -149,6 +175,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
         runtimeConfig(override),
         { plan: planRun },
         { prepareAndDeliver },
+        governance(),
       );
 
       await expect(service.execute(request())).resolves.toMatchObject({
@@ -171,11 +198,37 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
       config,
       { plan: planRun },
       { prepareAndDeliver },
+      governance(),
     );
 
     await expect(service.execute(request())).resolves.toMatchObject({
       status: 'blocked',
     });
+    expect(planRun).not.toHaveBeenCalled();
+    expect(prepareAndDeliver).not.toHaveBeenCalled();
+  });
+
+  it('blocks delivery when the real governance evidence is incomplete', async (): Promise<void> => {
+    const planRun = vi.fn();
+    const prepareAndDeliver = vi.fn();
+    const governanceInspector = governance('incomplete');
+    const service = new StaleOpportunityReminderExecutionService(
+      runtimeConfig(),
+      { plan: planRun },
+      { prepareAndDeliver },
+      governanceInspector,
+    );
+
+    await expect(service.execute(request())).resolves.toMatchObject({
+      status: 'blocked',
+      candidate: null,
+      outcome: null,
+      warnings: expect.arrayContaining([
+        'stale_opportunity_history_governance_evidence_incomplete',
+        'stale_opportunity_history_governance_pending',
+      ]),
+    });
+    expect(governanceInspector.inspect).toHaveBeenCalledWith({ now: NOW });
     expect(planRun).not.toHaveBeenCalled();
     expect(prepareAndDeliver).not.toHaveBeenCalled();
   });
@@ -188,6 +241,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
         runtimeConfig(),
         { plan: vi.fn(async () => plan(status)) },
         { prepareAndDeliver },
+        governance(),
       );
 
       await expect(service.execute(request())).resolves.toMatchObject({
@@ -207,12 +261,14 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
         followupVersion: 'new-version',
       })])) },
       { prepareAndDeliver },
+      governance(),
     );
     const duplicate = candidate();
     const ambiguous = new StaleOpportunityReminderExecutionService(
       runtimeConfig(),
       { plan: vi.fn(async () => plan('ready', [duplicate, duplicate])) },
       { prepareAndDeliver },
+      governance(),
     );
 
     await expect(noMatch.execute(request())).resolves.toMatchObject({
@@ -237,6 +293,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
         runtimeConfig(),
         { plan: vi.fn(async () => plan('ready', [current])) },
         { prepareAndDeliver },
+        governance(),
       );
 
       await expect(service.execute(request())).resolves.toMatchObject({
@@ -261,6 +318,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
       runtimeConfig(),
       { plan: vi.fn(async () => plan('ready', [current])) },
       { prepareAndDeliver },
+      governance(),
     );
 
     await expect(service.execute(request())).resolves.toEqual({
@@ -306,6 +364,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
       runtimeConfig(),
       { plan: vi.fn(async () => plan('ready', [current])) },
       { prepareAndDeliver },
+      governance(),
     );
 
     await expect(service.execute(request())).resolves.toMatchObject({
@@ -327,6 +386,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
         runtimeConfig(),
         { plan: vi.fn(async () => plan('ready', [current])) },
         { prepareAndDeliver },
+        governance(),
       );
 
       await expect(service.execute(request())).resolves.toMatchObject({

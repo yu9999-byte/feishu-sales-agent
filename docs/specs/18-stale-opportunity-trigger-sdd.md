@@ -1,5 +1,30 @@
 # 商机停滞 7 天提醒 S4 触发规格（部分实现）
 
+## 2026-10-06 S4-015 历史治理真实证据门
+
+- 新增 `StaleOpportunityHistoryGovernanceEvidenceService`，只允许使用 execution 白名单中唯一的
+  tenant/member/open_id，重读活跃租户、成员和已有 `StaleOpportunityReadinessService`。任一
+  身份不一致时不读 Base；来源不完整/不可用、范围为空或任一商机尚有准备度 blocker 均不能
+  输出 `complete`。
+- `GET /internal/stale-opportunity-reminder/execution-readiness` 新增 `historyGovernance`，包含状态、
+  检查时间、汇总、待治理记录和 warning。原人工配置仍保留，但只有人工标记与真实证据
+  同时完成才能通过历史治理门。
+- `StaleOpportunityReminderExecutionService` 在 plan 之前再独立调用同一证据门。证据非
+  `complete` 时返回 `blocked`，不调用 plan、协调器、账本 claim 或 sender；防止跳过
+  readiness 直接请求 execute，也防止单一环境标记误配放行。
+- Base 记录有 `last_modified_time` 时仍使用时间版本。真实搜索不返回该元数据时，商机使用
+  `recordId + name + status + ownerOpenIds`，跟进使用
+  `recordId + opportunityRecordId + communicationAt + ownerOpenIds` 的规范 JSON SHA-256 内容版本。
+  搜索显式请求 owner 字段；内容版本只做并发校验，不代表修改或沟通时间。
+- 真实只读探针返回 5 条白名单销售本人商机：1 条状态已确认，4 条状态未确认，
+  5 条无可核实跟进时间，所以治理证据为 `incomplete`；所有商机 `sourceVersion` 已非空。
+  账本为空、当前候选为 0，扫描 token 访问 execution readiness 为 `401`。提醒/执行开关
+  仍为 `false`，未调用 execute、未发送消息、未修改 Base/Task/控制库业务记录、未创建 cron。
+- 自动化覆盖完整/待治理/空范围/来源不完整/身份不一致、人工标记与证据不一致、execute
+  执行前阻断、修改时间优先和内容版本稳定性。定向 `92/92`、全量 Agent `438/438`、Postgres
+  `19/19`、发布器 `4/4` 通过；全仓 lint、三套类型检查、Agent/Web 构建、迁移全量 skip 与
+  diff 检查通过。完整门禁和发布证据见当前状态与需求追踪。
+
 ## 2026-10-05 S4-014 真实环境只读执行准备度
 
 - 新增 `GET /internal/stale-opportunity-reminder/execution-readiness`，复用执行专用 Bearer 凭证，
