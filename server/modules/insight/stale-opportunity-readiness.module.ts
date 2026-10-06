@@ -38,6 +38,8 @@ import { StaleOpportunityReminderExecutionReadinessService } from
   './stale-opportunity-reminder-execution-readiness.service';
 import { StaleOpportunityReminderSenderEvidenceService } from
   './stale-opportunity-reminder-sender-evidence.service';
+import { StaleOpportunityReminderScheduleObservationService } from
+  './stale-opportunity-reminder-schedule-observation.service';
 import { StaleOpportunityReminderService } from
   './stale-opportunity-reminder.service';
 import { StaleOpportunityScanService } from
@@ -89,6 +91,7 @@ import {
     StaleOpportunityReminderPlanService,
     StaleOpportunityReminderSenderEvidenceService,
     StaleOpportunityReminderExecutionReadinessService,
+    StaleOpportunityReminderScheduleObservationService,
     {
       provide: FeishuStaleOpportunityReminderSender,
       useFactory: (

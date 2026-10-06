@@ -18,7 +18,12 @@ describe('loadAgentConfig controlled reminder execution', (): void => {
   it('keeps real reminder execution disabled and unscoped by default', (): void => {
     requiredEnvironment();
 
-    expect(loadAgentConfig().staleOpportunityReminder?.execution).toEqual({
+    const reminder = loadAgentConfig().staleOpportunityReminder;
+
+    expect(reminder?.scheduleObservation).toEqual({
+      triggerToken: undefined,
+    });
+    expect(reminder?.execution).toEqual({
       enabled: false,
       triggerToken: undefined,
       allowedTenantId: undefined,
@@ -53,6 +58,20 @@ describe('loadAgentConfig controlled reminder execution', (): void => {
       allowedTenantId: 'tenant-a',
       allowedMemberId: 'member-a',
       allowedRecipientOpenId: 'ou_sales_a',
+    });
+  });
+
+  it('loads a dedicated read-only schedule observation token', (): void => {
+    requiredEnvironment();
+    vi.stubEnv(
+      'STALE_OPPORTUNITY_REMINDER_SCHEDULE_OBSERVATION_TOKEN',
+      'schedule-observation-token',
+    );
+
+    expect(
+      loadAgentConfig().staleOpportunityReminder?.scheduleObservation,
+    ).toEqual({
+      triggerToken: 'schedule-observation-token',
     });
   });
 });

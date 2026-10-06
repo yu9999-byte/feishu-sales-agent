@@ -10,6 +10,7 @@ import type {
   StaleOpportunityReminderExecutionReadinessResponse,
   StaleOpportunityReminderExecutionResponse,
   StaleOpportunityReminderPlanResponse,
+  StaleOpportunityReminderScheduleObservationResponse,
 } from '@shared/api.interface';
 import type { AgentRuntimeConfig } from '@server/config/agent.config';
 import {
@@ -17,6 +18,7 @@ import {
   type StaleOpportunityReminderRuntimeExecutionRunner,
   type StaleOpportunityReminderRuntimePlanRunner,
   type StaleOpportunityReminderRuntimePreflightRunner,
+  type StaleOpportunityReminderScheduleObservationRunner,
 } from '@server/modules/insight/stale-opportunity-reminder-runtime.controller';
 import {
   StaleOpportunityReadinessModule,
@@ -50,6 +52,9 @@ const runtimeConfig = (
     enabled: false,
     historyGovernanceReady: false,
     senderConfigured: false,
+    scheduleObservation: {
+      triggerToken: undefined,
+    },
     execution: {
       enabled: false,
       triggerToken: undefined,
@@ -128,6 +133,34 @@ const executionReadinessResponse:
       permissionGranted: null,
       dataSourceConfigured: null,
     },
+    historyGovernance: {
+      status: 'not_checked',
+      checkedAt: NOW,
+      summary: {
+        opportunityCount: 0,
+        statusConfirmedCount: 0,
+        statusNeedsConfirmationCount: 0,
+        followupTimeConfirmedCount: 0,
+        followupTimeNeedsConfirmationCount: 0,
+        readyForScanCount: 0,
+      },
+      pendingItems: [],
+      warnings: [],
+    },
+    senderEvidence: {
+      status: 'not_checked',
+      checkedAt: NOW,
+      credentialsStatus: 'not_checked',
+      botStatus: 'not_checked',
+      botOpenIdPresent: false,
+      sendPermissionStatus: 'not_checked',
+      grantedSendScope: null,
+      recipientVisibility: {
+        status: 'not_checked',
+        inspectionPermissionGranted: false,
+      },
+      warnings: [],
+    },
     ledger: { status: 'not_checked', uncertainDeliveryFound: false },
     candidateProbe: {
       status: 'disabled',
@@ -138,6 +171,28 @@ const executionReadinessResponse:
       warnings: [],
     },
     blockers: ['scan_disabled'],
+    warnings: [],
+  };
+
+const scheduleObservationResponse:
+  StaleOpportunityReminderScheduleObservationResponse = {
+    mode: 'read-only-observation',
+    traceId: 'schedule-observation-trace',
+    status: 'blocked',
+    observedAt: NOW,
+    blockers: ['history_governance_incomplete'],
+    summary: {
+      executionReadinessStatus: 'blocked',
+      blockerCount: 1,
+      warningCount: 0,
+      historyGovernanceStatus: 'incomplete',
+      senderEvidenceStatus: 'complete',
+      ledgerStatus: 'clear',
+      candidateProbeStatus: 'complete',
+      candidateCount: 0,
+      matchingCandidateCount: 0,
+    },
+    auditRecorded: true,
     warnings: [],
   };
 
@@ -356,6 +411,93 @@ describe('StaleOpportunityReminderRuntimeController', (): void => {
     ).resolves.toEqual(executionReadinessResponse);
     expect(config.staleOpportunityReminder?.execution?.enabled).toBe(false);
     expect(inspect).toHaveBeenCalledTimes(1);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('rejects schedule observation before inspection when its token is missing', async (): Promise<void> => {
+    const observe = vi.fn(async (): Promise<
+      StaleOpportunityReminderScheduleObservationResponse
+    > => scheduleObservationResponse);
+    const scheduleObserver:
+      StaleOpportunityReminderScheduleObservationRunner = { observe };
+    const controller = new StaleOpportunityReminderRuntimeController(
+      runtimeConfig('scan-token'),
+      { prepare: vi.fn() },
+      planRunner(),
+      executionRunner(),
+      undefined,
+      scheduleObserver,
+    );
+
+    await expect(
+      controller.observeSchedule('Bearer supplied-token'),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(observe).not.toHaveBeenCalled();
+  });
+
+  it.each(['scan', 'execution'] as const)(
+    'rejects a schedule token reused from %s',
+    async (source): Promise<void> => {
+      const config: AgentRuntimeConfig = runtimeConfig('scan-token');
+      config.staleOpportunityReminder!.execution!.triggerToken =
+        'execution-token';
+      config.staleOpportunityReminder!.scheduleObservation!.triggerToken =
+        source === 'scan' ? 'scan-token' : 'execution-token';
+      const observe = vi.fn(async (): Promise<
+        StaleOpportunityReminderScheduleObservationResponse
+      > => scheduleObservationResponse);
+      const controller = new StaleOpportunityReminderRuntimeController(
+        config,
+        { prepare: vi.fn() },
+        planRunner(),
+        executionRunner(),
+        undefined,
+        { observe },
+      );
+
+      await expect(
+        controller.observeSchedule(
+          `Bearer ${config.staleOpportunityReminder
+            ?.scheduleObservation?.triggerToken}`,
+        ),
+      ).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(observe).not.toHaveBeenCalled();
+    },
+  );
+
+  it('uses only the dedicated observation token and never invokes delivery', async (): Promise<void> => {
+    const config: AgentRuntimeConfig = runtimeConfig('scan-token');
+    config.staleOpportunityReminder!.execution!.triggerToken =
+      'execution-token';
+    config.staleOpportunityReminder!.scheduleObservation!.triggerToken =
+      'schedule-observation-token';
+    const execute = vi.fn(
+      async (): Promise<StaleOpportunityReminderExecutionResponse> =>
+        executionResponse,
+    );
+    const observe = vi.fn(async (): Promise<
+      StaleOpportunityReminderScheduleObservationResponse
+    > => scheduleObservationResponse);
+    const controller = new StaleOpportunityReminderRuntimeController(
+      config,
+      { prepare: vi.fn() },
+      planRunner(),
+      { execute },
+      undefined,
+      { observe },
+    );
+
+    await expect(controller.observeSchedule()).rejects
+      .toBeInstanceOf(UnauthorizedException);
+    await expect(controller.observeSchedule('Bearer scan-token')).rejects
+      .toBeInstanceOf(UnauthorizedException);
+    await expect(
+      controller.observeSchedule('Bearer execution-token'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(
+      controller.observeSchedule('Bearer schedule-observation-token'),
+    ).resolves.toEqual(scheduleObservationResponse);
+    expect(observe).toHaveBeenCalledTimes(1);
     expect(execute).not.toHaveBeenCalled();
   });
 });

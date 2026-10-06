@@ -5,9 +5,13 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Sql } from 'postgres';
 import type {
   PlatformSessionResponse,
+  StaleOpportunityReminderExecutionReadinessResponse,
   StaleOpportunityTriggerResponse,
 } from '@shared/api.interface';
 import type { AgentRuntimeConfig } from '@server/config/agent.config';
+import {
+  PostgresControlStore,
+} from '@server/modules/control-store/postgres-control.store';
 import type {
   StaleOpportunityFollowupPage,
   StaleOpportunityPage,
@@ -25,6 +29,9 @@ import {
 import {
   StaleOpportunityReminderPlanService,
 } from '@server/modules/insight/stale-opportunity-reminder-plan.service';
+import {
+  StaleOpportunityReminderScheduleObservationService,
+} from '@server/modules/insight/stale-opportunity-reminder-schedule-observation.service';
 import type {
   StaleOpportunityReminderClaimInput,
   StaleOpportunityReminderClaimResult,
@@ -343,6 +350,155 @@ describe('Stale opportunity preparation with persistent reminder ledger', (): vo
       followup_version: 'coordinator-followup-version-1',
       message_id: 'om_fake_coordinator_1',
     }]);
+  });
+
+  it('persists one redacted schedule observation without claiming or sending', async (): Promise<void> => {
+    const traceId: string = 'schedule-observation-integration-trace';
+    await sql`
+      DELETE FROM audit_events
+      WHERE tenant_id = ${COORDINATOR_TENANT_ID}::uuid
+        AND trace_id = ${traceId}
+    `;
+    const readiness: StaleOpportunityReminderExecutionReadinessResponse = {
+      mode: 'read-only',
+      status: 'blocked',
+      checkedAt: NOW.toISOString(),
+      configuration: {
+        executionEnabled: false,
+        reminderEnabled: false,
+        scanEnabled: true,
+        executionTokenConfigured: true,
+        scanTokenConfigured: true,
+        executionTokenDistinctFromScan: true,
+        allowlistConfigured: true,
+        historyGovernanceReady: false,
+        senderConfigured: false,
+      },
+      target: {
+        tenantId: COORDINATOR_TENANT_ID,
+        tenantName: '不得进入审计详情的企业名称',
+        tenantStatus: 'active',
+        memberId: 'member-private-id',
+        memberDisplayName: '不得进入审计详情的销售姓名',
+        memberStatus: 'active',
+        recipientOpenId: 'ou_private_recipient',
+        recipientOpenIdMatches: true,
+        permissionGranted: true,
+        dataSourceConfigured: true,
+      },
+      historyGovernance: {
+        status: 'incomplete',
+        checkedAt: NOW.toISOString(),
+        summary: {
+          opportunityCount: 5,
+          statusConfirmedCount: 1,
+          statusNeedsConfirmationCount: 4,
+          followupTimeConfirmedCount: 0,
+          followupTimeNeedsConfirmationCount: 5,
+          readyForScanCount: 0,
+        },
+        pendingItems: [],
+        warnings: [],
+      },
+      senderEvidence: {
+        status: 'complete',
+        checkedAt: NOW.toISOString(),
+        credentialsStatus: 'valid',
+        botStatus: 'enabled',
+        botOpenIdPresent: true,
+        sendPermissionStatus: 'granted',
+        grantedSendScope: 'im:message:send_as_bot',
+        recipientVisibility: {
+          status: 'not_checked',
+          inspectionPermissionGranted: false,
+        },
+        warnings: [],
+      },
+      ledger: {
+        status: 'clear',
+        uncertainDeliveryFound: false,
+      },
+      candidateProbe: {
+        status: 'complete',
+        traceId: 'private-candidate-trace',
+        candidateCount: 0,
+        matchingCandidateCount: 0,
+        items: [],
+        warnings: [],
+      },
+      blockers: [
+        'history_governance_incomplete',
+        'sender_unconfigured',
+        'candidate_not_found',
+      ],
+      warnings: [],
+    };
+    const config: AgentRuntimeConfig = {
+      host: '127.0.0.1',
+      port: 3100,
+      databaseUrl: 'postgres://test',
+      llm: {
+        baseUrl: 'https://llm.example.test',
+        apiKey: 'test-key',
+        model: 'test-model',
+      },
+      feishu: {
+        verificationToken: 'verification-token',
+        encryptKey: undefined,
+      },
+      staleOpportunityReminder: {
+        enabled: false,
+        historyGovernanceReady: false,
+        senderConfigured: false,
+        execution: {
+          enabled: false,
+          triggerToken: 'execution-token',
+          allowedTenantId: COORDINATOR_TENANT_ID,
+          allowedMemberId: 'member-private-id',
+          allowedRecipientOpenId: 'ou_private_recipient',
+        },
+      },
+    };
+    const inspect = vi.fn(async (): Promise<
+      StaleOpportunityReminderExecutionReadinessResponse
+    > => readiness);
+    const service = new StaleOpportunityReminderScheduleObservationService(
+      config,
+      { inspect },
+      new PostgresControlStore(sql),
+    );
+
+    const result = await service.observe({ now: NOW, traceId });
+
+    expect(result).toMatchObject({
+      status: 'blocked',
+      auditRecorded: true,
+      traceId,
+    });
+    const auditRows: Array<{
+      event_type: string;
+      outcome: string;
+      actor_open_id: string | null;
+      entity_id: string | null;
+      details: Record<string, unknown>;
+    }> = await sql`
+      SELECT event_type, outcome, actor_open_id, entity_id, details
+      FROM audit_events
+      WHERE tenant_id = ${COORDINATOR_TENANT_ID}::uuid
+        AND trace_id = ${traceId}
+    `;
+    expect(auditRows).toHaveLength(1);
+    expect(auditRows[0]).toMatchObject({
+      event_type: 'stale_opportunity_reminder.schedule_observed.v1',
+      outcome: 'ignored',
+      actor_open_id: null,
+      entity_id: null,
+    });
+    const serialized: string = JSON.stringify(auditRows[0]?.details);
+    expect(serialized).not.toContain('不得进入审计详情');
+    expect(serialized).not.toContain('member-private-id');
+    expect(serialized).not.toContain('ou_private_recipient');
+    expect(serialized).not.toContain('private-candidate-trace');
   });
 });
 

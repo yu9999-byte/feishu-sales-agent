@@ -44,6 +44,9 @@ export interface AgentRuntimeConfig {
     enabled: boolean;
     historyGovernanceReady: boolean;
     senderConfigured: boolean;
+    scheduleObservation?: {
+      triggerToken: string | undefined;
+    };
     execution?: {
       enabled: boolean;
       triggerToken: string | undefined;
@@ -144,6 +147,11 @@ const loadAgentConfig = (): AgentRuntimeConfig => ({
       process.env.STALE_OPPORTUNITY_REMINDER_SENDER_CONFIGURED,
       false,
     ),
+    scheduleObservation: {
+      triggerToken: optionalEnvironment(
+        'STALE_OPPORTUNITY_REMINDER_SCHEDULE_OBSERVATION_TOKEN',
+      ),
+    },
     execution: {
       enabled: parseBoolean(
         process.env.STALE_OPPORTUNITY_REMINDER_EXECUTION_ENABLED,

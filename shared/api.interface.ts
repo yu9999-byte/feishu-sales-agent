@@ -933,6 +933,44 @@ export interface StaleOpportunityReminderExecutionReadinessResponse {
   warnings: string[];
 }
 
+export type StaleOpportunityReminderScheduleObservationStatus =
+  | 'blocked'
+  | 'ready'
+  | 'unavailable'
+  | 'incomplete';
+
+export interface StaleOpportunityReminderScheduleObservationSummary {
+  executionReadinessStatus:
+    | StaleOpportunityReminderExecutionReadinessResponse['status']
+    | 'unavailable';
+  blockerCount: number;
+  warningCount: number;
+  historyGovernanceStatus:
+    | StaleOpportunityReminderHistoryGovernanceEvidence['status']
+    | 'not_checked';
+  senderEvidenceStatus:
+    | StaleOpportunityReminderSenderEvidence['status']
+    | 'not_checked';
+  ledgerStatus:
+    | StaleOpportunityReminderExecutionReadinessLedger['status']
+    | 'not_checked';
+  candidateProbeStatus:
+    StaleOpportunityReminderExecutionReadinessCandidateProbe['status'];
+  candidateCount: number;
+  matchingCandidateCount: number;
+}
+
+export interface StaleOpportunityReminderScheduleObservationResponse {
+  mode: 'read-only-observation';
+  traceId: string;
+  status: StaleOpportunityReminderScheduleObservationStatus;
+  observedAt: string;
+  blockers: StaleOpportunityReminderExecutionReadinessBlocker[];
+  summary: StaleOpportunityReminderScheduleObservationSummary;
+  auditRecorded: boolean;
+  warnings: string[];
+}
+
 export type StaleOpportunityReminderKind = 'stale_followup';
 
 export type StaleOpportunityReminderReconciliationDecision =

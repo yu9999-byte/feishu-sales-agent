@@ -1,5 +1,24 @@
 # 当前工程说明
 
+## 2026-10-06 S4-017 调度前可观测性（已完成，未创建或启用 cron）
+
+- 新增 `POST /internal/stale-opportunity-reminder/schedule-observation`。未来部署环境 cron 可以使用
+  独立观察凭证检查“当前能否进入受控投递、为什么被阻断”，但该凭证不能访问扫描或执行入口，
+  并且配置为与扫描/执行令牌相同会直接拒绝服务。
+- 观察入口只调用既有 `execution-readiness` 服务并返回脱敏聚合：trace、阻断项、治理/Sender/
+  账本/候选探针状态和数量。响应与审计都不包含租户名称、销售姓名、open_id、商机名称、记录
+  ID、跟进版本、Token 或 Secret。
+- 每次观察尝试向控制库写入
+  `stale_opportunity_reminder.schedule_observed.v1`：ready 为 `succeeded`、blocked 为
+  `ignored`、准备度异常为 `failed`。审计目标缺失或写入失败时明确返回
+  `auditRecorded=false` 和 warning，状态降为 `incomplete`/`unavailable`，不能伪装为观察完成。
+- 该路径不调用 `/execute`，不领取提醒账本，不调用 sender，不发送消息，不修改 Base/Task，
+  也不创建或启用 cron。提醒、执行、历史治理和 Sender 人工开关仍保持关闭；真实业务阻断状态
+  未被本切片改变。
+- 新增入口/配置/脱敏/失败降级单测及 Postgres 审计落库集成；定向 `24/24`、全量 Agent
+  `465/465`、Postgres `20/20`、发布器 `4/4` 通过。完整 Lint、三套类型检查、Agent 108 文件构建、
+  Web 构建、迁移连续两次全量 skip、diff 检查和 publisher dry-run 也已通过。
+
 ## 2026-10-06 S4-016 真实 Sender 就绪证据门（已完成，真实投递仍阻断）
 
 - `execution-readiness` 新增真实 `senderEvidence`，不再只信任

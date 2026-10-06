@@ -6,6 +6,23 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-06 外部 cron 缺少无发送权限的调度前可观测入口
+
+- 原风险：已有 scan、execution readiness 和 execute 入口，但未来 cron 若直接持有扫描或执行
+  凭证，会把“检查是否就绪”和“读取候选/执行投递”混在同一权限边界；检查结果也没有独立的
+  持久审计，无法证明某次调度为何停止。
+- 处理：新增只读 `schedule-observation` 入口和第三枚独立 Bearer 凭证。凭证缺失、错误或复用
+  scan/execution token 时，在准备度服务前拒绝。成功请求只聚合 readiness 证据，并向控制库
+  追加脱敏 `schedule_observed.v1` 审计。
+- 失败边界：准备度异常记录 failed；审计目标缺失或落库失败返回 `auditRecorded=false` 和稳定
+  warning，ready/blocked 结果不会被伪装成完整观察。响应和审计不含业务名称、记录 ID、open_id、
+  跟进版本或任何 Secret。
+- 边界：没有执行发送、账本 claim、Base/Task 写入，也没有创建或启用 cron；现有提醒/执行/
+  治理/Sender 开关不变。
+- 状态：`Resolved / read-only observation green / cron not configured / delivery blocked`。
+- 下一动作：由部署环境密钥管理器配置独立观察凭证，再以关闭状态接入外部 cron 做运行观察；
+  真实历史治理、自然候选和产品负责人单次投递确认完成前，不向 cron 提供执行凭证。
+
 ## 2026-10-06 S4 Sender 放行只有人工标记，缺少真实应用证据
 
 - 原风险：运行时只检查 `STALE_OPPORTUNITY_REMINDER_SENDER_CONFIGURED`。即使机器人未发布、

@@ -1,5 +1,27 @@
 # 商机停滞 7 天提醒 S4 触发规格（部分实现）
 
+## 2026-10-06 S4-017 调度前可观测性
+
+- 新增 `POST /internal/stale-opportunity-reminder/schedule-observation`，由未来部署环境 cron 使用
+  `STALE_OPPORTUNITY_REMINDER_SCHEDULE_OBSERVATION_TOKEN` 调用。该 token 必须与
+  `STALE_OPPORTUNITY_TRIGGER_TOKEN` 和
+  `STALE_OPPORTUNITY_REMINDER_EXECUTION_TOKEN` 都不同；缺失、错误或复用时在调用
+  readiness 前拒绝。
+- 服务只调用 `StaleOpportunityReminderExecutionReadinessService.inspect`，把结果压缩为
+  trace、状态、blockers、治理/Sender/账本/候选探针状态及数量。候选 items、租户/成员标识、
+  open_id、商机/跟进名称与记录 ID、跟进版本和任何配置 Secret 均不进入响应或审计。
+- 每次观察使用 `CONTROL_STORE.appendAudit` 写入
+  `stale_opportunity_reminder.schedule_observed.v1`。readiness ready 对应 `succeeded`，blocked
+  对应 `ignored`，检查异常对应 `failed`；详情只保留布尔值、枚举和数量。
+- readiness 异常会返回 `unavailable`；审计目标缺失或写入失败会返回
+  `auditRecorded=false` 与稳定 warning，正常 ready/blocked 会降为 `incomplete`，调度器不得将其
+  解释成完整观察或继续投递。
+- 入口未注入执行协调器或 sender，不调用 execute，不领取 reminder ledger，不写 Base/Task，
+  不创建/启用 cron。触发器规范中的 `@Automation/@BindTrigger` 不用于当前独立 Agent。
+- 自动化覆盖独立/缺失/错误/复用凭证、模块装配、ready/blocked/异常、审计失败、无审计租户、
+  业务标识脱敏和真实 Postgres 落库。定向 `24/24`、全量 Agent `465/465`、Postgres `20/20`
+  通过；实际部署 cron 和密钥配置仍待完成。
+
 ## 2026-10-06 S4-016 真实 Sender 就绪证据门
 
 - 新增 `StaleOpportunityReminderSenderEvidenceService`。服务只接受 execution 白名单中唯一的

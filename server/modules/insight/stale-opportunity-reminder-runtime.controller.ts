@@ -22,6 +22,7 @@ import {
   type StaleOpportunityReminderExecutionReadinessResponse,
   type StaleOpportunityReminderPlanResponse,
   type StaleOpportunityReminderPreflightResponse,
+  type StaleOpportunityReminderScheduleObservationResponse,
 } from '@shared/api.interface';
 import {
   AGENT_CONFIG,
@@ -36,6 +37,8 @@ import { StaleOpportunityReminderExecutionService } from
   './stale-opportunity-reminder-execution.service';
 import { StaleOpportunityReminderExecutionReadinessService } from
   './stale-opportunity-reminder-execution-readiness.service';
+import { StaleOpportunityReminderScheduleObservationService } from
+  './stale-opportunity-reminder-schedule-observation.service';
 
 interface StaleOpportunityReminderRuntimePreflightRunner {
   prepare(): Promise<StaleOpportunityReminderPreflightResponse>;
@@ -53,6 +56,10 @@ interface StaleOpportunityReminderRuntimeExecutionRunner {
 
 interface StaleOpportunityReminderExecutionReadinessRunner {
   inspect(): Promise<StaleOpportunityReminderExecutionReadinessResponse>;
+}
+
+interface StaleOpportunityReminderScheduleObservationRunner {
+  observe(): Promise<StaleOpportunityReminderScheduleObservationResponse>;
 }
 
 const TOKEN_PATTERN: RegExp = /^Bearer ([^\s]+)$/iu;
@@ -75,6 +82,10 @@ class StaleOpportunityReminderRuntimeController {
     @Inject(StaleOpportunityReminderExecutionReadinessService)
     private readonly executionReadiness?:
       StaleOpportunityReminderExecutionReadinessRunner,
+    @Optional()
+    @Inject(StaleOpportunityReminderScheduleObservationService)
+    private readonly scheduleObservation?:
+      StaleOpportunityReminderScheduleObservationRunner,
   ) {}
 
   @Get('preflight')
@@ -120,6 +131,22 @@ class StaleOpportunityReminderRuntimeController {
       });
     }
     return this.executionReadiness.inspect();
+  }
+
+  @Post('schedule-observation')
+  @HttpCode(HttpStatus.OK)
+  @Header('Cache-Control', 'no-store')
+  async observeSchedule(
+    @Headers('authorization') authorization?: string,
+  ): Promise<StaleOpportunityReminderScheduleObservationResponse> {
+    this.assertScheduleObservationAuthorized(authorization);
+    if (!this.scheduleObservation) {
+      throw new ServiceUnavailableException({
+        code: 'SCHEDULE_OBSERVATION_UNAVAILABLE',
+        message: '商机提醒调度观察服务未装配',
+      });
+    }
+    return this.scheduleObservation.observe();
   }
 
   private assertAuthorized(authorization: string | undefined): void {
@@ -170,6 +197,42 @@ class StaleOpportunityReminderRuntimeController {
     }
   }
 
+  private assertScheduleObservationAuthorized(
+    authorization: string | undefined,
+  ): void {
+    const expected: string | undefined =
+      this.config.staleOpportunityReminder?.scheduleObservation
+        ?.triggerToken?.trim();
+    if (!expected) {
+      throw new ServiceUnavailableException({
+        code: 'SCHEDULE_OBSERVATION_DISABLED',
+        message: '商机提醒调度观察入口未配置',
+      });
+    }
+    const scanToken: string | undefined =
+      this.config.staleOpportunityScan?.triggerToken?.trim();
+    const executionToken: string | undefined =
+      this.config.staleOpportunityReminder?.execution?.triggerToken?.trim();
+    if (expected === scanToken || expected === executionToken) {
+      throw new ServiceUnavailableException({
+        code: 'SCHEDULE_OBSERVATION_CREDENTIAL_UNSAFE',
+        message: '商机提醒调度观察凭证未与扫描和执行凭证隔离',
+      });
+    }
+    const match: RegExpExecArray | null = TOKEN_PATTERN.exec(
+      authorization ?? '',
+    );
+    if (
+      match === null ||
+      !timingSafeEqual(digestToken(match[1]), digestToken(expected))
+    ) {
+      throw new UnauthorizedException({
+        code: 'UNAUTHENTICATED',
+        message: '商机提醒调度观察凭证无效',
+      });
+    }
+  }
+
   private parseExecutionRequest(
     body: unknown,
   ): StaleOpportunityReminderExecutionRequest {
@@ -209,4 +272,5 @@ export type {
   StaleOpportunityReminderRuntimeExecutionRunner,
   StaleOpportunityReminderRuntimePlanRunner,
   StaleOpportunityReminderRuntimePreflightRunner,
+  StaleOpportunityReminderScheduleObservationRunner,
 };
