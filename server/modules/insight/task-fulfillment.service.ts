@@ -35,6 +35,7 @@ interface TaskFulfillmentInput {
   referenceDate: string;
   timezone: string;
   now?: Date;
+  readOnly?: boolean;
 }
 
 interface TaskFulfillmentTasksReader {
@@ -305,12 +306,14 @@ class TaskFulfillmentService {
       });
     const completedResult: CompletedTasksResult =
       await this.readCompletedTasks(input, warnings);
-    const snapshotResult: SnapshotResult = await this.recordSnapshots(
-      input,
-      [...items, ...completedResult.taskItems],
-      warnings,
-      now,
-    );
+    const snapshotResult: SnapshotResult = input.readOnly === true
+      ? { available: false, changes: [] }
+      : await this.recordSnapshots(
+          input,
+          [...items, ...completedResult.taskItems],
+          warnings,
+          now,
+        );
     const reconciliation: PromiseReconciliationResult =
       await this.reconcilePromises(
         input,
@@ -549,14 +552,16 @@ class TaskFulfillmentService {
         taskLookupUnavailable,
         warnings,
       );
-    const detailSnapshotResult: SnapshotResult = await this.recordSnapshots(
-      input,
-      detailedTasks.map((task: DailyReportTaskRecord): TaskFulfillmentItem =>
-        this.toTaskItem(task, input.timezone, input.referenceDate),
-      ),
-      warnings,
-      now,
-    );
+    const detailSnapshotResult: SnapshotResult = input.readOnly === true
+      ? { available: false, changes: [] }
+      : await this.recordSnapshots(
+          input,
+          detailedTasks.map((task: DailyReportTaskRecord): TaskFulfillmentItem =>
+            this.toTaskItem(task, input.timezone, input.referenceDate),
+          ),
+          warnings,
+          now,
+        );
     const historyResult: TaskHistoryResult =
       await this.readTaskStatusEvents(
         input,

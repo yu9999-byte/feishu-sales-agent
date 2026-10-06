@@ -139,6 +139,29 @@ const saveSucceeded = async (
 };
 
 describe('TaskFulfillmentService', (): void => {
+  it('supports decision reads without persisting task snapshots', async (): Promise<void> => {
+    const tasks: TaskFulfillmentTasksReader = {
+      listOwnedTasks: vi.fn(
+        async (): Promise<DailyReportTaskResult> => taskResult,
+      ),
+    };
+    const store: MemoryControlStore = new MemoryControlStore([integration]);
+    const recordSnapshots = vi.spyOn(store, 'recordTaskSnapshots');
+
+    const result = await new TaskFulfillmentService(tasks, store).analyze({
+      integration,
+      actorOpenId: 'ou_sales_a',
+      referenceDate: '2026-09-30',
+      timezone: 'Asia/Shanghai',
+      now: NOW,
+      readOnly: true,
+    });
+
+    expect(result.metrics.openTaskCount).toBe(5);
+    expect(recordSnapshots).not.toHaveBeenCalled();
+    expect(result.coverage.taskSnapshots).toBe('unavailable');
+  });
+
   it('classifies open tasks in tenant local time and orders risks first', async (): Promise<void> => {
     const tasks: TaskFulfillmentTasksReader = {
       listOwnedTasks: vi.fn(

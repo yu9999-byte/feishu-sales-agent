@@ -14,6 +14,10 @@ import type {
   SalesContextHints,
   SalesRecordResult,
   OpportunityLifecycleStatus,
+  OpportunityPortfolioCustomerRecord,
+  OpportunityPortfolioFollowupRecord,
+  OpportunityPortfolioOpportunityRecord,
+  OpportunityPortfolioResult,
   OpportunityStatusValueMapping,
   OpportunityStatusUpdateInput,
   OpportunityStatusUpdateResult,
@@ -520,6 +524,199 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
         },
       );
     return { customers, followups, opportunities, warnings: [] };
+  }
+
+  async readOpportunityPortfolio(
+    integration: TenantIntegration,
+    actorOpenId: string,
+  ): Promise<OpportunityPortfolioResult> {
+    const result: OpportunityPortfolioResult = {
+      customers: [],
+      opportunities: [],
+      followups: [],
+      warnings: [],
+    };
+    if (!actorOpenId.trim()) {
+      result.warnings.push('opportunity_portfolio_actor_not_configured');
+      return result;
+    }
+
+    const customerTable = integration.base.customers;
+    const opportunityTable = integration.base.opportunities;
+    const followupTable = integration.base.followups;
+    const ownerCondition = (fieldName: string): SearchCondition => ({
+      field_name: fieldName,
+      operator: 'is',
+      value: [actorOpenId],
+    });
+
+    if (!customerTable.fields.ownerOpenId) {
+      result.warnings.push('opportunity_portfolio_customer_scope_missing');
+    } else {
+      const read: PagedBaseReadResult = await this.searchAllContextRecords(
+        integration,
+        customerTable,
+        [ownerCondition(customerTable.fields.ownerOpenId)],
+        [
+          customerTable.fields.customerName,
+          customerTable.fields.contactName,
+          customerTable.fields.latestSummary,
+          customerTable.fields.lastFollowupAt,
+        ],
+        'opportunity_portfolio_customer',
+      );
+      if (read.warning) result.warnings.push(read.warning);
+      result.customers = read.items.flatMap(
+        (item: BaseContextRecord): OpportunityPortfolioCustomerRecord[] => {
+          const recordId: string | undefined = item.record_id;
+          const name: string | null = this.readText(
+            item.fields,
+            customerTable.fields.customerName,
+          );
+          if (!recordId || !name) return [];
+          return [{
+            recordId,
+            name,
+            contactName: this.readText(
+              item.fields,
+              customerTable.fields.contactName,
+            ),
+            latestSummary: this.readText(
+              item.fields,
+              customerTable.fields.latestSummary,
+            ),
+            lastFollowupAt: this.readDate(
+              item.fields,
+              customerTable.fields.lastFollowupAt,
+            ),
+            sourceVersion: this.sourceVersion(item.last_modified_time),
+            recordUrl: item.record_url ?? null,
+          }];
+        },
+      );
+    }
+
+    if (!opportunityTable.fields.ownerOpenId) {
+      result.warnings.push('opportunity_portfolio_opportunity_scope_missing');
+    } else {
+      if (!opportunityTable.fields.status) {
+        result.warnings.push('opportunity_portfolio_status_mapping_missing');
+      }
+      if (!opportunityTable.statusValues?.active.length) {
+        result.warnings.push('opportunity_portfolio_status_values_missing');
+      }
+      const read: PagedBaseReadResult = await this.searchAllContextRecords(
+        integration,
+        opportunityTable,
+        [ownerCondition(opportunityTable.fields.ownerOpenId)],
+        [
+          opportunityTable.fields.opportunityName,
+          opportunityTable.fields.customerLink,
+          opportunityTable.fields.status,
+          opportunityTable.fields.expectedAmount,
+          opportunityTable.fields.progress,
+          opportunityTable.fields.nextAction,
+          opportunityTable.fields.dueAt,
+        ],
+        'opportunity_portfolio_opportunity',
+      );
+      if (read.warning) result.warnings.push(read.warning);
+      result.opportunities = read.items.flatMap(
+        (item: BaseContextRecord): OpportunityPortfolioOpportunityRecord[] => {
+          const recordId: string | undefined = item.record_id;
+          const name: string | null = this.readText(
+            item.fields,
+            opportunityTable.fields.opportunityName,
+          );
+          if (!recordId || !name) return [];
+          return [{
+            recordId,
+            customerRecordId: this.readLinkedRecordId(
+              item.fields,
+              opportunityTable.fields.customerLink,
+            ),
+            name,
+            status: this.mapOpportunityStatus(
+              this.readText(item.fields, opportunityTable.fields.status),
+              opportunityTable.statusValues ?? { active: [] },
+            ),
+            expectedAmount: this.readNumber(
+              item.fields,
+              opportunityTable.fields.expectedAmount,
+            ),
+            progress: this.readText(
+              item.fields,
+              opportunityTable.fields.progress,
+            ),
+            nextAction: this.readText(
+              item.fields,
+              opportunityTable.fields.nextAction,
+            ),
+            dueAt: this.readDate(item.fields, opportunityTable.fields.dueAt),
+            sourceVersion: this.sourceVersion(item.last_modified_time),
+            recordUrl: item.record_url ?? null,
+          }];
+        },
+      );
+    }
+
+    if (!followupTable.fields.ownerOpenId) {
+      result.warnings.push('opportunity_portfolio_followup_scope_missing');
+    } else {
+      if (!followupTable.fields.communicationAt) {
+        result.warnings.push('opportunity_portfolio_communication_time_missing');
+      }
+      const read: PagedBaseReadResult = await this.searchAllContextRecords(
+        integration,
+        followupTable,
+        [ownerCondition(followupTable.fields.ownerOpenId)],
+        [
+          followupTable.fields.customerLink,
+          followupTable.fields.opportunityLink,
+          followupTable.fields.summary,
+          followupTable.fields.communicationAt,
+          followupTable.fields.nextAction,
+          followupTable.fields.dueAt,
+        ],
+        'opportunity_portfolio_followup',
+      );
+      if (read.warning) result.warnings.push(read.warning);
+      result.followups = read.items.flatMap(
+        (item: BaseContextRecord): OpportunityPortfolioFollowupRecord[] => {
+          const recordId: string | undefined = item.record_id;
+          const summary: string | null = this.readText(
+            item.fields,
+            followupTable.fields.summary,
+          );
+          if (!recordId || !summary) return [];
+          return [{
+            recordId,
+            customerRecordId: this.readLinkedRecordId(
+              item.fields,
+              followupTable.fields.customerLink,
+            ),
+            opportunityRecordId: this.readLinkedRecordId(
+              item.fields,
+              followupTable.fields.opportunityLink,
+            ),
+            summary,
+            communicationAt: this.readDate(
+              item.fields,
+              followupTable.fields.communicationAt,
+            ),
+            nextAction: this.readText(
+              item.fields,
+              followupTable.fields.nextAction,
+            ),
+            dueAt: this.readDate(item.fields, followupTable.fields.dueAt),
+            sourceVersion: this.sourceVersion(item.last_modified_time),
+            recordUrl: item.record_url ?? null,
+          }];
+        },
+      );
+    }
+
+    return result;
   }
 
   async readStaleOpportunityFollowupPage(
@@ -1355,6 +1552,7 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     table: BaseTableMapping<TFields>,
     conditions: SearchCondition[],
     fieldNames: Array<string | undefined>,
+    warningPrefix: string = 'daily_report',
   ): Promise<PagedBaseReadResult> {
     const client = this.clients.getClient(integration);
     const items: BaseContextRecord[] = [];
@@ -1390,17 +1588,17 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
           },
           this.clients.getRequestOptions(integration),
         );
-      assertFeishuSuccess(response.code, response.msg, 'read daily report');
+      assertFeishuSuccess(response.code, response.msg, 'read Base portfolio');
       items.push(...(response.data?.items ?? []));
       if (response.data?.has_more !== true) return { items };
       const nextPageToken: string = response.data?.page_token?.trim() ?? '';
       if (!nextPageToken || seenTokens.has(nextPageToken)) {
-        return { items, warning: 'daily_report_pagination_incomplete' };
+        return { items, warning: `${warningPrefix}_pagination_incomplete` };
       }
       seenTokens.add(nextPageToken);
       pageToken = nextPageToken;
     }
-    return { items, warning: 'daily_report_pagination_limited' };
+    return { items, warning: `${warningPrefix}_pagination_limited` };
   }
 
   private readText(

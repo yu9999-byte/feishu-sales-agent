@@ -1,6 +1,6 @@
 # 销策 Agent SDD 索引
 
-状态：`Approved / Goal v3 P1-PROGRESS automated Green 2026-09-25`
+状态：`Approved / Goal v3 multi-agent automated Green 2026-10-06`
 
 本目录是 Goal v3 的规格权威来源。代码、测试、飞书配置和 UI 验收都必须能追溯到这里的
 需求编号；参考文档只提供业务输入，不能直接替代本项目规格。
@@ -30,6 +30,11 @@
 | `15-followup-context-read-tdd.md` | 上下文读取、隔离、冲突和持久化测试 | Green |
 | `16-followup-progress-assessment-sdd.md` | 本次进展、缺口、风险、建议和确认动作契约 | 已实现，UI 待验收 |
 | `17-followup-progress-assessment-tdd.md` | 推进判断、展示、版本和兼容测试 | Green |
+| `18-stale-opportunity-trigger-sdd.md` | 商机停滞扫描、治理、安全门、提醒账本和调度观察契约 | 部分实现，真实投递关闭 |
+| `19-team-review-agent-sdd.md` | 主管/高管团队 Review 聚合与权限范围 | 已实现，UI 待验收 |
+| `20-task-fulfillment-agent-sdd.md` | 本人任务履约、承诺核对和历史覆盖边界 | 已实现，UI 待验收 |
+| `21-opportunity-decision-agent-sdd.md` | 本人客户与商机组合优先级、风险、证据和建议契约 | 已实现，API/机器人已接入，UI 待验收 |
+| `22-opportunity-decision-agent-tdd.md` | 商机决策排序、权限、关联、降级和零副作用测试 | Green |
 
 ## 2. 规格状态
 

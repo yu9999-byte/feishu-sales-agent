@@ -6,6 +6,7 @@ import type {
   FollowupDraft,
   FollowupMissingField,
   JsonObject,
+  OpportunityDecisionResponse,
   PlatformSessionResponse,
   SalesContext,
 } from '@shared/api.interface';
@@ -32,6 +33,7 @@ import type {
   ConversationAssistant,
   FeishuMessenger,
   FollowupExtractor,
+  OpportunityDecisionReader,
   SalesContextReader,
   SalesRecordsGateway,
   TaskGateway,
@@ -250,6 +252,43 @@ class FakeConversationAssistant implements ConversationAssistant {
   }
 }
 
+const emptyDecisionResponse: OpportunityDecisionResponse = {
+  referenceDate: '2026-09-17',
+  timezone: 'Asia/Shanghai',
+  status: 'ready',
+  generatedAt: '2026-09-17T02:00:00.000Z',
+  summary: {
+    totalOpportunityCount: 1,
+    activeOpportunityCount: 1,
+    excludedClosedOpportunityCount: 0,
+    criticalCount: 1,
+    atRiskCount: 0,
+    needsAttentionCount: 0,
+    onTrackCount: 0,
+  },
+  priorities: [],
+  globalTaskAlerts: [],
+  coverage: {
+    scope: 'self',
+    customers: 'complete',
+    opportunities: 'complete',
+    followups: 'complete',
+    taskPromises: 'agent_confirmed_only',
+    taskAssociation: 'explicit_agent_confirmation_only',
+  },
+  warnings: [],
+};
+
+class FakeOpportunityDecisionReader implements OpportunityDecisionReader {
+  readonly analyze = vi.fn(
+    async (): Promise<OpportunityDecisionResponse> => emptyDecisionResponse,
+  );
+
+  formatConversationReply(): string {
+    return '现在最该推进：北辰数字化项目。\n原因：下一步已逾期。\n建议尚未执行。';
+  }
+}
+
 class FakeMessenger implements FeishuMessenger {
   readonly texts: string[] = [];
   readonly textUpdates: Array<{ messageId: string; text: string }> = [];
@@ -461,7 +500,9 @@ const createPlatformSession = (
     displayName: '销售',
   },
   roles,
-  permissions: roles.length > 0 ? ['followup:create-own'] : [],
+  permissions: roles.length > 0
+    ? ['followup:create-own', 'opportunity:read']
+    : [],
   navigation: [],
   policyVersion: 'test',
 });
@@ -476,12 +517,15 @@ interface TestHarness {
   extractor: FixedExtractor;
   conversation: FakeConversationAssistant;
   sessions: FakePlatformSessions;
+  opportunityDecisions: FakeOpportunityDecisionReader;
   workflow: AgentWorkflowService;
 }
 
 const createHarness = (
   draft: FollowupDraft = completeDraft,
   salesContext?: SalesContextReader,
+  opportunityDecisions: FakeOpportunityDecisionReader =
+    new FakeOpportunityDecisionReader(),
 ): TestHarness => {
   const integrationA: TenantIntegration = createIntegration(
     '00000000-0000-0000-0000-00000000000a',
@@ -588,6 +632,7 @@ const createHarness = (
     records,
     platformSessions,
     salesContext,
+    opportunityDecisions,
   );
   return {
     integrationA,
@@ -599,6 +644,7 @@ const createHarness = (
     extractor,
     conversation,
     sessions,
+    opportunityDecisions,
     workflow,
   };
 };
@@ -1178,7 +1224,7 @@ describe('AgentWorkflowService', (): void => {
     ['你好', '你好'],
     ['客户一直压价怎么办？', '压价'],
     ['帮我写一封催客户确认方案的邮件', '邮件'],
-    ['北辰制造最近进展怎么样？', '暂时'],
+    ['北辰制造最近进展怎么样？', '现在最该推进'],
   ])(
     'routes %s as conversation without followup side effects',
     async (text: string, expectedReply: string): Promise<void> => {
@@ -1196,6 +1242,55 @@ describe('AgentWorkflowService', (): void => {
       expect(harness.tasks.calls).toBe(0);
     },
   );
+
+  it('routes business queries through owner-scoped opportunity evidence', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-opportunity-decision'),
+      text: '北辰制造最近进展怎么样？',
+    });
+
+    expect(harness.opportunityDecisions.analyze).toHaveBeenCalledWith({
+      integration: harness.integrationA,
+      actorOpenId: 'ou_sales',
+      referenceDate: '2026-09-17',
+      timezone: 'Asia/Shanghai',
+      now: new Date('2026-09-17T10:00:00+08:00'),
+    });
+    expect(harness.messenger.texts.at(-1)).toContain(
+      '现在最该推进：北辰数字化项目',
+    );
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+    expect(harness.store.getAudits(harness.integrationA.tenantId))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          eventType: 'opportunity_decision.read.v1',
+          outcome: 'succeeded',
+        }),
+      ]));
+  });
+
+  it('routes project diagnosis to the same read-only decision capability', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'project_diagnosis',
+      confidence: 0.96,
+      reply: '模型回复不应直接作为业务结论。',
+    };
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-project-diagnosis'),
+      text: '帮我诊断一下现在最危险的商机',
+    });
+
+    expect(harness.opportunityDecisions.analyze).toHaveBeenCalledTimes(1);
+    expect(harness.messenger.texts.at(-1)).not.toContain('模型回复');
+    expect(harness.messenger.texts.at(-1)).toContain('建议尚未执行');
+    expect(harness.messenger.actions).toHaveLength(0);
+  });
 
   it('routes opportunity status intent to an explicit confirmation card', async (): Promise<void> => {
     const harness: TestHarness = createHarness();

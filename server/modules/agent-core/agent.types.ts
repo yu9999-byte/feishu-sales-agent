@@ -299,6 +299,48 @@ export interface DailyReportBaseResult {
   warnings: string[];
 }
 
+export interface OpportunityPortfolioCustomerRecord {
+  recordId: string;
+  name: string;
+  contactName: string | null;
+  latestSummary: string | null;
+  lastFollowupAt: string | null;
+  sourceVersion: string | null;
+  recordUrl: string | null;
+}
+
+export interface OpportunityPortfolioOpportunityRecord {
+  recordId: string;
+  customerRecordId: string | null;
+  name: string;
+  status: OpportunityLifecycleStatus;
+  expectedAmount: number | null;
+  progress: string | null;
+  nextAction: string | null;
+  dueAt: string | null;
+  sourceVersion: string | null;
+  recordUrl: string | null;
+}
+
+export interface OpportunityPortfolioFollowupRecord {
+  recordId: string;
+  customerRecordId: string | null;
+  opportunityRecordId: string | null;
+  summary: string;
+  communicationAt: string | null;
+  nextAction: string | null;
+  dueAt: string | null;
+  sourceVersion: string | null;
+  recordUrl: string | null;
+}
+
+export interface OpportunityPortfolioResult {
+  customers: OpportunityPortfolioCustomerRecord[];
+  opportunities: OpportunityPortfolioOpportunityRecord[];
+  followups: OpportunityPortfolioFollowupRecord[];
+  warnings: string[];
+}
+
 export interface DailyReportTaskRecord {
   guid: string;
   title: string;

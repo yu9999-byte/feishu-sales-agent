@@ -12,13 +12,16 @@ import type {
   FollowupDraft,
   JsonObject,
   JsonValue,
+  OpportunityDecisionResponse,
   PendingActionStatus,
+  PlatformSessionResponse,
 } from '@shared/api.interface';
 import {
   CONTROL_STORE,
   CONVERSATION_ASSISTANT,
   FEISHU_MESSENGER,
   FOLLOWUP_EXTRACTOR,
+  OPPORTUNITY_DECISION_READER,
   SALES_RECORDS_GATEWAY,
   SALES_CONTEXT_READER,
 } from './agent.ports';
@@ -27,6 +30,7 @@ import type {
   ConversationAssistant,
   FeishuMessenger,
   FollowupExtractor,
+  OpportunityDecisionReader,
   SalesRecordsGateway,
   SalesContextReader,
 } from './agent.ports';
@@ -105,6 +109,9 @@ export class AgentWorkflowService {
     @Optional()
     @Inject(SALES_CONTEXT_READER)
     private readonly salesContext?: SalesContextReader,
+    @Optional()
+    @Inject(OPPORTUNITY_DECISION_READER)
+    private readonly opportunityDecisions?: OpportunityDecisionReader,
     @Optional()
     @Inject(LONG_TERM_MEMORY)
     private readonly longTermMemory?: LongTermMemoryPort,
@@ -414,11 +421,28 @@ export class AgentWorkflowService {
         await this.handleOpportunityStatusOperation(integration, message);
         return;
       }
+      if (this.isOpportunityDecisionIntent(decision)) {
+        await this.store.closeSession(
+          integration.tenantId,
+          message.senderOpenId,
+        );
+        await this.auditIntentClarificationResolved(
+          integration,
+          message,
+          session,
+          'analyze',
+        );
+        await this.handleOpportunityDecision(
+          integration,
+          message,
+          decision,
+        );
+        return;
+      }
       if (
         decision.confidence >= 0.55 && (
           decision.intent === 'followup_analyze' ||
-          decision.intent === 'sales_qa' ||
-          decision.intent === 'project_diagnosis'
+          decision.intent === 'sales_qa'
         )
       ) {
         await this.store.closeSession(
@@ -543,6 +567,15 @@ export class AgentWorkflowService {
         await this.handleOpportunityStatusOperation(integration, message);
         return;
       }
+      if (this.isOpportunityDecisionIntent(decision)) {
+        await this.handleOpportunityDecision(
+          integration,
+          message,
+          decision,
+          waitingMessageId,
+        );
+        return;
+      }
       await this.replyToConversation(integration, message, {
         context,
         decision,
@@ -645,6 +678,19 @@ export class AgentWorkflowService {
         message.senderOpenId,
       );
       await this.handleOpportunityStatusOperation(integration, message);
+      return;
+    }
+    if (this.isOpportunityDecisionIntent(decision)) {
+      await this.store.closeSession(
+        integration.tenantId,
+        message.senderOpenId,
+      );
+      await this.handleOpportunityDecision(
+        integration,
+        message,
+        decision,
+        waitingMessageId,
+      );
       return;
     }
     await this.store.closeSession(
@@ -963,6 +1009,130 @@ export class AgentWorkflowService {
       dueAt: null,
       evidenceQuotes: [],
     };
+  }
+
+  private isOpportunityDecisionIntent(
+    decision: ConversationDecision,
+  ): boolean {
+    return decision.confidence >= 0.55 && (
+      decision.intent === 'business_query' ||
+      decision.intent === 'project_diagnosis'
+    );
+  }
+
+  private async handleOpportunityDecision(
+    integration: TenantIntegration,
+    message: IncomingMessage,
+    decision: ConversationDecision,
+    waitingMessageId?: string | null,
+  ): Promise<void> {
+    if (!this.opportunityDecisions) {
+      await this.finishConversationWaiting(
+        integration,
+        message,
+        waitingMessageId ?? null,
+        '客户与商机决策能力暂时不可用，我没有生成业务结论。',
+      );
+      return;
+    }
+    try {
+      const member: PlatformMember | null = await this.sessions.getActiveMember(
+        integration.tenantId,
+        message.senderOpenId,
+      );
+      if (member === null) {
+        throw new PlatformAccessDeniedError();
+      }
+      const session: PlatformSessionResponse =
+        await this.sessions.getSessionByMembership(
+          integration.tenantId,
+          member.id,
+          message.receivedAt,
+        );
+      if (!session.permissions.includes('opportunity:read')) {
+        throw new PlatformAccessDeniedError();
+      }
+      const report: OpportunityDecisionResponse =
+        await this.opportunityDecisions.analyze({
+          integration,
+          actorOpenId: message.senderOpenId,
+          referenceDate: this.localDateKey(
+            message.receivedAt,
+            session.tenant.timezone,
+          ),
+          timezone: session.tenant.timezone,
+          now: message.receivedAt,
+        });
+      const reply: string = this.opportunityDecisions.formatConversationReply(
+        report,
+        message.text,
+      );
+      await this.finishConversationWaiting(
+        integration,
+        message,
+        waitingMessageId ?? null,
+        reply,
+      );
+      await this.store.appendAudit({
+        tenantId: integration.tenantId,
+        traceId: message.messageId,
+        eventType: 'opportunity_decision.read.v1',
+        actorOpenId: message.senderOpenId,
+        outcome: 'succeeded',
+        details: {
+          intent: decision.intent,
+          status: report.status,
+          activeOpportunityCount: report.summary.activeOpportunityCount,
+          returnedPriorityCount: report.priorities.length,
+          scope: report.coverage.scope,
+        },
+      });
+    } catch (error: unknown) {
+      const denied: boolean = error instanceof PlatformAccessDeniedError;
+      this.logger.warn(
+        `Opportunity decision failed: ${redactErrorMessage(
+          this.toError(error),
+        )}`,
+      );
+      await this.finishConversationWaiting(
+        integration,
+        message,
+        waitingMessageId ?? null,
+        denied
+          ? '你当前没有读取商机决策建议的权限。'
+          : '现在无法完整读取本人客户与商机数据，我没有生成业务结论。',
+      );
+      await this.store.appendAudit({
+        tenantId: integration.tenantId,
+        traceId: message.messageId,
+        eventType: denied
+          ? 'opportunity_decision.forbidden.v1'
+          : 'opportunity_decision.unavailable.v1',
+        actorOpenId: message.senderOpenId,
+        outcome: 'failed',
+        details: {
+          intent: decision.intent,
+          errorCode: denied ? 'ACCESS_DENIED' : this.errorCode(error),
+        },
+      });
+    }
+  }
+
+  private localDateKey(value: Date, timezone: string): string {
+    const parts: Intl.DateTimeFormatPart[] = new Intl.DateTimeFormat(
+      'en-CA',
+      {
+        timeZone: timezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      },
+    ).formatToParts(value);
+    const partValue = (type: Intl.DateTimeFormatPartTypes): string =>
+      parts.find(
+        (part: Intl.DateTimeFormatPart): boolean => part.type === type,
+      )?.value ?? '';
+    return [partValue('year'), partValue('month'), partValue('day')].join('-');
   }
 
   private async replyToConversation(

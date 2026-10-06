@@ -3,6 +3,7 @@ import type {
   FollowupDraft,
   FollowupMissingField,
   JsonObject,
+  OpportunityDecisionResponse,
   PendingActionStatus,
 } from '@shared/api.interface';
 import type {
@@ -14,6 +15,7 @@ import type {
   FollowupExtractionInput,
   OpportunityStatusUpdateInput,
   OpportunityStatusUpdateResult,
+  OpportunityPortfolioResult,
   PendingAction,
   SalesRecordResult,
   SaveCollectingSessionInput,
@@ -48,6 +50,9 @@ export const FEISHU_MESSENGER = Symbol('FEISHU_MESSENGER');
 export const SALES_RECORDS_GATEWAY = Symbol('SALES_RECORDS_GATEWAY');
 export const TASK_GATEWAY = Symbol('TASK_GATEWAY');
 export const SALES_CONTEXT_READER = Symbol('SALES_CONTEXT_READER');
+export const OPPORTUNITY_DECISION_READER = Symbol(
+  'OPPORTUNITY_DECISION_READER',
+);
 
 export interface ControlStore {
   resolveTenant(feishuTenantKey: string): Promise<TenantIntegration | null>;
@@ -228,6 +233,10 @@ export interface SalesRecordsGateway {
     reportDate: string,
     timezone: string,
   ): Promise<DailyReportBaseResult>;
+  readOpportunityPortfolio?(
+    integration: TenantIntegration,
+    actorOpenId: string,
+  ): Promise<OpportunityPortfolioResult>;
   upsertCustomer(
     integration: TenantIntegration,
     action: PendingAction,
@@ -256,6 +265,20 @@ export interface SalesRecordsGateway {
     opportunityRecordId: string,
     followupRecordId: string,
   ): Promise<SalesRecordResult>;
+}
+
+export interface OpportunityDecisionReader {
+  analyze(input: {
+    integration: TenantIntegration;
+    actorOpenId: string;
+    referenceDate: string;
+    timezone: string;
+    now?: Date;
+  }): Promise<OpportunityDecisionResponse>;
+  formatConversationReply(
+    report: OpportunityDecisionResponse,
+    query: string,
+  ): string;
 }
 
 export interface TaskGateway {

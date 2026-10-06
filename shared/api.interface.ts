@@ -414,6 +414,143 @@ export interface DailySalesReportResponse {
   warnings: string[];
 }
 
+export type OpportunityDecisionStatus =
+  | 'ready'
+  | 'partial'
+  | 'empty'
+  | 'unavailable';
+
+export type OpportunityDecisionHealth =
+  | 'critical'
+  | 'at_risk'
+  | 'needs_attention'
+  | 'on_track';
+
+export type OpportunityDecisionRiskCode =
+  | 'next_action_overdue'
+  | 'followup_stale'
+  | 'followup_time_missing'
+  | 'no_followup_evidence'
+  | 'lifecycle_unknown'
+  | 'confirmed_task_overdue'
+  | 'confirmed_task_changed';
+
+export type OpportunityDecisionGapCode =
+  | 'customer_missing'
+  | 'progress_missing'
+  | 'amount_missing'
+  | 'next_action_missing'
+  | 'due_at_missing';
+
+export type OpportunityDecisionEvidenceKind =
+  | 'customer'
+  | 'opportunity'
+  | 'followup'
+  | 'task_promise';
+
+export interface OpportunityDecisionEvidence {
+  id: string;
+  kind: OpportunityDecisionEvidenceKind;
+  label: string;
+  value: string;
+  occurredAt: string | null;
+  source: DailySalesReportSource | null;
+}
+
+export interface OpportunityDecisionRisk {
+  code: OpportunityDecisionRiskCode;
+  severity: 'high' | 'medium';
+  title: string;
+  detail: string;
+  evidenceIds: string[];
+}
+
+export interface OpportunityDecisionGap {
+  code: OpportunityDecisionGapCode;
+  title: string;
+  detail: string;
+  evidenceIds: string[];
+}
+
+export interface OpportunityDecisionRecommendation {
+  action: string;
+  reason: string;
+  dueAt: string | null;
+  evidenceIds: string[];
+  requiresConfirmation: true;
+}
+
+export interface OpportunityDecisionTaskPromise {
+  pendingActionId: string;
+  taskGuid: string | null;
+  title: string;
+  status: TaskPromiseStatus;
+  dueAt: string | null;
+  suggestedAction: string;
+}
+
+export interface OpportunityDecisionItem {
+  rank: number;
+  recordId: string;
+  recordUrl: string | null;
+  name: string;
+  customerRecordId: string | null;
+  customerName: string | null;
+  lifecycleStatus: OpportunityStatusActionLifecycleStatus;
+  expectedAmount: number | null;
+  progress: string | null;
+  lastFollowupAt: string | null;
+  lastFollowupSummary: string | null;
+  nextAction: string | null;
+  dueAt: string | null;
+  health: OpportunityDecisionHealth;
+  priorityScore: number;
+  risks: OpportunityDecisionRisk[];
+  gaps: OpportunityDecisionGap[];
+  recommendation: OpportunityDecisionRecommendation | null;
+  taskPromises: OpportunityDecisionTaskPromise[];
+  evidence: OpportunityDecisionEvidence[];
+}
+
+export interface OpportunityDecisionGlobalTaskAlert {
+  code: 'overdue_tasks' | 'unlinked_promises' | 'task_source_incomplete';
+  severity: 'high' | 'medium';
+  title: string;
+  detail: string;
+  count: number;
+}
+
+export interface OpportunityDecisionSummary {
+  totalOpportunityCount: number;
+  activeOpportunityCount: number;
+  excludedClosedOpportunityCount: number;
+  criticalCount: number;
+  atRiskCount: number;
+  needsAttentionCount: number;
+  onTrackCount: number;
+}
+
+export interface OpportunityDecisionCoverage {
+  scope: 'self';
+  customers: 'complete' | 'partial' | 'unavailable';
+  opportunities: 'complete' | 'partial' | 'unavailable';
+  followups: 'complete' | 'partial' | 'unavailable';
+  taskPromises: 'agent_confirmed_only' | 'unavailable';
+  taskAssociation: 'explicit_agent_confirmation_only';
+}
+
+export interface OpportunityDecisionResponse {
+  referenceDate: string;
+  timezone: string;
+  status: OpportunityDecisionStatus;
+  generatedAt: string;
+  summary: OpportunityDecisionSummary;
+  priorities: OpportunityDecisionItem[];
+  globalTaskAlerts: OpportunityDecisionGlobalTaskAlert[];
+  coverage: OpportunityDecisionCoverage;
+  warnings: string[];
+}
+
 export type TaskFulfillmentStatus =
   | 'ready'
   | 'partial'

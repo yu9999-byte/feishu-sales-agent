@@ -179,6 +179,134 @@ describe('sales context gateways', (): void => {
     expect(search).not.toHaveBeenCalled();
   });
 
+  it('reads a complete owner-scoped opportunity portfolio with explicit links', async (): Promise<void> => {
+    const search = vi.fn()
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          items: [{
+            record_id: 'customer-portfolio-1',
+            record_url: 'https://feishu.cn/customer-portfolio-1',
+            last_modified_time: 1790215200000,
+            fields: {
+              客户: [{ text: '北辰制造' }],
+              联系人: [{ text: '张总' }],
+              最近摘要: [{ text: '认可方案' }],
+            },
+          }],
+          has_more: false,
+        },
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          items: [{
+            record_id: 'opportunity-portfolio-1',
+            record_url: 'https://feishu.cn/opportunity-portfolio-1',
+            last_modified_time: 1790215200000,
+            fields: {
+              商机: [{ text: '北辰数字化项目' }],
+              客户关联: [{ record_id: 'customer-portfolio-1' }],
+              商机状态: '进行中',
+              金额: 500000,
+              进展: [{ text: '方案评估中' }],
+              下一步: [{ text: '提交实施计划' }],
+              截止: 1790647200000,
+            },
+          }],
+          has_more: false,
+        },
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        data: {
+          items: [{
+            record_id: 'followup-portfolio-1',
+            record_url: 'https://feishu.cn/followup-portfolio-1',
+            last_modified_time: 1790215200000,
+            fields: {
+              客户关联: [{ record_id: 'customer-portfolio-1' }],
+              商机关联: [{ record_id: 'opportunity-portfolio-1' }],
+              摘要: [{ text: '客户要求补充实施计划' }],
+              本次沟通发生时间: 1790215200000,
+              下一步: [{ text: '提交实施计划' }],
+              截止: 1790647200000,
+            },
+          }],
+          has_more: false,
+        },
+      });
+    const client = { bitable: { appTableRecord: { search } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    const result = await new FeishuBaseGateway(factory)
+      .readOpportunityPortfolio(integration, 'ou_sales_a');
+
+    expect(result.customers[0]).toMatchObject({
+      recordId: 'customer-portfolio-1',
+      name: '北辰制造',
+    });
+    expect(result.opportunities[0]).toMatchObject({
+      recordId: 'opportunity-portfolio-1',
+      customerRecordId: 'customer-portfolio-1',
+      status: 'active',
+      expectedAmount: 500000,
+    });
+    expect(result.followups[0]).toMatchObject({
+      customerRecordId: 'customer-portfolio-1',
+      opportunityRecordId: 'opportunity-portfolio-1',
+      summary: '客户要求补充实施计划',
+    });
+    expect(result.warnings).toEqual([]);
+    expect(search).toHaveBeenCalledTimes(3);
+    search.mock.calls.forEach((call): void => {
+      expect(call[0].data.filter.conditions).toContainEqual({
+        field_name: '负责人',
+        operator: 'is',
+        value: ['ou_sales_a'],
+      });
+    });
+  });
+
+  it('does not cross the owner boundary when a portfolio scope is missing', async (): Promise<void> => {
+    const search = vi.fn(async () => ({
+      code: 0,
+      data: { items: [], has_more: false },
+    }));
+    const client = { bitable: { appTableRecord: { search } } };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+    const scoped: TenantIntegration = {
+      ...integration,
+      base: {
+        ...integration.base,
+        opportunities: {
+          ...integration.base.opportunities,
+          fields: {
+            ...integration.base.opportunities.fields,
+            ownerOpenId: undefined,
+          },
+        },
+      },
+    };
+
+    const result = await new FeishuBaseGateway(factory)
+      .readOpportunityPortfolio(scoped, 'ou_sales_a');
+
+    expect(result.opportunities).toEqual([]);
+    expect(result.warnings).toContain(
+      'opportunity_portfolio_opportunity_scope_missing',
+    );
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(search.mock.calls.map((call) => call[0].path.table_id))
+      .toEqual(['customers', 'followups']);
+  });
+
   it('falls back to the owner customer opportunities when a model hint does not match', async (): Promise<void> => {
     const search = vi.fn()
       .mockResolvedValueOnce({

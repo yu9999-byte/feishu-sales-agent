@@ -17,6 +17,8 @@ import { StaleOpportunityReadinessModule } from
 import { TeamReviewModule } from './modules/insight/team-review.module';
 import { TaskFulfillmentModule } from
   './modules/insight/task-fulfillment.module';
+import { OpportunityDecisionModule } from
+  './modules/insight/opportunity-decision.module';
 import { FeishuWebhookBridge } from './modules/feishu/feishu-webhook.bridge';
 import { FeishuWebhookController } from './modules/feishu/feishu-webhook.controller';
 
@@ -31,6 +33,7 @@ import { FeishuWebhookController } from './modules/feishu/feishu-webhook.control
     StaleOpportunityReadinessModule,
     TeamReviewModule,
     TaskFulfillmentModule,
+    OpportunityDecisionModule,
   ],
   controllers: [FeishuWebhookController],
   providers: [
