@@ -844,6 +844,7 @@ export type StaleOpportunityReminderExecutionReadinessBlocker =
   | 'data_source_unconfigured'
   | 'history_governance_incomplete'
   | 'sender_unconfigured'
+  | 'sender_evidence_incomplete'
   | 'uncertain_delivery_present'
   | 'reconciliation_unavailable'
   | 'candidate_probe_incomplete'
@@ -889,6 +890,26 @@ export interface StaleOpportunityReminderHistoryGovernanceEvidence {
   warnings: string[];
 }
 
+export type StaleOpportunityReminderSenderScope =
+  | 'im:message'
+  | 'im:message:send_as_bot'
+  | 'im:message:send';
+
+export interface StaleOpportunityReminderSenderEvidence {
+  status: 'complete' | 'incomplete' | 'unavailable' | 'not_checked';
+  checkedAt: string;
+  credentialsStatus: 'valid' | 'unavailable' | 'not_checked';
+  botStatus: 'enabled' | 'disabled' | 'unavailable' | 'not_checked';
+  botOpenIdPresent: boolean;
+  sendPermissionStatus: 'granted' | 'missing' | 'unavailable' | 'not_checked';
+  grantedSendScope: StaleOpportunityReminderSenderScope | null;
+  recipientVisibility: {
+    status: 'visible' | 'not_visible' | 'unavailable' | 'not_checked';
+    inspectionPermissionGranted: boolean;
+  };
+  warnings: string[];
+}
+
 export interface StaleOpportunityReminderExecutionReadinessCandidateProbe {
   status: 'complete' | 'incomplete' | 'disabled' | 'not_checked';
   traceId: string | null;
@@ -905,6 +926,7 @@ export interface StaleOpportunityReminderExecutionReadinessResponse {
   configuration: StaleOpportunityReminderExecutionReadinessConfiguration;
   target: StaleOpportunityReminderExecutionReadinessTarget;
   historyGovernance: StaleOpportunityReminderHistoryGovernanceEvidence;
+  senderEvidence: StaleOpportunityReminderSenderEvidence;
   ledger: StaleOpportunityReminderExecutionReadinessLedger;
   candidateProbe: StaleOpportunityReminderExecutionReadinessCandidateProbe;
   blockers: StaleOpportunityReminderExecutionReadinessBlocker[];

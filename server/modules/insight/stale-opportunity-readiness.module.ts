@@ -36,6 +36,8 @@ import { StaleOpportunityReminderExecutionService } from
   './stale-opportunity-reminder-execution.service';
 import { StaleOpportunityReminderExecutionReadinessService } from
   './stale-opportunity-reminder-execution-readiness.service';
+import { StaleOpportunityReminderSenderEvidenceService } from
+  './stale-opportunity-reminder-sender-evidence.service';
 import { StaleOpportunityReminderService } from
   './stale-opportunity-reminder.service';
 import { StaleOpportunityScanService } from
@@ -85,6 +87,7 @@ import {
     StaleOpportunityTriggerService,
     StaleOpportunityReminderRuntimeService,
     StaleOpportunityReminderPlanService,
+    StaleOpportunityReminderSenderEvidenceService,
     StaleOpportunityReminderExecutionReadinessService,
     {
       provide: FeishuStaleOpportunityReminderSender,
@@ -141,18 +144,21 @@ import {
         planner: StaleOpportunityReminderPlanService,
         coordinator: StaleOpportunityReminderCoordinatorService,
         governance: StaleOpportunityHistoryGovernanceEvidenceService,
+        sender: StaleOpportunityReminderSenderEvidenceService,
       ): StaleOpportunityReminderExecutionService =>
         new StaleOpportunityReminderExecutionService(
           config,
           planner,
           coordinator,
           governance,
+          sender,
         ),
       inject: [
         AGENT_CONFIG,
         StaleOpportunityReminderPlanService,
         StaleOpportunityReminderCoordinatorService,
         StaleOpportunityHistoryGovernanceEvidenceService,
+        StaleOpportunityReminderSenderEvidenceService,
       ],
     },
     StaleOpportunityReminderReconciliationService,

@@ -4,6 +4,7 @@ import type {
   StaleOpportunityReminderExecutionResponse,
   StaleOpportunityReminderHistoryGovernanceEvidence,
   StaleOpportunityReminderPlanResponse,
+  StaleOpportunityReminderSenderEvidence,
   StaleOpportunityTriggerCandidate,
 } from '@shared/api.interface';
 import type { AgentRuntimeConfig } from '@server/config/agent.config';
@@ -37,6 +38,12 @@ interface StaleOpportunityReminderExecutionGovernanceInspector {
   >;
 }
 
+interface StaleOpportunityReminderExecutionSenderInspector {
+  inspect(input?: { now?: Date }): Promise<
+    StaleOpportunityReminderSenderEvidence
+  >;
+}
+
 const IDEMPOTENT_SKIP_REASONS: Set<string> = new Set([
   'cooling_down',
   'in_flight',
@@ -50,6 +57,7 @@ class StaleOpportunityReminderExecutionService {
     private readonly coordinator: StaleOpportunityReminderExecutionCoordinator,
     private readonly governance:
       StaleOpportunityReminderExecutionGovernanceInspector,
+    private readonly sender: StaleOpportunityReminderExecutionSenderInspector,
   ) {}
 
   async execute(
@@ -84,6 +92,21 @@ class StaleOpportunityReminderExecutionService {
         ? 'stale_opportunity_history_governance_evidence_incomplete'
         : 'stale_opportunity_history_governance_evidence_unavailable';
       return this.empty('blocked', now, [warning, ...governance.warnings]);
+    }
+
+    let sender: StaleOpportunityReminderSenderEvidence;
+    try {
+      sender = await this.sender.inspect({ now });
+    } catch (_error: unknown) {
+      return this.empty('blocked', now, [
+        'stale_opportunity_sender_evidence_unavailable',
+      ]);
+    }
+    if (sender.status !== 'complete') {
+      const warning: string = sender.status === 'incomplete'
+        ? 'stale_opportunity_sender_evidence_incomplete'
+        : 'stale_opportunity_sender_evidence_unavailable';
+      return this.empty('blocked', now, [warning, ...sender.warnings]);
     }
 
     let plan: StaleOpportunityReminderPlanResponse;
@@ -254,4 +277,5 @@ export type {
   StaleOpportunityReminderExecutionGovernanceInspector,
   StaleOpportunityReminderExecutionInput,
   StaleOpportunityReminderExecutionPlanRunner,
+  StaleOpportunityReminderExecutionSenderInspector,
 };

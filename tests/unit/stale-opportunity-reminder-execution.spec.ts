@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type {
   StaleOpportunityReminderHistoryGovernanceEvidence,
   StaleOpportunityReminderPlanResponse,
+  StaleOpportunityReminderSenderEvidence,
   StaleOpportunityTriggerCandidate,
 } from '@shared/api.interface';
 import type { AgentRuntimeConfig } from '@server/config/agent.config';
@@ -127,6 +128,29 @@ const governance = (
   })),
 });
 
+const senderEvidence = (
+  status: StaleOpportunityReminderSenderEvidence['status'] = 'complete',
+) => ({
+  inspect: vi.fn(async (): Promise<StaleOpportunityReminderSenderEvidence> => ({
+    status,
+    checkedAt: NOW.toISOString(),
+    credentialsStatus: status === 'complete' ? 'valid' : 'unavailable',
+    botStatus: status === 'complete' ? 'enabled' : 'unavailable',
+    botOpenIdPresent: status === 'complete',
+    sendPermissionStatus: status === 'complete' ? 'granted' : 'unavailable',
+    grantedSendScope: status === 'complete'
+      ? 'im:message:send_as_bot'
+      : null,
+    recipientVisibility: {
+      status: 'not_checked',
+      inspectionPermissionGranted: false,
+    },
+    warnings: status === 'complete'
+      ? ['stale_opportunity_sender_recipient_visibility_not_checked']
+      : ['stale_opportunity_sender_bot_unavailable'],
+  })),
+});
+
 describe('StaleOpportunityReminderExecutionService', (): void => {
   it('registers the controlled execution chain in the insight module', (): void => {
     const providers: unknown[] = Reflect.getMetadata(
@@ -149,6 +173,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
       { plan: planRun },
       { prepareAndDeliver },
       governance(),
+      senderEvidence(),
     );
 
     await expect(service.execute(request())).resolves.toMatchObject({
@@ -176,6 +201,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
         { plan: planRun },
         { prepareAndDeliver },
         governance(),
+        senderEvidence(),
       );
 
       await expect(service.execute(request())).resolves.toMatchObject({
@@ -199,6 +225,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
       { plan: planRun },
       { prepareAndDeliver },
       governance(),
+      senderEvidence(),
     );
 
     await expect(service.execute(request())).resolves.toMatchObject({
@@ -217,6 +244,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
       { plan: planRun },
       { prepareAndDeliver },
       governanceInspector,
+      senderEvidence(),
     );
 
     await expect(service.execute(request())).resolves.toMatchObject({
@@ -233,6 +261,32 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
     expect(prepareAndDeliver).not.toHaveBeenCalled();
   });
 
+  it('blocks unavailable sender evidence before planning or delivery', async (): Promise<void> => {
+    const planRun = vi.fn();
+    const prepareAndDeliver = vi.fn();
+    const senderInspector = senderEvidence('unavailable');
+    const service = new StaleOpportunityReminderExecutionService(
+      runtimeConfig(),
+      { plan: planRun },
+      { prepareAndDeliver },
+      governance(),
+      senderInspector,
+    );
+
+    await expect(service.execute(request())).resolves.toMatchObject({
+      status: 'blocked',
+      candidate: null,
+      outcome: null,
+      warnings: expect.arrayContaining([
+        'stale_opportunity_sender_evidence_unavailable',
+        'stale_opportunity_sender_bot_unavailable',
+      ]),
+    });
+    expect(senderInspector.inspect).toHaveBeenCalledWith({ now: NOW });
+    expect(planRun).not.toHaveBeenCalled();
+    expect(prepareAndDeliver).not.toHaveBeenCalled();
+  });
+
   it.each(['disabled', 'blocked', 'incomplete'] as const)(
     'does not deliver a %s plan',
     async (status): Promise<void> => {
@@ -242,6 +296,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
         { plan: vi.fn(async () => plan(status)) },
         { prepareAndDeliver },
         governance(),
+        senderEvidence(),
       );
 
       await expect(service.execute(request())).resolves.toMatchObject({
@@ -262,6 +317,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
       })])) },
       { prepareAndDeliver },
       governance(),
+      senderEvidence(),
     );
     const duplicate = candidate();
     const ambiguous = new StaleOpportunityReminderExecutionService(
@@ -269,6 +325,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
       { plan: vi.fn(async () => plan('ready', [duplicate, duplicate])) },
       { prepareAndDeliver },
       governance(),
+      senderEvidence(),
     );
 
     await expect(noMatch.execute(request())).resolves.toMatchObject({
@@ -294,6 +351,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
         { plan: vi.fn(async () => plan('ready', [current])) },
         { prepareAndDeliver },
         governance(),
+        senderEvidence(),
       );
 
       await expect(service.execute(request())).resolves.toMatchObject({
@@ -319,6 +377,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
       { plan: vi.fn(async () => plan('ready', [current])) },
       { prepareAndDeliver },
       governance(),
+      senderEvidence(),
     );
 
     await expect(service.execute(request())).resolves.toEqual({
@@ -365,6 +424,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
       { plan: vi.fn(async () => plan('ready', [current])) },
       { prepareAndDeliver },
       governance(),
+      senderEvidence(),
     );
 
     await expect(service.execute(request())).resolves.toMatchObject({
@@ -387,6 +447,7 @@ describe('StaleOpportunityReminderExecutionService', (): void => {
         { plan: vi.fn(async () => plan('ready', [current])) },
         { prepareAndDeliver },
         governance(),
+        senderEvidence(),
       );
 
       await expect(service.execute(request())).resolves.toMatchObject({

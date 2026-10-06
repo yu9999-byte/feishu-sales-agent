@@ -84,7 +84,7 @@
 | 任务履约 Agent v1 | `Automated Green / Web implemented / UI pending` | 已按本人范围识别未完成任务风险，并按负责人分页读取检索范围内的已完成任务；按精确 `taskGuid` 只读核对最近 180 天 Agent 已确认承诺。任务详情和持久快照保存有效完成时间，并新增按租户/销售/GUID 隔离的 `observed`/`changed`/`completed`/`reopened` 事件账本，可识别已完成、部分完成、仍未完成、变更、重新开放证据，`completed_at="0"` 不再误判为完成；任务事件回执按租户和事件 ID 去重保存，但不被误作完整历史；`/tasks` 展示关联、未关联、已完成和不可核实结果；本地 Postgres 迁移 003..016、集成 `13/13` 和 Agent 全量 `303/303` 已通过；事件账本不是全量飞书历史，不按标题/时间/列表缺失跨任务关联；全量完成历史、无任务承诺兑现判断、提醒、状态更新和主管升级未实现 |
 | 销售日报 Agent v1 | `Automated Green / API contract ready / UI pending` | `GET /api/platform/daily-report` 已按当前销售和租户权限只读汇总当天跟进、商机、未完成/逾期任务；单测、全量 Agent 回归、类型、Lint、构建通过；真实登录态内容和 Web/飞书 UI 尚未验收 |
 | 商机提醒准备度工作台 | `Automated Green / API contract ready / UI pending` | `/stale-opportunity-readiness` 复用 `review:read-personal`，只读展示商机状态、可信跟进时间、阻断原因和 Base 来源；页面不写业务数据、不发送提醒；真实登录态内容和视觉验收仍待浏览器控制句柄 |
-| 商机停滞提醒 Agent（S4） | `Partial / controlled runtime green / governance pending / delivery disabled` | 已具备默认关闭的只读扫描、运行前安全门、plan-only、持久账本、未知投递人工对账、飞书本人 sender、单候选受控执行入口和关闭状态下的真实 readiness。历史治理门现在同时要求人工声明与白名单销售真实证据，且在 execute 前重查；真实探针识别 5 条商机均有安全版本，但仍有 4 条状态、5 条可信时间缺口、0 候选和 0 账本记录。Agent `438/438`、Postgres `19/19` 及完整质量门通过；提醒/执行/cron 关闭，未发送真实消息 |
+| 商机停滞提醒 Agent（S4） | `Partial / controlled runtime green / sender evidence green / governance pending / delivery disabled` | 已具备默认关闭的只读扫描、运行前安全门、plan-only、持久账本、未知投递人工对账、飞书本人 sender、单候选受控执行入口和关闭状态下的真实 readiness。历史治理与 Sender 均要求人工声明和白名单真实证据，并在 execute 前重查；真实探针确认机器人启用且 `im:message:send_as_bot` 已授权，可用范围因无额外查询权限明确标记 `not_checked`。当前仍有 4 条状态、5 条可信时间缺口、0 候选和 0 账本记录。Agent `454/454`、Postgres `19/19` 及完整质量门通过；提醒/执行/cron 关闭，未发送真实消息 |
 | 商机推进 | `Automated Green / UI pending`（当前跟进切片） | 已基于本次沟通与业务上下文生成版本化的变化、缺口、风险和行动建议；既有商机状态已具备聊天确认执行入口，主动停滞扫描仍属于 S4 |
 | 管理 Review | `Automated Green / Web implemented / UI pending` | `/api/platform/team-review` 已按主管/高管权限聚合个人日报、团队风险和管理建议；`/reviews/team` 已展示指标、关注成员、管理建议和逐人状态；真实主管 UI、管理动作执行和调度仍未验收 |
 | Playbook 优化 | `Draft` | 依赖足够赢单/丢单与阶段数据，尚未开始 |
@@ -270,13 +270,17 @@ Playbook 的共同基础，优先级高于语音、报告、RAG 和管理看板�
 - [x] 建立历史治理证据门：`execution-readiness` 和受控执行入口都重新读取白名单销售的
   真实商机/跟进准备度，不再单独信任人工环境标记；源不完整、空范围或任一待治理记录均
   阻断发送。Base 不返回修改时间时使用治理字段内容版本做并发校验，不将版本当作业务时间。
+- [x] 建立真实 Sender 就绪证据门：按执行白名单重读租户/成员/open_id，使用当前租户应用身份
+  只读核验机器人启用状态和租户授权的消息发送权限；readiness 与 execute 均同时要求人工声明
+  和真实证据。无可用范围查询权限时明确返回 `not_checked` warning，不为此申请过宽权限。
 - [ ] 由销售依据工作台完成剩余历史商机分类和历史可信时间治理；无已有跟进时不得伪造历史记录。
 - [ ] 在部署环境配置外部 cron 与密钥管理并完成运行可观测性；正式门禁通过前保持开关关闭。
 - [x] 在只允许受控测试租户和本人收件人的执行入口注册已验证的执行链与飞书适配器；确认动作由人
   决定，不自动建任务或升级主管；执行开关、密钥和白名单默认关闭/空值。
 - [ ] 建立受控真实投递和飞书 UI 验收；人工对账恢复已完成，真实提醒仍保持关闭。
-- [ ] 历史治理完成后核验并记录 sender 所需的真实应用权限；等待自然产生或由业务人员明确指定的
-  真实停滞候选，再由产品负责人单独确认一次本人投递。不得为制造候选而修改业务数据。
+- [ ] 历史治理完成后等待自然产生或由业务人员明确指定的真实停滞候选，再由产品负责人单独确认
+  一次本人投递。Sender 应用级证据已通过，但可用范围仍须在投递前由消息结果与回读共同验证；
+  不得为制造候选而修改业务数据。
 - 只有 S4 通过后，才扩展逾期任务和承诺未兑现等触发器。
 
 ### 阶段 S5：销售日报 Agent v1（自动化完成，真实 UI 待验收）

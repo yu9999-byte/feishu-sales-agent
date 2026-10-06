@@ -274,6 +274,24 @@ describe('Stale opportunity preparation with persistent reminder ledger', (): vo
           warnings: [],
         })),
       },
+      {
+        inspect: vi.fn(async () => ({
+          status: 'complete' as const,
+          checkedAt: NOW.toISOString(),
+          credentialsStatus: 'valid' as const,
+          botStatus: 'enabled' as const,
+          botOpenIdPresent: true,
+          sendPermissionStatus: 'granted' as const,
+          grantedSendScope: 'im:message:send_as_bot' as const,
+          recipientVisibility: {
+            status: 'not_checked' as const,
+            inspectionPermissionGranted: false,
+          },
+          warnings: [
+            'stale_opportunity_sender_recipient_visibility_not_checked',
+          ],
+        })),
+      },
     );
 
     const originalRequest = {

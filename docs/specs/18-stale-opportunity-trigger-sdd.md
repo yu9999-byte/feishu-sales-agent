@@ -1,5 +1,29 @@
 # 商机停滞 7 天提醒 S4 触发规格（部分实现）
 
+## 2026-10-06 S4-016 真实 Sender 就绪证据门
+
+- 新增 `StaleOpportunityReminderSenderEvidenceService`。服务只接受 execution 白名单中唯一的
+  tenant/member/open_id，先重读 active 租户和成员并验证归属、状态及 open_id；目标未配置、
+  读取异常或身份不一致时不调用任何飞书机器人能力接口。
+- 目标通过后，使用 `FeishuClientFactory` 和当前租户应用身份只读调用
+  `GET /open-apis/bot/v3/info` 与 `GET /open-apis/application/v6/scopes`。机器人必须
+  `activate_status=2` 且有非空 bot open_id；租户授权必须包含 `im:message`、
+  `im:message:send_as_bot` 或 `im:message:send` 之一。检查路径不调用消息发送接口。
+- 只有应用已经拥有 `application:application:self_manage` 或 `admin:app.info:readonly` 时，才调用
+  `POST /open-apis/application/v6/applications/:app_id/visibility/check_white_black_list` 做只读
+  可用范围查询。目标在黑名单、既不在白名单也不在付费名单，或查询失败时均不能 complete；
+  没有查询权限时不扩大权限，返回 `recipientVisibility.status=not_checked` 和稳定 warning。
+- `execution-readiness` 返回完整 Sender 证据；人工 `senderConfigured` 标记仍保留，二者必须同时
+  通过。`StaleOpportunityReminderExecutionService` 在治理证据之后、plan 之前独立重查；证据
+  非 complete 时不调用 plan、协调器、账本或 sender。
+- 真实只读探针确认 bot 已启用、open_id 存在、`im:message:send_as_bot` 已授权；可用范围因无
+  额外查询权限为 `not_checked`。整体仍由历史治理、人工 Sender 标记和无候选阻断；扫描 token
+  交叉访问返回 `401`，目标租户账本为 0，未调用 execute、未发送消息、未修改业务数据或启用 cron。
+- 自动化覆盖目标未配置/不一致、凭证与 bot API 不可用、机器人停用、发送权限缺失、三种发送
+  scope、可见/不可见/查询失败、readiness 人工标记不一致、execute 在 plan 前阻断及模块装配。
+  S4 定向 `171/171`、全量 Agent `454/454`、Postgres `19/19`、发布器 `4/4`，全仓 lint、三套
+  类型检查、Agent/Web 构建、迁移全量 skip、启动日志与 diff 检查通过。
+
 ## 2026-10-06 S4-015 历史治理真实证据门
 
 - 新增 `StaleOpportunityHistoryGovernanceEvidenceService`，只允许使用 execution 白名单中唯一的

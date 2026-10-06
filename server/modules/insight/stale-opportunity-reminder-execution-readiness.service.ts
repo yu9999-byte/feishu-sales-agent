@@ -8,6 +8,7 @@ import type {
   StaleOpportunityReminderExecutionReadinessResponse,
   StaleOpportunityReminderExecutionReadinessTarget,
   StaleOpportunityReminderHistoryGovernanceEvidence,
+  StaleOpportunityReminderSenderEvidence,
   StaleOpportunityTriggerCandidate,
   StaleOpportunityTriggerResponse,
 } from '@shared/api.interface';
@@ -33,6 +34,9 @@ import {
 import {
   StaleOpportunityHistoryGovernanceEvidenceService,
 } from './stale-opportunity-history-governance-evidence.service';
+import {
+  StaleOpportunityReminderSenderEvidenceService,
+} from './stale-opportunity-reminder-sender-evidence.service';
 import type {
   StaleOpportunityReminderUncertainReader,
 } from './stale-opportunity-reminder.service';
@@ -76,6 +80,12 @@ interface ExecutionReadinessCandidateRunner {
 interface ExecutionReadinessHistoryGovernanceInspector {
   inspect(input?: { now?: Date }): Promise<
     StaleOpportunityReminderHistoryGovernanceEvidence
+  >;
+}
+
+interface ExecutionReadinessSenderEvidenceInspector {
+  inspect(input?: { now?: Date }): Promise<
+    StaleOpportunityReminderSenderEvidence
   >;
 }
 
@@ -123,6 +133,23 @@ const emptyHistoryGovernance = (
   warnings: ['stale_opportunity_history_governance_target_not_verified'],
 });
 
+const emptySenderEvidence = (
+  now: Date,
+): StaleOpportunityReminderSenderEvidence => ({
+  status: 'not_checked',
+  checkedAt: now.toISOString(),
+  credentialsStatus: 'not_checked',
+  botStatus: 'not_checked',
+  botOpenIdPresent: false,
+  sendPermissionStatus: 'not_checked',
+  grantedSendScope: null,
+  recipientVisibility: {
+    status: 'not_checked',
+    inspectionPermissionGranted: false,
+  },
+  warnings: ['stale_opportunity_sender_target_not_verified'],
+});
+
 const emptyCandidateProbe = (
   status: StaleOpportunityReminderExecutionReadinessCandidateProbe['status'],
 ): StaleOpportunityReminderExecutionReadinessCandidateProbe => ({
@@ -152,6 +179,8 @@ class StaleOpportunityReminderExecutionReadinessService {
     @Inject(StaleOpportunityHistoryGovernanceEvidenceService)
     private readonly historyGovernance:
       ExecutionReadinessHistoryGovernanceInspector,
+    @Inject(StaleOpportunityReminderSenderEvidenceService)
+    private readonly senderEvidence: ExecutionReadinessSenderEvidenceInspector,
   ) {}
 
   async inspect(
@@ -224,6 +253,13 @@ class StaleOpportunityReminderExecutionReadinessService {
     if (historyGovernance.status !== 'complete') {
       addBlocker('history_governance_incomplete');
     }
+    const senderEvidence: StaleOpportunityReminderSenderEvidence =
+      targetVerified
+        ? await this.senderEvidence.inspect({ now })
+        : emptySenderEvidence(now);
+    if (senderEvidence.status !== 'complete') {
+      addBlocker('sender_evidence_incomplete');
+    }
     const ledger: StaleOpportunityReminderExecutionReadinessLedger =
       await this.inspectLedger(tenantId, addBlocker);
     const candidateProbe:
@@ -239,6 +275,7 @@ class StaleOpportunityReminderExecutionReadinessService {
       );
     const warnings: string[] = Array.from(new Set<string>([
       ...historyGovernance.warnings,
+      ...senderEvidence.warnings,
       ...candidateProbe.warnings,
     ])).sort();
 
@@ -263,6 +300,7 @@ class StaleOpportunityReminderExecutionReadinessService {
       },
       target,
       historyGovernance,
+      senderEvidence,
       ledger,
       candidateProbe,
       blockers,
@@ -488,5 +526,6 @@ export type {
   ExecutionReadinessHistoryGovernanceInspector,
   ExecutionReadinessIdentityReader,
   ExecutionReadinessInput,
+  ExecutionReadinessSenderEvidenceInspector,
   ExecutionReadinessSessionReader,
 };

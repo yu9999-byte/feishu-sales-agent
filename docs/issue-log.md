@@ -6,6 +6,21 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-06 S4 Sender 放行只有人工标记，缺少真实应用证据
+
+- 原风险：运行时只检查 `STALE_OPPORTUNITY_REMINDER_SENDER_CONFIGURED`。即使机器人未发布、
+  应用凭证失效或消息发送权限未授权，误配 `true` 后也可能继续生成执行计划，直到真实发送阶段
+  才失败；readiness 无法解释究竟缺少哪一层能力。
+- 处理：新增只读 Sender 证据服务，严格复用 execution 白名单，重读有效租户、成员和本人
+  `open_id`；调用机器人信息与租户授权状态接口，输出凭证、机器人、发送权限和目标可用范围的
+  机器可读证据。readiness 和 execute 都要求真实证据 `complete`，execute 在 plan 前失败关闭。
+- 真实证据：机器人已启用、bot open_id 存在，`im:message:send_as_bot` 已授权。应用没有额外的
+  可用范围查询权限，因此目标销售可见性为 `not_checked` warning，不申请过宽权限。整体仍由
+  历史治理、人工 Sender 标记和 0 候选阻断；目标租户账本为 0，扫描凭证交叉访问为 `401`。
+- 状态：`Resolved / sender evidence green / visibility not checked / delivery blocked`。
+- 下一动作：先完成历史治理；等待真实候选后由产品负责人单独确认一次本人投递，并通过消息与
+  账本回读补齐目标可达性的最终证据。期间保持提醒、执行和 cron 关闭。
+
 ## 2026-10-06 S4 历史治理只有人工标记，且真实 Base 版本缺失
 
 - 原风险：运行时只检查 `STALE_OPPORTUNITY_HISTORY_GOVERNANCE_READY`；若误配为 `true`，
@@ -355,6 +370,7 @@
 | `ISS-S4-013` | 真实提醒链已有扫描、账本和 sender，但缺少受控执行入口 | Resolved / automated green / real delivery disabled | 新增独立执行令牌、单候选请求、测试租户/成员/本人 open_id 三重白名单、执行前重跑 plan、唯一候选匹配和已注册 Nest sender/协调层；冷却重复幂等，未知投递停止。定向 `29/29`、全量 Agent `409/409`、Postgres `19/19`、Lint、三套类型检查、双构建及迁移幂等通过 | 仍需历史治理、部署密钥管理和单独确认后的一次真实测试租户消息回读；不启用 cron，不把自动化假 SDK 结果当真实投递证据 |
 | `ISS-S4-014` | 受控执行入口缺少关闭状态下的真实租户/销售放行检查 | Resolved / real read-only probe / delivery blocked | 新增 execution readiness，使用独立执行凭证并将探针限制为精确白名单；真实核验租户/销售/open_id/权限/数据源/空 uncertain 账本通过，候选完整扫描为 0，探针后账本仍为空；提醒和执行关闭，未调用 execute | 完成历史治理、核验 sender 权限并等待真实停滞候选；三项齐备前不启执行、提醒或 cron，不造业务数据 |
 | `ISS-S4-015` | 历史治理门只信任人工标记，且 Base 搜索缺安全版本 | Resolved / evidence gate green / governance pending / delivery blocked | 新增真实治理证据并同时接入 readiness 与 execute；缺 `last_modified_time` 时以治理字段内容版本做并发校验。真实探针识别 5 条商机均有版本，仍有 4 条状态和 5 条可信时间缺口；账本为 0，未发消息。Agent `438/438`、Postgres `19/19` 和完整质量门通过；功能 checkpoint 为 `bcffd91e0e17ff4fa66e439039469957823f2d2d` | 销售逐条确认状态；无已有跟进证据的记录不猜填时间。治理证据 complete 前保持提醒/执行/cron 关闭 |
+| `ISS-S4-016` | Sender 放行只信任人工配置，缺少真实机器人与权限证据 | Resolved / sender evidence green / visibility not checked / delivery blocked | readiness 与 execute 新增真实 Sender 证据门；严格复用白名单，只读核验凭证、机器人启用和租户发送权限。真实探针确认 bot 启用且 `im:message:send_as_bot` 已授权；因无额外可用范围查询权限，目标可见性明确为 `not_checked` warning。S4 `171/171`、Agent `454/454`、Postgres `19/19` 和完整质量门通过；账本为 0，未发消息 | 先完成历史治理；等待真实候选后由产品负责人单独确认一次本人投递，并以消息和账本回读验证最终可达性。保持提醒/执行/cron 关闭 |
 
 更新规则：发现问题时先补复现证据；修复后记录对应测试或运行证据；没有真实 UI 证据时不得把
 `Open` 改为 `Resolved`，也不得把 `Automated Green / UI pending` 写成 `UI Verified`。

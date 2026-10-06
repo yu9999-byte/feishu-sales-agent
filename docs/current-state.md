@@ -1,5 +1,24 @@
 # 当前工程说明
 
+## 2026-10-06 S4-016 真实 Sender 就绪证据门（已完成，真实投递仍阻断）
+
+- `execution-readiness` 新增真实 `senderEvidence`，不再只信任
+  `STALE_OPPORTUNITY_REMINDER_SENDER_CONFIGURED`。证据门按 execution 白名单重读唯一租户、
+  成员和本人 `open_id`，再以当前租户应用身份只读核验机器人启用状态和已授权发送权限；身份、
+  凭证、机器人、权限或可用范围查询任一明确失败都 fail closed。
+- 受控 `/execute` 在历史治理证据通过后、生成 plan 之前再次独立检查 Sender 证据。真实证据非
+  `complete` 时返回 `blocked`，不会扫描候选、领取账本、调用协调器或发送器；人工 Sender 标记
+  仍保留，并与真实证据共同构成最终放行条件。
+- 真实只读探针确认“销售agent”机器人已启用，bot open_id 存在，租户已授权
+  `im:message:send_as_bot`。当前应用未拥有额外的应用可用范围查询权限，因此目标销售可见性明确
+  返回 `not_checked` 和 warning；应用级 Sender 证据为 `complete`，不为消除 warning 申请过宽权限。
+- 整体 readiness 仍为 `blocked`：历史治理还有 4 条未知状态和 5 条可信时间缺口，人工 Sender
+  标记保持 `false`，当前候选为 0。扫描凭证访问 execution readiness 返回 `401`，目标租户提醒
+  账本回读仍为 0；本轮未调用 `/execute`、未发送消息、未修改业务数据、未启用 cron。
+- S4 定向回归 `171/171`、全量 Agent `454/454`、Postgres 集成 `19/19`、发布器测试 `4/4`
+  均通过；全仓 ESLint/Stylelint、服务端/客户端/测试 TypeScript、Agent 107 文件构建、Web 构建、
+  迁移全量 skip、启动日志核对和 `git diff --check` 也已通过。
+
 ## 2026-10-06 S4-015 历史商机治理证据门（已完成，真实投递仍阻断）
 
 - `execution-readiness` 不再只信任人工环境标记：新增白名单销售的真实治理证据，只读返回

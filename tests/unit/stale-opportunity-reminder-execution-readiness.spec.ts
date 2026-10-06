@@ -5,6 +5,7 @@ import type {
   PlatformPermission,
   PlatformSessionResponse,
   StaleOpportunityReminderHistoryGovernanceEvidence,
+  StaleOpportunityReminderSenderEvidence,
   StaleOpportunityTriggerCandidate,
   StaleOpportunityTriggerResponse,
 } from '@shared/api.interface';
@@ -50,6 +51,7 @@ interface HarnessOptions {
   triggerResult?: StaleOpportunityTriggerResponse;
   triggerFails?: boolean;
   governanceEvidence?: StaleOpportunityReminderHistoryGovernanceEvidence;
+  senderEvidence?: StaleOpportunityReminderSenderEvidence;
 }
 
 interface Harness {
@@ -60,6 +62,7 @@ interface Harness {
   listUncertain: ReturnType<typeof vi.fn>;
   run: ReturnType<typeof vi.fn>;
   inspectGovernance: ReturnType<typeof vi.fn>;
+  inspectSender: ReturnType<typeof vi.fn>;
 }
 
 const runtimeConfig = (options: ConfigOptions = {}): AgentRuntimeConfig => ({
@@ -211,6 +214,27 @@ const governanceEvidence = (
     : ['stale_opportunity_history_governance_pending'],
 });
 
+const senderEvidence = (
+  status: StaleOpportunityReminderSenderEvidence['status'] = 'complete',
+): StaleOpportunityReminderSenderEvidence => ({
+  status,
+  checkedAt: NOW.toISOString(),
+  credentialsStatus: status === 'complete' ? 'valid' : 'unavailable',
+  botStatus: status === 'complete' ? 'enabled' : 'unavailable',
+  botOpenIdPresent: status === 'complete',
+  sendPermissionStatus: status === 'complete' ? 'granted' : 'unavailable',
+  grantedSendScope: status === 'complete'
+    ? 'im:message:send_as_bot'
+    : null,
+  recipientVisibility: {
+    status: 'not_checked',
+    inspectionPermissionGranted: false,
+  },
+  warnings: status === 'complete'
+    ? ['stale_opportunity_sender_recipient_visibility_not_checked']
+    : ['stale_opportunity_sender_bot_unavailable'],
+});
+
 const createHarness = (options: HarnessOptions = {}): Harness => {
   vi.stubEnv('TEST_FEISHU_SECRET', 'configured-secret');
   const selectedIntegration: TenantIntegration | null =
@@ -259,6 +283,9 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
   const inspectGovernance = vi.fn(async (): Promise<
     StaleOpportunityReminderHistoryGovernanceEvidence
   > => options.governanceEvidence ?? governanceEvidence());
+  const inspectSender = vi.fn(async (): Promise<
+    StaleOpportunityReminderSenderEvidence
+  > => options.senderEvidence ?? senderEvidence());
   const service = new StaleOpportunityReminderExecutionReadinessService(
     options.config ?? runtimeConfig(),
     { resolveTenantById },
@@ -267,6 +294,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     { listUncertain },
     { run },
     { inspect: inspectGovernance },
+    { inspect: inspectSender },
   );
   return {
     service,
@@ -276,6 +304,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
     listUncertain,
     run,
     inspectGovernance,
+    inspectSender,
   };
 };
 
@@ -326,6 +355,7 @@ describe('StaleOpportunityReminderExecutionReadinessService', (): void => {
         dataSourceConfigured: true,
       },
       historyGovernance: governanceEvidence(),
+      senderEvidence: senderEvidence(),
       ledger: { status: 'clear', uncertainDeliveryFound: false },
       candidateProbe: {
         status: 'complete',
@@ -336,7 +366,9 @@ describe('StaleOpportunityReminderExecutionReadinessService', (): void => {
         warnings: [],
       },
       blockers: [],
-      warnings: [],
+      warnings: [
+        'stale_opportunity_sender_recipient_visibility_not_checked',
+      ],
     });
     expect(current.run).toHaveBeenCalledWith({
       now: NOW,
@@ -392,6 +424,19 @@ describe('StaleOpportunityReminderExecutionReadinessService', (): void => {
     expect(result.configuration.historyGovernanceReady).toBe(true);
     expect(result.historyGovernance.status).toBe('incomplete');
     expect(result.blockers).toContain('history_governance_incomplete');
+    expect(result.status).toBe('blocked');
+  });
+
+  it('blocks a manual sender attestation when real evidence is unavailable', async (): Promise<void> => {
+    const current: Harness = createHarness({
+      senderEvidence: senderEvidence('unavailable'),
+    });
+
+    const result = await current.service.inspect({ now: NOW });
+
+    expect(result.configuration.senderConfigured).toBe(true);
+    expect(result.senderEvidence.status).toBe('unavailable');
+    expect(result.blockers).toContain('sender_evidence_incomplete');
     expect(result.status).toBe('blocked');
   });
 
