@@ -1,6 +1,6 @@
 # 销策 Agent SDD 索引
 
-状态：`Approved / Goal v3 multi-agent automated Green 2026-10-06`
+状态：`Approved / Goal v3 multi-agent automated Green 2026-10-07`
 
 本目录是 Goal v3 的规格权威来源。代码、测试、飞书配置和 UI 验收都必须能追溯到这里的
 需求编号；参考文档只提供业务输入，不能直接替代本项目规格。
@@ -37,6 +37,8 @@
 | `22-opportunity-decision-agent-tdd.md` | 商机决策排序、权限、关联、降级和零副作用测试 | Green |
 | `23-opportunity-decision-workbench-sdd.md` | 客户组合摘要与商机主从决策工作台 | 已实现，UI 待验收 |
 | `24-opportunity-decision-workbench-tdd.md` | 客户汇总、决策视图、状态和只读边界测试 | Green |
+| `25-team-opportunity-decision-sdd.md` | 主管团队商机组合、组织范围、排序和管理建议契约 | 已实现，UI 待验收 |
+| `26-team-opportunity-decision-tdd.md` | 团队聚合、权限、降级、金额和页面状态测试 | Green |
 
 ## 2. 规格状态
 

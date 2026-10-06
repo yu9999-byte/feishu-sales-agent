@@ -119,6 +119,7 @@ v1 识别以下信息缺口：关联客户、当前进展、预计金额、下�
 ## 9. 后续演进
 
 同一决策契约已接入客户组合摘要和商机决策工作台，详见
-[23-opportunity-decision-workbench-sdd.md](23-opportunity-decision-workbench-sdd.md)。下一阶段优先扩展主管团队商机组合决策；
-完整 CRM 客户 360 按后续业务需求迭代。任何自动任务、商机更新或客户触达仍须单独设计确认、
+[23-opportunity-decision-workbench-sdd.md](23-opportunity-decision-workbench-sdd.md)。主管团队商机组合决策已由后续
+[25-team-opportunity-decision-sdd.md](25-team-opportunity-decision-sdd.md) 实现；完整 CRM 客户 360
+按后续业务需求迭代。任何自动任务、商机更新或客户触达仍须单独设计确认、
 权限、幂等、审计和失败恢复，不由本只读版本隐式放开。

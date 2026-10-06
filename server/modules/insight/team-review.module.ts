@@ -6,6 +6,11 @@ import { IdentityAccessModule } from '@server/modules/identity-access/identity-a
 import { PlatformShellModule } from '@server/modules/platform-shell/platform-shell.module';
 import { WebAuthModule } from '@server/modules/web-auth/web-auth.module';
 import { DailyReportModule } from './daily-report.module';
+import { OpportunityDecisionModule } from './opportunity-decision.module';
+import { TeamOpportunityDecisionController } from
+  './team-opportunity-decision.controller';
+import { TeamOpportunityDecisionService } from
+  './team-opportunity-decision.service';
 import { TeamReviewController } from './team-review.controller';
 import { TeamReviewService } from './team-review.service';
 
@@ -15,11 +20,12 @@ import { TeamReviewService } from './team-review.service';
     AgentExecutionModule,
     DailyReportModule,
     IdentityAccessModule,
+    OpportunityDecisionModule,
     PlatformShellModule,
     WebAuthModule,
   ],
-  controllers: [TeamReviewController],
-  providers: [TeamReviewService],
+  controllers: [TeamReviewController, TeamOpportunityDecisionController],
+  providers: [TeamReviewService, TeamOpportunityDecisionService],
 })
 class TeamReviewModule {}
 

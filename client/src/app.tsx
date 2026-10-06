@@ -12,6 +12,7 @@ import FollowupDraftPage from './pages/FollowupDraftPage/FollowupDraftPage';
 import DailyReportPage from './pages/DailyReportPage/DailyReportPage';
 import StaleOpportunityReadinessPage from './pages/StaleOpportunityReadinessPage/StaleOpportunityReadinessPage';
 import TeamReviewPage from './pages/TeamReviewPage/TeamReviewPage';
+import TeamOpportunityDecisionPage from './pages/TeamOpportunityDecisionPage/TeamOpportunityDecisionPage';
 import TaskFulfillmentPage from './pages/TaskFulfillmentPage/TaskFulfillmentPage';
 
 const RoutesComponent: React.FC = () => (
@@ -27,6 +28,7 @@ const RoutesComponent: React.FC = () => (
       <Route path="followups/:id/edit" element={<FollowupDraftPage />} />
       <Route path="tasks" element={<TaskFulfillmentPage />} />
       <Route path="reviews/team" element={<TeamReviewPage />} />
+      <Route path="reviews/opportunities" element={<TeamOpportunityDecisionPage />} />
       <Route path="analytics" element={<SectionPage sectionKey="analytics" />} />
       <Route path="playbooks" element={<SectionPage sectionKey="playbooks" />} />
       <Route path="admin/members" element={<SectionPage sectionKey="admin-members" />} />

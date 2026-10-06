@@ -759,6 +759,77 @@ export interface TeamReviewResponse {
   warnings: string[];
 }
 
+export type TeamOpportunityDecisionStatus =
+  | 'ready'
+  | 'partial'
+  | 'empty'
+  | 'unavailable';
+
+export interface TeamOpportunityDecisionMetrics {
+  memberCount: number;
+  readableMemberCount: number;
+  activeOpportunityCount: number;
+  criticalCount: number;
+  atRiskCount: number;
+  needsAttentionCount: number;
+  onTrackCount: number;
+  knownExpectedAmount: number | null;
+}
+
+export interface TeamOpportunityDecisionItem {
+  teamRank: number;
+  memberRank: number;
+  ownerMemberId: string;
+  ownerDisplayName: string;
+  opportunity: OpportunityDecisionItem;
+}
+
+export interface TeamOpportunityDecisionMember {
+  memberId: string;
+  displayName: string;
+  status: OpportunityDecisionStatus;
+  activeOpportunityCount: number;
+  criticalCount: number;
+  atRiskCount: number;
+  needsAttentionCount: number;
+  onTrackCount: number;
+  knownExpectedAmount: number | null;
+  topTeamRank: number | null;
+  topOpportunityName: string | null;
+  topRecommendation: string | null;
+  warnings: string[];
+}
+
+export interface TeamOpportunityDecisionManagerAction {
+  ownerMemberId: string;
+  ownerDisplayName: string;
+  opportunityRecordId: string;
+  opportunityName: string;
+  action: string;
+  reason: string;
+  requiresConfirmation: true;
+}
+
+export interface TeamOpportunityDecisionTaskAlert
+  extends OpportunityDecisionGlobalTaskAlert {
+  ownerMemberId: string;
+  ownerDisplayName: string;
+}
+
+export interface TeamOpportunityDecisionResponse {
+  referenceDate: string;
+  timezone: string;
+  status: TeamOpportunityDecisionStatus;
+  generatedAt: string;
+  scope: 'team' | 'tenant';
+  metrics: TeamOpportunityDecisionMetrics;
+  priorities: TeamOpportunityDecisionItem[];
+  members: TeamOpportunityDecisionMember[];
+  managerActions: TeamOpportunityDecisionManagerAction[];
+  taskAlerts: TeamOpportunityDecisionTaskAlert[];
+  warnings: string[];
+}
+
 export type StaleOpportunityReadinessStatus =
   | 'ready'
   | 'incomplete'

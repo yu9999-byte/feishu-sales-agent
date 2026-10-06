@@ -1,6 +1,6 @@
 # 销售跟进执行 Agent 项目主计划
 
-状态：`Approved / multi-agent sales assistant direction confirmed / updated 2026-10-06`
+状态：`Approved / multi-agent sales assistant direction confirmed / updated 2026-10-07`
 
 本文把产品总纲、当前代码实现、规格文件、测试证据和真实飞书验收记录统一为后续推进基线。
 它定义产品方向和阶段顺序；具体接口、状态机和字段契约仍以 `docs/specs/` 与
@@ -65,7 +65,7 @@
 
 ## 4. 当前基线
 
-截至 2026-10-06，代码仓库和文档证据形成以下判断：
+截至 2026-10-07，代码仓库和文档证据形成以下判断：
 
 本日任务履约增量只接受“成功 Agent 动作结果中的完整替代声明”：
 `relatedTaskGuid + relation: replaces` 必须成对出现，并通过当前租户、当前销售、非自替代、
@@ -89,7 +89,8 @@
 | 销售日报 Agent v1 | `Automated Green / API contract ready / UI pending` | `GET /api/platform/daily-report` 已按当前销售和租户权限只读汇总当天跟进、商机、未完成/逾期任务；单测、全量 Agent 回归、类型、Lint、构建通过；真实登录态内容和 Web/飞书 UI 尚未验收 |
 | 商机提醒准备度工作台 | `Automated Green / API contract ready / UI pending` | `/stale-opportunity-readiness` 复用 `review:read-personal`，只读展示商机状态、可信跟进时间、阻断原因和 Base 来源；页面不写业务数据、不发送提醒；真实登录态内容和视觉验收仍待浏览器控制句柄 |
 | 商机停滞提醒 Agent（S4） | `Partial / read-only scheduling package green / governance pending / delivery disabled` | 已具备默认关闭的只读扫描、安全门、plan-only、持久账本、未知投递人工对账、飞书本人 sender、单候选受控执行、真实 readiness、独立凭证保护和脱敏审计的调度观察入口，以及固定路径/超时/响应契约/退出码的外部调用工具与禁用 cron 示例。真实探针确认机器人启用且 `im:message:send_as_bot` 已授权；当前仍有 4 条状态、5 条可信时间缺口、0 候选和 0 账本记录。调度客户端 `10/10`、Agent `465/465`、Postgres `20/20` 及完整质量门通过；未创建或启用 cron，未发送真实消息 |
-| 客户与商机决策 Agent v1 | `Automated Green / Web implemented / API and bot integrated / UI pending` | 已按本人范围组合读取客户、商机、全部历史跟进和 Agent 明确确认的任务证据；对进行中商机输出风险优先级、缺口、依据与下一步建议，机器人、API、`/opportunities` 主从决策面和 `/customers` 客户组合摘要已接入。关闭类商机排除，普通任务不按标题猜关联；只读、不执行建议。完整 CRM 客户 360、主管团队组合决策和真实 UI 验收待后续 |
+| 客户与商机决策 Agent v1 | `Automated Green / Web implemented / API and bot integrated / UI pending` | 已按本人范围组合读取客户、商机、全部历史跟进和 Agent 明确确认的任务证据；对进行中商机输出风险优先级、缺口、依据与下一步建议，机器人、API、`/opportunities` 主从决策面和 `/customers` 客户组合摘要已接入。关闭类商机排除，普通任务不按标题猜关联；只读、不执行建议。完整 CRM 客户 360 和真实 UI 验收待后续；主管团队聚合由下一行独立能力承接 |
+| 主管团队客户与商机决策 Agent v1 | `Automated Green / Web implemented / UI pending` | manager 按本人+递归下属、executive/admin 按租户 active 成员聚合个人商机决策，输出跨销售优先级、负责人、风险、建议管理动作和成员组合；双权限 API 与 `/reviews/opportunities` 已接入。未知金额不补 0，成员失败安全降级，只读不派发、不提醒、不写业务数据；真实主管/高管 UI 待验收 |
 | 单次跟进推进判断 | `Automated Green / UI pending` | 已基于本次沟通与业务上下文生成版本化的变化、缺口、风险和行动建议；既有商机状态已具备聊天确认执行入口，主动停滞扫描仍属于 S4 |
 | 管理 Review | `Automated Green / Web implemented / UI pending` | `/api/platform/team-review` 已按主管/高管权限聚合个人日报、团队风险和管理建议；`/reviews/team` 已展示指标、关注成员、管理建议和逐人状态；真实主管 UI、管理动作执行和调度仍未验收 |
 | Playbook 优化 | `Draft` | 依赖足够赢单/丢单与阶段数据，尚未开始 |
@@ -173,8 +174,8 @@ Agent 判断、建议和待确认动作，并随草案版本保存。既有商�
 客户与商机决策 Agent v1 进一步完成“销售主动问当前组合”场景：按本人范围读取客户、商机、
 历史跟进和可信任务证据，对进行中商机输出风险优先级、证据和下一步建议，并已接入机器人和
 只读 Web API，并已建成 `/opportunities` 商机决策工作台和 `/customers` 客户组合摘要。
-该版本不执行建议、不预测赢单率，也不等同于 S4 定时提醒；完整 CRM 客户 360
-和主管团队组合决策仍待后续实现。
+该版本不执行建议、不预测赢单率，也不等同于 S4 定时提醒。主管团队组合决策已由
+`COP-012..016` 独立实现；完整 CRM 客户 360 仍待后续实现。
 
 ### 后续能力：主动触发器（不是并列 Agent）
 
@@ -379,7 +380,10 @@ Playbook 的共同基础，优先级高于语音、报告、RAG 和管理看板�
   `10/10` 及完整静态、构建、迁移和隔离端口启动门禁通过。
 - [ ] 在真实销售登录态和机器人会话核对本人范围、排序、来源链接、中文回复和部分数据状态；
   未完成前保持 `UI pending`。
-- [ ] 下一阶段扩展主管团队商机组合决策；再按业务需求增补完整 CRM 客户 360。
+- [x] 扩展主管团队商机组合决策：按组织/租户范围聚合个人决策，保留负责人、个人排名和
+  真实建议；双权限 API、`/reviews/opportunities`、部分失败降级和未知金额契约已完成。
+- [ ] 在真实主管/高管登录态验收团队范围、真实内容、链接和视觉状态；再按业务需求增补完整
+  CRM 客户 360。
   任何商机更新、建任务或客户触达继续走人工确认执行边界。
 
 ## 8. 统一 Agent 契约

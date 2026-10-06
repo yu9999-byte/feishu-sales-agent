@@ -51,4 +51,5 @@
 - 使用真实销售登录态核对 API 中的本人数据范围、日期、链接和降级提示。
 - 在飞书机器人真实会话核对业务查询和项目诊断回复的可读性。
 - 客户组合摘要和商机决策面已由后续
-  [工作台 TDD](24-opportunity-decision-workbench-tdd.md) 覆盖；完整 CRM 客户 360 和主管团队组合决策尚未实现。
+  [工作台 TDD](24-opportunity-decision-workbench-tdd.md) 覆盖；主管团队组合决策已由后续
+  [团队决策 TDD](26-team-opportunity-decision-tdd.md) 覆盖，完整 CRM 客户 360 尚未实现。

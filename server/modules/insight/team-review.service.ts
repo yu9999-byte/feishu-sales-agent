@@ -3,7 +3,6 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type {
   DailySalesReportResponse,
   DailySalesReportStatus,
-  PlatformRole,
   PlatformSessionResponse,
   TeamReviewAttention,
   TeamReviewMemberSummary,
@@ -21,6 +20,11 @@ import {
   DailySalesReportService,
   type DailySalesReportInput,
 } from './daily-sales-report.service';
+import {
+  hasTeamReviewRole,
+  resolveTeamReviewScope,
+  type TeamReviewScope,
+} from './team-review-scope';
 
 interface TeamReviewInput {
   integration: TenantIntegration;
@@ -37,11 +41,6 @@ interface TeamReviewIdentityReader {
 
 interface DailyReportGenerator {
   generate(input: DailySalesReportInput): Promise<DailySalesReportResponse>;
-}
-
-interface TeamReviewScope {
-  memberIds: Set<string>;
-  warnings: string[];
 }
 
 const HIGH_ATTENTION_REASON = '数据不完整，暂时无法形成可靠判断';
@@ -69,51 +68,6 @@ const emptyReport = (
   nextActions: [],
   warnings: [warning],
 });
-
-const isBroadScope = (roles: PlatformRole[]): boolean =>
-  roles.includes('executive') || roles.includes('admin');
-
-const collectManagerScope = (
-  viewerMemberId: string,
-  relations: ReportingRelation[],
-  now: Date,
-): TeamReviewScope => {
-  const activeRelations: ReportingRelation[] = relations.filter(
-    (relation: ReportingRelation): boolean =>
-      relation.validFrom.getTime() <= now.getTime() &&
-      (relation.validTo === null || relation.validTo.getTime() > now.getTime()),
-  );
-  const memberIds: Set<string> = new Set<string>([viewerMemberId]);
-  const visiting: Set<string> = new Set<string>();
-  const visited: Set<string> = new Set<string>();
-  let hasCycle: boolean = false;
-
-  const visit = (managerMemberId: string): void => {
-    if (visiting.has(managerMemberId)) {
-      hasCycle = true;
-      return;
-    }
-    if (visited.has(managerMemberId)) return;
-    visiting.add(managerMemberId);
-    activeRelations
-      .filter(
-        (relation: ReportingRelation): boolean =>
-          relation.managerMemberId === managerMemberId,
-      )
-      .forEach((relation: ReportingRelation): void => {
-        memberIds.add(relation.reportMemberId);
-        visit(relation.reportMemberId);
-      });
-    visiting.delete(managerMemberId);
-    visited.add(managerMemberId);
-  };
-
-  visit(viewerMemberId);
-  return {
-    memberIds,
-    warnings: hasCycle ? ['组织汇报关系存在循环，已限制为可确认范围'] : [],
-  };
-};
 
 const buildAttention = (
   member: PlatformMember,
@@ -181,9 +135,7 @@ class TeamReviewService {
     if (input.integration.status !== 'active') {
       return this.unavailable(input, now, ['销售数据连接未启用']);
     }
-    if (!input.session.roles.some((role: PlatformRole): boolean =>
-      role === 'manager' || role === 'executive' || role === 'admin'
-    )) {
+    if (!hasTeamReviewRole(input.session.roles)) {
       return this.unavailable(input, now, ['当前成员没有团队 Review 权限']);
     }
     const members: PlatformMember[] = await this.identity.listMembers(
@@ -209,14 +161,12 @@ class TeamReviewService {
       );
     }
 
-    const scope: TeamReviewScope = isBroadScope(input.session.roles)
-      ? {
-          memberIds: new Set<string>(
-            activeMembers.map((member: PlatformMember): string => member.id),
-          ),
-          warnings: [],
-        }
-      : collectManagerScope(input.session.member.id, relations, now);
+    const scope: TeamReviewScope = resolveTeamReviewScope({
+      viewerMemberId: input.session.member.id,
+      roles: input.session.roles,
+      relations,
+      now,
+    }, activeMembers);
     const scopedMembers: PlatformMember[] = activeMembers.filter(
       (member: PlatformMember): boolean => scope.memberIds.has(member.id),
     );

@@ -15,6 +15,7 @@ import type {
   StaleOpportunityGovernanceResponse,
   StaleOpportunityReadinessResponse,
   TaskFulfillmentResponse,
+  TeamOpportunityDecisionResponse,
   TeamReviewResponse,
   WorkspaceResponse,
 } from '@shared/api.interface';
@@ -152,6 +153,23 @@ const getTeamReview = async (
       : '';
     const response = await axios.get<TeamReviewResponse>(
       `/api/platform/team-review${query}`,
+      { withCredentials: true },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
+const getTeamOpportunityDecisions = async (
+  referenceDate?: string,
+): Promise<TeamOpportunityDecisionResponse> => {
+  try {
+    const query: string = referenceDate
+      ? `?date=${encodeURIComponent(referenceDate)}`
+      : '';
+    const response = await axios.get<TeamOpportunityDecisionResponse>(
+      `/api/platform/team-opportunity-decisions${query}`,
       { withCredentials: true },
     );
     return response.data;
@@ -324,6 +342,7 @@ export {
   getDailySalesReport,
   getOpportunityDecisions,
   getTaskFulfillment,
+  getTeamOpportunityDecisions,
   getTeamReview,
   getStaleOpportunityReadiness,
   submitStaleOpportunityGovernance,

@@ -17,6 +17,7 @@ class WebPageController {
     'followups/:id/edit',
     'tasks',
     'reviews/team',
+    'reviews/opportunities',
     'analytics',
     'playbooks',
     'admin/members',

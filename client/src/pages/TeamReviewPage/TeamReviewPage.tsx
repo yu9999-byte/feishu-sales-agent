@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   AlertCircle,
   AlertTriangle,
+  BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
   ClipboardCheck,
@@ -9,6 +10,7 @@ import {
   ShieldAlert,
   UsersRound,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import type {
   TeamReviewAttention,
@@ -125,10 +127,18 @@ const TeamReviewPage: React.FC = () => {
             最近生成：{formatGeneratedAt(review.generatedAt)} · {review.timezone}
           </p>
         </div>
-        <Button variant="outline" onClick={refresh} disabled={loading}>
-          <RefreshCw aria-hidden="true" />
-          刷新复盘
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/reviews/opportunities">
+              <BriefcaseBusiness aria-hidden="true" />
+              看团队商机决策
+            </Link>
+          </Button>
+          <Button variant="outline" onClick={refresh} disabled={loading}>
+            <RefreshCw aria-hidden="true" />
+            刷新复盘
+          </Button>
+        </div>
       </header>
 
       {review.warnings.length > 0 && (
