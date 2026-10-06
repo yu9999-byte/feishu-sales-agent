@@ -1,0 +1,9 @@
+# DISABLED EXAMPLE — this file is documentation and must not be installed as-is.
+#
+# The scheduler runtime must obtain only the observation URL and observation
+# token from the deployment secret manager. Never put a real token here.
+# Minimum supported interval: 30 minutes.
+#
+# SHELL=/bin/sh
+# PATH=/usr/local/bin:/usr/bin:/bin
+# */30 * * * * cd /opt/sales-agent && /usr/bin/npm run observe:stale-opportunity-schedule >> /var/log/sales-agent/schedule-observation.log 2>&1

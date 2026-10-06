@@ -17,11 +17,12 @@ P0 已通过真实飞书企业闭环验收：用户私聊机器人提交跟进�
 完成结构化提取，用户确认消息卡片后，Agent 写入客户、商机和跟进三张 Demo Base 表，并
 创建分配给发送者的飞书任务。版本 `1.0.1` 已审核发布，应用身份可读取和写入 Demo Base。
 2026-09-24 整改基线为 22 个测试文件、158 项测试和 8 项真实 Postgres 集成测试。
-截至 2026-10-06，当前工程回归基线为 48 个 Agent 测试文件、465 项测试和 4 个
-Postgres 集成测试文件、20 项测试；服务端、客户端和测试类型检查、ESLint/Stylelint、Agent 与
-Web 构建均通过。商机停滞提醒已增加独立凭证保护、脱敏审计的调度前只读观察入口；真实 Sender
-只读证据已确认机器人启用及租户消息发送权限，但历史治理、人工开关和真实候选仍阻断投递，
-外部 cron 也尚未创建或启用。Vitest 已固定使用 `threads` pool，
+截至 2026-10-06，当前工程回归基线为 48 个 Agent 测试文件、465 项测试，4 个
+Postgres 集成测试文件、20 项测试，以及 10 项只读调度客户端测试；服务端、客户端和测试
+类型检查、ESLint/Stylelint、Agent 与 Web 构建均通过。商机停滞提醒已增加独立凭证保护、
+脱敏审计的调度前只读观察入口及部署调用工具；真实 Sender 只读证据已确认机器人启用及租户
+消息发送权限，但历史治理、人工开关和真实候选仍阻断投递，外部 cron 也尚未创建或启用。
+Vitest 已固定使用 `threads` pool，
 避免 Windows/Node 25 默认 fork worker 的原生
 CSPRNG 初始化崩溃。
 
@@ -77,6 +78,7 @@ CSPRNG 初始化崩溃。
 npm run type:check:server
 npm run type:check:client
 npm run type:check:test
+npm run test:schedule-observer
 npm run test:agent
 npx vitest run --config vitest.integration.config.ts
 npm run eslint
@@ -110,6 +112,7 @@ npm run build:web
 | [P0 验收矩阵](docs/p0-acceptance.md) | 每项能力的验证方式、证据和当前状态 |
 | [当前工程说明](docs/current-state.md) | 现有文件、遗留资产和真实完成度 |
 | [问题日志](docs/issue-log.md) | 当前问题、状态、证据和下一动作 |
+| [只读调度观察运行手册](docs/runbooks/stale-opportunity-schedule-observation.md) | 调度凭证、调用工具、退出码、禁用 cron 示例与故障处理 |
 | [竞品能力映射](docs/reference-capability-map.md) | APTSell 公开能力与本项目阶段映射 |
 | [跟进卡片决策问答](docs/decisions/2026-09-20-followup-chat-cards.md) | 三种条件卡、一次确认、质检/推送边界和被覆盖旧口径 |
 | [GitHub 自动检查点](docs/github-publish-automation.md) | 阶段发布、每日补漏、安全门与命令说明 |

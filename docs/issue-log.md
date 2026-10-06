@@ -6,6 +6,20 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-06 只读观察入口缺少部署侧安全调用与故障契约
+
+- 原风险：S4-017 已提供受保护观察 API，但部署人员仍需手写 HTTP 命令、超时、响应判断和 cron；
+  容易把 Token 放进命令行/日志、误调用 execute、跟随重定向泄露凭证，或把 `incomplete` 当成功。
+- 处理：新增无命令行密钥参数的 Node 调用工具，只读固定观察路径，拒绝远程 HTTP、内嵌凭证、
+  query/fragment 和重定向；请求/响应有界，输出只保留已知脱敏字段，底层错误和 HTTP 正文不透传。
+- 运行契约：`0/2/3/4` 分别表示 ready/blocked/incomplete/unavailable，`10..14` 表示配置、超时、
+  网络、HTTP 或响应契约故障。任何非 ready 结果都不会调用执行入口，ready 也不会自动发送。
+- 交付：部署运行手册、密钥最小权限矩阵、故障处理说明及完全注释的 30 分钟 cron 禁用示例。
+  自动化 `10/10` 及全项目 Agent `465/465`、Postgres `20/20` 和质量门通过。
+- 状态：`Resolved / scheduler client green / cron not installed / delivery blocked`。
+- 下一动作：由部署环境密钥管理器分别向 Agent 和调度身份注入同一观察凭证；产品负责人确认前
+  不安装或启用 cron，不向调度身份提供扫描/执行凭证。
+
 ## 2026-10-06 外部 cron 缺少无发送权限的调度前可观测入口
 
 - 原风险：已有 scan、execution readiness 和 execute 入口，但未来 cron 若直接持有扫描或执行

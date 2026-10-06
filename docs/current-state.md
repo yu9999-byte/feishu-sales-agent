@@ -1,5 +1,21 @@
 # 当前工程说明
 
+## 2026-10-06 S4-018 只读调度接入包（已完成，cron 仍未创建或启用）
+
+- 新增独立部署调用工具 `npm run observe:stale-opportunity-schedule`。它只接受固定的
+  `schedule-observation` 完整 URL、独立观察 Token 和有界超时，通过一次 `POST` 读取 S4-017
+  脱敏观察结果；没有扫描或执行入口的调用代码。
+- 工具拒绝远程明文 HTTP、URL 内嵌凭证、query/fragment、重定向、非 JSON、超过 64 KiB 的响应
+  和状态/计数关系不一致的响应。网络与服务异常只输出稳定分类，不回显 Token、上游响应正文、
+  URL 或底层异常细节。
+- 退出码区分 `ready=0`、`blocked=2`、`incomplete=3`、`unavailable=4` 及配置/超时/网络/HTTP/
+  非法响应故障 `10..14`。非 ready 结果不会串接 execute；`ready` 也只代表可进入人工放行评估，
+  不会自动投递。
+- 新增部署运行手册和全部注释的 30 分钟 cron 禁用示例。仓库没有安装、创建或启用 cron，也没有
+  修改提醒、执行、治理或 Sender 开关；当前 4 条状态、5 条可信时间缺口和 0 候选保持不变。
+- 调度客户端 `10/10`、Agent `465/465`、Postgres `20/20`、发布器 `4/4` 通过；全仓 Lint、
+  三套类型检查、Agent 108 文件构建、Web 构建、迁移连续两次全量 skip 和 diff 检查通过。
+
 ## 2026-10-06 S4-017 调度前可观测性（已完成，未创建或启用 cron）
 
 - 新增 `POST /internal/stale-opportunity-reminder/schedule-observation`。未来部署环境 cron 可以使用

@@ -1,5 +1,22 @@
 # 商机停滞 7 天提醒 S4 触发规格（部分实现）
 
+## 2026-10-06 S4-018 只读调度接入包
+
+- 新增 `scripts/stale-opportunity-schedule-observer.mjs` 单次调用工具及独立 library。部署调度器只需
+  提供完整观察 URL、观察 Token 和可选超时；工具固定使用 `POST` 调用 S4-017，不包含 scan、
+  execution-readiness 或 execute 的备用路径，也不在成功后串接任何动作。
+- URL 必须以固定观察路径结尾，禁止 query、fragment、URL 内嵌凭证和重定向。远程地址必须使用
+  HTTPS，仅 loopback 联调允许 HTTP；请求默认 10 秒、可配置范围 1..60 秒，响应最大 64 KiB。
+- 客户端验证 JSON content-type、模式、状态、trace、时间、审计标记、阻断/warning 列表、汇总
+  枚举和非负计数，并校验 blocker/warning 数量、候选数量以及 ready/blocked/incomplete/
+  unavailable 与 readiness/audit 的关系。只输出经过白名单重建的脱敏字段，不输出未知字段。
+- `0/2/3/4` 表示 ready/blocked/incomplete/unavailable；`10..14` 表示配置、超时、网络、HTTP、
+  非法响应。HTTP 错误正文与底层异常不透传，避免意外泄露 Token 或上游内容。
+- 运行手册规定观察/扫描/执行三枚凭证隔离；仓库的 30 分钟 cron 文件全部注释且扩展名为
+  `.disabled`。本切片没有安装、创建或启用任务，也未更改任何投递开关。
+- Node 客户端测试 `10/10`、Agent `465/465`、Postgres `20/20`、发布器 `4/4`，全仓 Lint、
+  三套类型检查、Agent/Web 构建、迁移连续两次全量 skip 和 diff 检查通过。
+
 ## 2026-10-06 S4-017 调度前可观测性
 
 - 新增 `POST /internal/stale-opportunity-reminder/schedule-observation`，由未来部署环境 cron 使用

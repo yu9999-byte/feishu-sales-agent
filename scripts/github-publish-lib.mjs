@@ -412,6 +412,7 @@ function defaultQualityGates(repoRoot, logger) {
   const gates = [
     ['lint'],
     ['test:github-publish'],
+    ['test:schedule-observer'],
     ['test:agent'],
   ];
 
