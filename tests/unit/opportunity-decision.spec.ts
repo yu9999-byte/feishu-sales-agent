@@ -117,15 +117,26 @@ const taskReport = (): TaskFulfillmentResponse => ({
 });
 
 const portfolio = (): OpportunityPortfolioResult => ({
-  customers: [{
-    recordId: 'customer-1',
-    name: '北辰制造',
-    contactName: '张总',
-    latestSummary: '认可试点价值',
-    lastFollowupAt: '2026-09-01T02:00:00.000Z',
-    sourceVersion: '2026-10-01T02:00:00.000Z',
-    recordUrl: 'https://example.com/customer-1',
-  }],
+  customers: [
+    {
+      recordId: 'customer-1',
+      name: '北辰制造',
+      contactName: '张总',
+      latestSummary: '认可试点价值',
+      lastFollowupAt: '2026-09-01T02:00:00.000Z',
+      sourceVersion: '2026-10-01T02:00:00.000Z',
+      recordUrl: 'https://example.com/customer-1',
+    },
+    {
+      recordId: 'customer-2',
+      name: '无进行中商机客户',
+      contactName: null,
+      latestSummary: null,
+      lastFollowupAt: null,
+      sourceVersion: '2026-10-02T02:00:00.000Z',
+      recordUrl: null,
+    },
+  ],
   opportunities: [
     {
       recordId: 'opportunity-1',
@@ -306,5 +317,123 @@ describe('OpportunityDecisionService', (): void => {
     expect(reply).toContain('现在最该推进：北辰数字化项目');
     expect(reply).toContain('下一步：先核对逾期任务的真实状态');
     expect(reply).toContain('建议尚未执行');
+  });
+
+  it('includes visible customers even when they have no active opportunity', async (): Promise<void> => {
+    const { service } = setup();
+    const result: OpportunityDecisionResponse = await service.analyze({
+      integration,
+      actorOpenId: 'ou_sales_a',
+      referenceDate: '2026-10-06',
+      timezone: 'Asia/Shanghai',
+      now: new Date('2026-10-06T04:00:00.000Z'),
+    });
+
+    expect(result.customers).toContainEqual(expect.objectContaining({
+      recordId: 'customer-2',
+      activeOpportunityCount: 0,
+      criticalOpportunityCount: 0,
+      atRiskOpportunityCount: 0,
+      totalExpectedAmount: null,
+      topPriorityRank: null,
+      topRecommendation: null,
+    }));
+  });
+
+  it('summarizes multiple explicitly linked opportunities for one customer', async (): Promise<void> => {
+    const input: OpportunityPortfolioResult = portfolio();
+    input.opportunities.push({
+      recordId: 'opportunity-3',
+      customerRecordId: 'customer-1',
+      name: '北辰二期项目',
+      status: 'active',
+      expectedAmount: 200000,
+      progress: '需求确认中',
+      nextAction: '约定方案沟通',
+      dueAt: '2026-10-10T02:00:00.000Z',
+      sourceVersion: '2026-10-02T02:00:00.000Z',
+      recordUrl: null,
+    });
+    const { service } = setup(input);
+
+    const result: OpportunityDecisionResponse = await service.analyze({
+      integration,
+      actorOpenId: 'ou_sales_a',
+      referenceDate: '2026-10-06',
+      timezone: 'Asia/Shanghai',
+      now: new Date('2026-10-06T04:00:00.000Z'),
+    });
+    const customer = result.customers.find(
+      (item): boolean => item.recordId === 'customer-1',
+    );
+
+    expect(customer).toMatchObject({
+      activeOpportunityCount: 2,
+      totalExpectedAmount: 700000,
+      topPriorityRank: 1,
+    });
+    expect(
+      (customer?.criticalOpportunityCount ?? 0) +
+      (customer?.atRiskOpportunityCount ?? 0),
+    ).toBeGreaterThanOrEqual(1);
+    expect(customer?.topRecommendation).toBeTruthy();
+  });
+
+  it('keeps amount unknown when a customer has no known opportunity amount', async (): Promise<void> => {
+    const input: OpportunityPortfolioResult = portfolio();
+    input.opportunities.push({
+      recordId: 'opportunity-4',
+      customerRecordId: 'customer-2',
+      name: '待估额项目',
+      status: 'active',
+      expectedAmount: null,
+      progress: '需求确认中',
+      nextAction: '确认预算范围',
+      dueAt: null,
+      sourceVersion: null,
+      recordUrl: null,
+    });
+    const { service } = setup(input);
+
+    const result: OpportunityDecisionResponse = await service.analyze({
+      integration,
+      actorOpenId: 'ou_sales_a',
+      referenceDate: '2026-10-06',
+      timezone: 'Asia/Shanghai',
+      now: new Date('2026-10-06T04:00:00.000Z'),
+    });
+
+    expect(result.customers.find(
+      (item): boolean => item.recordId === 'customer-2',
+    )?.totalExpectedAmount).toBeNull();
+  });
+
+  it('does not infer a customer link from an opportunity title', async (): Promise<void> => {
+    const input: OpportunityPortfolioResult = portfolio();
+    input.opportunities.push({
+      recordId: 'opportunity-unlinked',
+      customerRecordId: null,
+      name: '北辰制造续约项目',
+      status: 'active',
+      expectedAmount: 100000,
+      progress: '沟通中',
+      nextAction: '补充材料',
+      dueAt: null,
+      sourceVersion: null,
+      recordUrl: null,
+    });
+    const { service } = setup(input);
+
+    const result: OpportunityDecisionResponse = await service.analyze({
+      integration,
+      actorOpenId: 'ou_sales_a',
+      referenceDate: '2026-10-06',
+      timezone: 'Asia/Shanghai',
+      now: new Date('2026-10-06T04:00:00.000Z'),
+    });
+
+    expect(result.customers.find(
+      (item): boolean => item.recordId === 'customer-1',
+    )?.activeOpportunityCount).toBe(1);
   });
 });

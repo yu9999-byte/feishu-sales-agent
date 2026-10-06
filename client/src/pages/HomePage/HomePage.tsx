@@ -86,7 +86,7 @@ const HomePage: React.FC = () => {
               <div>
                 <h2 className="text-sm font-semibold">业务统计正在接入</h2>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  跟进、任务和风险汇总尚未接入工作台。现有飞书机器人 P0 跟进闭环仍可使用；此处不展示未经核实的数字。
+                  首页统一数字汇总尚未接入。客户组合、商机决策、任务履约和飞书跟进闭环已有独立入口；此处不展示未经核实的数字。
                 </p>
               </div>
             </section>
@@ -126,15 +126,21 @@ const HomePage: React.FC = () => {
                   <Link to="/followups/new">在页面中写跟进<ArrowRight aria-hidden="true" /></Link>
                 </Button>
               </div>
-              <div className="rounded-xl border border-border bg-muted/50 p-6">
-                <p className="text-sm font-semibold text-muted-foreground">后续阶段</p>
-                <h3 className="mt-5 text-lg font-semibold">客户与商机全景</h3>
+              <div className="rounded-xl border border-border bg-card p-6">
+                <div className="flex items-center gap-2 text-primary">
+                  <CheckCircle2 aria-hidden="true" className="size-5" />
+                  <span className="text-sm font-semibold">已可使用</span>
+                </div>
+                <h3 className="mt-5 text-lg font-semibold">客户与商机决策</h3>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  页面已建立权限入口，客户时间线、项目质检和建议将在后续阶段接入真实数据。
+                  从本人可见的客户、商机、历史跟进和已确认任务中，找出最该推进的商机和下一步。
                 </p>
                 <Button variant="outline" className="mt-5" asChild>
-                  <Link to="/customers">查看页面状态<ArrowRight aria-hidden="true" /></Link>
+                  <Link to="/opportunities">查看商机决策<ArrowRight aria-hidden="true" /></Link>
                 </Button>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  也可从<Link className="mx-1 font-medium text-primary hover:underline" to="/customers">客户组合</Link>查看客户摘要。
+                </p>
               </div>
             </div>
           </section>

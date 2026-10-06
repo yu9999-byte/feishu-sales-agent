@@ -78,6 +78,7 @@ const response: OpportunityDecisionResponse = {
     needsAttentionCount: 0,
     onTrackCount: 0,
   },
+  customers: [],
   priorities: [],
   globalTaskAlerts: [],
   coverage: {

@@ -2,14 +2,14 @@
 
 状态：`Approved / Goal v3 aligned / automated Green / UI pending 2026-10-06`
 
-2026-10-06 `COP-001..007` 客户与商机决策 Agent v1 已从 Draft 进入自动化 Green：按当前销售
+2026-10-06 `COP-001..011` 客户与商机决策 Agent v1 已从 Draft 进入自动化 Green：按当前销售
 本人范围分页读取客户、商机和历史跟进，复用只读任务履约证据，只对进行中/状态待确认商机
 输出风险优先级、缺口、依据和下一步建议；关闭类商机排除，普通任务不按标题猜测关联。
 机器人 `business_query` / `project_diagnosis` 与
-`GET /api/platform/opportunity-decisions` 均已接入真实服务。关键 `129/129`、Agent `478/478`、
-Postgres `20/20`、发布器 `4/4`、调度客户端 `10/10` 及三套类型、Lint、双构建、迁移和启动
-门禁通过。本轮没有 UI 验收、真实消息或业务写入，客户 360、商机详情页和主管团队组合决策
-仍未完成。
+`GET /api/platform/opportunity-decisions` 均已接入真实服务；`/opportunities` 已提供主从决策面，
+`/customers` 已提供客户组合摘要。客户汇总保留无进行中商机客户，未知金额保持
+`null`，无明确客户关联的商机不按标题猜绑。本轮没有 UI 验收、真实消息或业务写入；
+完整 CRM 客户 360 和主管团队组合决策仍未完成。
 
 2026-10-03 飞书机器人成员入口已补齐第一道准入门：在消息和卡片动作解析出租户后，
 `PlatformSessionService.getActiveMember` 只允许活跃租户中的活跃成员继续进入模型调用、
@@ -207,7 +207,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | `S4-017` 调度前可观测性 | S4 schedule observation | Automated Green / read-only audited / cron not configured / delivery blocked | 新增第三枚独立凭证保护的 `POST /internal/stale-opportunity-reminder/schedule-observation`；只聚合 execution readiness 的 blockers、治理/Sender/账本/候选状态与数量，不返回业务标识或候选明细。每次观察写脱敏 `schedule_observed.v1` 控制库审计；检查异常记 failed，审计目标缺失或落库失败显式返回 `auditRecorded=false` 并降级。凭证复用 scan/execute 时前置拒绝。定向 `24/24`、Agent `465/465`、Postgres `20/20` 通过；未调用 execute、未领取账本、未发消息、未改 Base/Task，也未创建 cron | 在部署密钥管理中配置独立观察凭证，让外部 cron 先只读观察；历史治理、自然候选和产品负责人单次确认前不提供执行凭证、不启用真实投递 |
 | `S4-018` 只读调度接入包 | S4 scheduler client | Automated Green / deployment package ready / cron not installed / delivery blocked | 新增固定调用 `schedule-observation` 的单次 Node 工具；仅从环境读取观察 URL/Token/超时，拒绝远程 HTTP、URL 凭证、query/fragment、重定向、超大/非 JSON/不一致响应，不透传 Token、HTTP 正文或底层异常。退出码区分 ready、blocked、incomplete、unavailable 与五类调用故障；附密钥隔离运行手册和完全注释的 30 分钟 cron 示例。客户端 `10/10`、Agent `465/465`、Postgres `20/20`、发布器 `4/4` 及 Lint、类型、构建、迁移幂等通过 | 由部署环境配置固定 HTTPS 地址与观察凭证；产品负责人确认前不安装或启用 cron，不向调度身份提供扫描/执行凭证。历史治理、自然候选和单次本人投递仍是后续门禁 |
 | `REV-001` 个人日报 | B7 | Automated Green / API contract ready / UI pending | 日报聚合快照 3/3；Agent 全量 `245/245`、Postgres `8/8`、服务端/客户端/测试 TypeScript、ESLint、Agent/Web 构建通过；`GET /api/platform/daily-report` 已实现登录、租户、销售范围和 `review:read-personal` 权限边界，来源不可用/分页不完整安全降级；当前租户真实只读 Task 探针返回 5 条本人未完成任务、无分页警告 | 尚未在真实登录态回读日报内容，也未完成真实 Web/飞书 UI 验收 |
-| `COP-001..007` 客户商机决策 | C / P1-PROGRESS | Automated Green / API and bot integrated / UI pending | 本人客户、商机、历史跟进和 Agent 明确确认任务证据已形成只读组合；进行中/未知生命周期商机按确定性健康等级、风险/缺口、真实金额稳定排序，关闭类排除；机器人两类查询和 Web API 已接入，成员/租户/`opportunity:read`/跨租户失败关闭；普通任务不按标题猜关联，决策模式不保存任务快照。关键 `129/129`、Agent `478/478`、Postgres `20/20` 和完整质量门通过 | 真实销售机器人回复和 Web 登录态 API 尚未验收；客户 360、商机详情页、主管团队组合决策和任何建议执行均未完成 |
+| `COP-001..011` 客户商机决策 | C / P1-PROGRESS | Automated Green / Web implemented / API and bot integrated / UI pending | 本人客户、商机、历史跟进和 Agent 明确确认任务证据已形成只读组合；进行中/未知生命周期商机按确定性规则排序，关闭类排除；机器人、Web API、`/opportunities` 主从决策面和 `/customers` 客户组合摘要已接入。客户汇总保留无进行中商机客户，金额缺失不补 0，无明确客户关联的商机不猜绑；只读不执行建议 | 真实销售机器人回复和 Web 登录态/UI 尚未验收；完整 CRM 客户 360、主管团队组合决策和任何建议执行均未完成 |
 | `SIA-001..006` 问答、RAG 和操作 | D | Draft | 待 ACL/RAG/工具测试 | 待问答与操作验收 |
 | `REV-002..006` 团队 Review 和经营分析 | E | Automated Green / Web implemented / UI pending | `GET /api/platform/team-review` 已覆盖主管递归范围、高管租户范围、成员日报聚合、逾期/无跟进关注项、来源降级和无效成员 fail-closed；`/reviews/team` 已展示团队指标、关注成员、管理建议和逐人状态；团队/平台权限/导航 16 项定向回归、全量 Agent `264/264`、Postgres `11/11`、三套 TypeScript、全库 ESLint、Stylelint 和 Agent/Web 构建通过 | 尚未在真实主管/高管登录态核对团队范围、真实内容和视觉呈现；管理动作执行、调度和幂等仍未实现 |
 | `BPA-001..006` 最佳实践与 Playbook | F | Draft | 待样本/版本/审核测试 | 待管理员审核验收 |

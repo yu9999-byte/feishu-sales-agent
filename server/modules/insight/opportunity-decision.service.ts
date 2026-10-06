@@ -3,6 +3,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type {
   DailySalesReportSource,
   OpportunityDecisionCoverage,
+  OpportunityDecisionCustomer,
   OpportunityDecisionEvidence,
   OpportunityDecisionGap,
   OpportunityDecisionGapCode,
@@ -207,6 +208,10 @@ class OpportunityDecisionService {
         rank: index + 1,
       }),
     );
+    const customers: OpportunityDecisionCustomer[] = this.customers(
+      portfolio.customers,
+      priorities,
+    );
     const globalTaskAlerts: OpportunityDecisionGlobalTaskAlert[] =
       this.globalTaskAlerts(taskReport, priorities);
     const coverage: OpportunityDecisionCoverage = this.coverage(
@@ -236,6 +241,7 @@ class OpportunityDecisionService {
       status,
       generatedAt: now.toISOString(),
       summary,
+      customers,
       priorities,
       globalTaskAlerts,
       coverage,
@@ -769,6 +775,70 @@ class OpportunityDecisionService {
     };
   }
 
+  private customers(
+    customers: OpportunityPortfolioCustomerRecord[],
+    priorities: OpportunityDecisionItem[],
+  ): OpportunityDecisionCustomer[] {
+    const summaries: OpportunityDecisionCustomer[] = customers.map(
+      (
+        customer: OpportunityPortfolioCustomerRecord,
+      ): OpportunityDecisionCustomer => {
+        const opportunities: OpportunityDecisionItem[] = priorities.filter(
+          (item: OpportunityDecisionItem): boolean =>
+            item.customerRecordId === customer.recordId,
+        );
+        const knownAmounts: number[] = opportunities
+          .filter(
+            (item: OpportunityDecisionItem): boolean =>
+              item.expectedAmount !== null,
+          )
+          .map(
+            (item: OpportunityDecisionItem): number =>
+              item.expectedAmount ?? 0,
+          );
+        const top: OpportunityDecisionItem | undefined = opportunities[0];
+        return {
+          recordId: customer.recordId,
+          recordUrl: customer.recordUrl,
+          name: customer.name,
+          contactName: customer.contactName,
+          latestSummary: customer.latestSummary,
+          lastFollowupAt: customer.lastFollowupAt,
+          activeOpportunityCount: opportunities.length,
+          criticalOpportunityCount: opportunities.filter(
+            (item: OpportunityDecisionItem): boolean =>
+              item.health === 'critical',
+          ).length,
+          atRiskOpportunityCount: opportunities.filter(
+            (item: OpportunityDecisionItem): boolean =>
+              item.health === 'at_risk',
+          ).length,
+          totalExpectedAmount: knownAmounts.length > 0
+            ? knownAmounts.reduce(
+                (total: number, amount: number): number => total + amount,
+                0,
+              )
+            : null,
+          topPriorityRank: top?.rank ?? null,
+          topRecommendation: top?.recommendation?.action ?? null,
+        };
+      },
+    );
+    return summaries.sort(
+      (
+        left: OpportunityDecisionCustomer,
+        right: OpportunityDecisionCustomer,
+      ): number => {
+        const rankDifference: number =
+          (left.topPriorityRank ?? Number.MAX_SAFE_INTEGER) -
+          (right.topPriorityRank ?? Number.MAX_SAFE_INTEGER);
+        return rankDifference !== 0
+          ? rankDifference
+          : left.name.localeCompare(right.name, 'zh-CN');
+      },
+    );
+  }
+
   private coverage(
     warnings: string[],
     taskReport: TaskFulfillmentResponse,
@@ -814,6 +884,7 @@ class OpportunityDecisionService {
         needsAttentionCount: 0,
         onTrackCount: 0,
       },
+      customers: [],
       priorities: [],
       globalTaskAlerts: [],
       coverage: {

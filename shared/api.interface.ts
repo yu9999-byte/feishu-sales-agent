@@ -512,6 +512,21 @@ export interface OpportunityDecisionItem {
   evidence: OpportunityDecisionEvidence[];
 }
 
+export interface OpportunityDecisionCustomer {
+  recordId: string;
+  recordUrl: string | null;
+  name: string;
+  contactName: string | null;
+  latestSummary: string | null;
+  lastFollowupAt: string | null;
+  activeOpportunityCount: number;
+  criticalOpportunityCount: number;
+  atRiskOpportunityCount: number;
+  totalExpectedAmount: number | null;
+  topPriorityRank: number | null;
+  topRecommendation: string | null;
+}
+
 export interface OpportunityDecisionGlobalTaskAlert {
   code: 'overdue_tasks' | 'unlinked_promises' | 'task_source_incomplete';
   severity: 'high' | 'medium';
@@ -545,6 +560,7 @@ export interface OpportunityDecisionResponse {
   status: OpportunityDecisionStatus;
   generatedAt: string;
   summary: OpportunityDecisionSummary;
+  customers: OpportunityDecisionCustomer[];
   priorities: OpportunityDecisionItem[];
   globalTaskAlerts: OpportunityDecisionGlobalTaskAlert[];
   coverage: OpportunityDecisionCoverage;

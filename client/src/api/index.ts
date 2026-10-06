@@ -6,6 +6,7 @@ import type {
   CreateFollowupDraftRequest,
   DailySalesReportResponse,
   FollowupDraftResponse,
+  OpportunityDecisionResponse,
   UpdateFollowupDraftRequest,
   PlatformSectionKey,
   PlatformSectionResponse,
@@ -176,6 +177,23 @@ const getTaskFulfillment = async (
   }
 };
 
+const getOpportunityDecisions = async (
+  referenceDate?: string,
+): Promise<OpportunityDecisionResponse> => {
+  try {
+    const query: string = referenceDate
+      ? `?date=${encodeURIComponent(referenceDate)}`
+      : '';
+    const response = await axios.get<OpportunityDecisionResponse>(
+      `/api/platform/opportunity-decisions${query}`,
+      { withCredentials: true },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
 const getStaleOpportunityReadiness = async (): Promise<StaleOpportunityReadinessResponse> => {
   try {
     const response = await axios.get<StaleOpportunityReadinessResponse>(
@@ -304,6 +322,7 @@ export {
   getFollowupDraft,
   getFollowupExecution,
   getDailySalesReport,
+  getOpportunityDecisions,
   getTaskFulfillment,
   getTeamReview,
   getStaleOpportunityReadiness,

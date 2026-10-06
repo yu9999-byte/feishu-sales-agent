@@ -35,6 +35,8 @@
 | `20-task-fulfillment-agent-sdd.md` | 本人任务履约、承诺核对和历史覆盖边界 | 已实现，UI 待验收 |
 | `21-opportunity-decision-agent-sdd.md` | 本人客户与商机组合优先级、风险、证据和建议契约 | 已实现，API/机器人已接入，UI 待验收 |
 | `22-opportunity-decision-agent-tdd.md` | 商机决策排序、权限、关联、降级和零副作用测试 | Green |
+| `23-opportunity-decision-workbench-sdd.md` | 客户组合摘要与商机主从决策工作台 | 已实现，UI 待验收 |
+| `24-opportunity-decision-workbench-tdd.md` | 客户汇总、决策视图、状态和只读边界测试 | Green |
 
 ## 2. 规格状态
 

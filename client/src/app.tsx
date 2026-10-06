@@ -2,8 +2,10 @@ import React from 'react';
 import { Route, Routes } from 'react-router-dom';
 
 import Layout from './components/Layout';
+import CustomerPortfolioPage from './pages/CustomerPortfolioPage/CustomerPortfolioPage';
 import HomePage from './pages/HomePage/HomePage';
 import NotFound from './pages/NotFound/NotFound';
+import OpportunityDecisionPage from './pages/OpportunityDecisionPage/OpportunityDecisionPage';
 import SectionPage from './pages/SectionPage/SectionPage';
 import FollowupCreatePage from './pages/FollowupCreatePage/FollowupCreatePage';
 import FollowupDraftPage from './pages/FollowupDraftPage/FollowupDraftPage';
@@ -18,8 +20,8 @@ const RoutesComponent: React.FC = () => (
       <Route index element={<HomePage />} />
       <Route path="daily-report" element={<DailyReportPage />} />
       <Route path="stale-opportunity-readiness" element={<StaleOpportunityReadinessPage />} />
-      <Route path="customers" element={<SectionPage sectionKey="customers" />} />
-      <Route path="opportunities" element={<SectionPage sectionKey="opportunities" />} />
+      <Route path="customers" element={<CustomerPortfolioPage />} />
+      <Route path="opportunities" element={<OpportunityDecisionPage />} />
       <Route path="followups" element={<SectionPage sectionKey="followups" />} />
       <Route path="followups/new" element={<FollowupCreatePage />} />
       <Route path="followups/:id/edit" element={<FollowupDraftPage />} />
