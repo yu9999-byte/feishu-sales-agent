@@ -37,6 +37,7 @@ interface OpportunityDecisionInput {
   referenceDate: string;
   timezone: string;
   now?: Date;
+  portfolio?: OpportunityPortfolioResult;
 }
 
 interface DecisionDraft {
@@ -126,7 +127,7 @@ class OpportunityDecisionService {
         warnings: ['检查日期或销售时区无效'],
       };
     }
-    if (!this.records.readOpportunityPortfolio) {
+    if (!input.portfolio && !this.records.readOpportunityPortfolio) {
       return {
         ...empty,
         status: 'unavailable',
@@ -135,22 +136,26 @@ class OpportunityDecisionService {
     }
 
     let portfolio: OpportunityPortfolioResult;
-    try {
-      portfolio = await this.records.readOpportunityPortfolio(
-        input.integration,
-        input.actorOpenId,
-      );
-    } catch (error: unknown) {
-      this.logger.warn(
-        `Opportunity portfolio read failed: ${error instanceof Error
-          ? error.message
-          : String(error)}`,
-      );
-      return {
-        ...empty,
-        status: 'unavailable',
-        warnings: ['客户与商机数据源暂时不可用'],
-      };
+    if (input.portfolio) {
+      portfolio = input.portfolio;
+    } else {
+      try {
+        portfolio = await this.records.readOpportunityPortfolio!(
+          input.integration,
+          input.actorOpenId,
+        );
+      } catch (error: unknown) {
+        this.logger.warn(
+          `Opportunity portfolio read failed: ${error instanceof Error
+            ? error.message
+            : String(error)}`,
+        );
+        return {
+          ...empty,
+          status: 'unavailable',
+          warnings: ['客户与商机数据源暂时不可用'],
+        };
+      }
     }
 
     const taskReport: TaskFulfillmentResponse =

@@ -1,5 +1,24 @@
 # 当前工程说明
 
+## 2026-10-07 客户洞察与拜访准备 Agent v1（Web 已实现，UI 待验收）
+
+- `/customers` 每张客户卡新增“准备拜访”，进入
+  `/customers/:customerRecordId/briefing`。页面展示客户概况、联系人、最新摘要、指标、相关
+  商机与风险、待确认问题、三段式议程、最近 10 条跟进和来源覆盖。
+- 新增 `GET /api/platform/customer-briefings/:customerRecordId`，依次要求 `customer:read`、
+  `opportunity:read`、`followup:read`；认证会话、平台成员、`open_id`、租户和 active 集成必须
+  一致，只向服务传当前登录销售身份和 URL 客户 ID。
+- 客户和商机只按 record ID 显式关联。同名客户、同名商机和任务标题不猜绑；跟进存在客户链接
+  时必须精确命中，冲突客户链接不能被商机链接覆盖，只有客户链接为空时才可通过该客户商机关联。
+- 进行中/状态待确认商机复用个人商机决策的风险、缺口和建议；赢单、丢单、关闭商机只作历史
+  背景。未知金额保持 `null`，缺联系人、摘要、进展、金额、下一步、时间或真实风险时转为问题，
+  不补造事实。
+- 客户攻略服务、Controller 和页面 helper 定向 `17/17`，Agent 全量 `516/516`、Postgres
+  `20/20`、发布器 `4/4`、调度客户端 `10/10` 通过；三套 TypeScript、全仓 Lint、Stylelint、
+  Agent 118 文件构建、Web 生产构建和迁移连续两次全量 `skip` 通过。
+- 完整 Agent 启动无错误，首页、客户组合和拜访准备页均 `200`，未登录新 API 返回 `401`。
+  本轮不做真实 UI，不联系客户、不建任务、不写客户/商机/跟进，也不启用任何提醒或 cron。
+
 ## 2026-10-07 主管团队客户与商机决策 Agent v1（Web 已实现，UI 待验收）
 
 - 新增 `/reviews/opportunities` 团队商机决策工作台：主管可看到跨销售团队优先级、负责人、

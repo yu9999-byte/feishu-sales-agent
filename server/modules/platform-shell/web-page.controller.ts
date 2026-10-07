@@ -10,6 +10,7 @@ class WebPageController {
     'daily-report',
     'stale-opportunity-readiness',
     'customers',
+    'customers/:customerRecordId/briefing',
     'opportunities',
     'followups',
     'followups/new',

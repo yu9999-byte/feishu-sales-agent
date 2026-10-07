@@ -39,6 +39,8 @@
 | `24-opportunity-decision-workbench-tdd.md` | 客户汇总、决策视图、状态和只读边界测试 | Green |
 | `25-team-opportunity-decision-sdd.md` | 主管团队商机组合、组织范围、排序和管理建议契约 | 已实现，UI 待验收 |
 | `26-team-opportunity-decision-tdd.md` | 团队聚合、权限、降级、金额和页面状态测试 | Green |
+| `27-customer-visit-briefing-sdd.md` | 本人客户洞察、拜访准备、显式关联和只读边界 | 已实现，UI 待验收 |
+| `28-customer-visit-briefing-tdd.md` | 客户攻略、三权限、同名隔离、降级和页面状态测试 | Green |
 
 ## 2. 规格状态
 

@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom';
 
 import Layout from './components/Layout';
 import CustomerPortfolioPage from './pages/CustomerPortfolioPage/CustomerPortfolioPage';
+import CustomerVisitBriefingPage from './pages/CustomerVisitBriefingPage/CustomerVisitBriefingPage';
 import HomePage from './pages/HomePage/HomePage';
 import NotFound from './pages/NotFound/NotFound';
 import OpportunityDecisionPage from './pages/OpportunityDecisionPage/OpportunityDecisionPage';
@@ -22,6 +23,10 @@ const RoutesComponent: React.FC = () => (
       <Route path="daily-report" element={<DailyReportPage />} />
       <Route path="stale-opportunity-readiness" element={<StaleOpportunityReadinessPage />} />
       <Route path="customers" element={<CustomerPortfolioPage />} />
+      <Route
+        path="customers/:customerRecordId/briefing"
+        element={<CustomerVisitBriefingPage />}
+      />
       <Route path="opportunities" element={<OpportunityDecisionPage />} />
       <Route path="followups" element={<SectionPage sectionKey="followups" />} />
       <Route path="followups/new" element={<FollowupCreatePage />} />

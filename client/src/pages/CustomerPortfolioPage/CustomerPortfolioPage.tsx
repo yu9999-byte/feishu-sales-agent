@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
   BriefcaseBusiness,
   Building2,
+  CalendarCheck2,
   CircleDollarSign,
   Clock3,
   RefreshCw,
@@ -282,6 +283,13 @@ const CustomerCard: React.FC<{ customer: OpportunityDecisionCustomer }> = ({
       </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
+        <Button size="sm" asChild>
+          <Link
+            to={`/customers/${encodeURIComponent(customer.recordId)}/briefing`}
+          >
+            <CalendarCheck2 aria-hidden="true" />准备拜访
+          </Link>
+        </Button>
         {customer.recordUrl && (
           <Button variant="outline" size="sm" asChild>
             <a href={customer.recordUrl} target="_blank" rel="noreferrer">

@@ -567,6 +567,113 @@ export interface OpportunityDecisionResponse {
   warnings: string[];
 }
 
+export type CustomerVisitBriefingStatus =
+  | 'ready'
+  | 'partial'
+  | 'empty'
+  | 'unavailable';
+
+export interface CustomerVisitBriefingSource {
+  recordId: string;
+  recordUrl: string | null;
+  sourceVersion: string | null;
+}
+
+export interface CustomerVisitBriefingCustomer {
+  recordId: string;
+  name: string;
+  contactName: string | null;
+  latestSummary: string | null;
+  lastFollowupAt: string | null;
+  source: CustomerVisitBriefingSource;
+}
+
+export interface CustomerVisitBriefingOpportunity {
+  recordId: string;
+  name: string;
+  lifecycleStatus: OpportunityStatusActionLifecycleStatus;
+  expectedAmount: number | null;
+  progress: string | null;
+  nextAction: string | null;
+  dueAt: string | null;
+  health: OpportunityDecisionHealth | null;
+  risks: OpportunityDecisionRisk[];
+  gaps: OpportunityDecisionGap[];
+  recommendation: OpportunityDecisionRecommendation | null;
+  source: CustomerVisitBriefingSource;
+}
+
+export interface CustomerVisitBriefingFollowup {
+  recordId: string;
+  opportunityRecordId: string | null;
+  opportunityName: string | null;
+  summary: string;
+  communicationAt: string | null;
+  nextAction: string | null;
+  dueAt: string | null;
+  source: CustomerVisitBriefingSource;
+}
+
+export type CustomerVisitBriefingQuestionCode =
+  | 'contact_missing'
+  | 'customer_summary_missing'
+  | 'progress_missing'
+  | 'amount_missing'
+  | 'next_action_missing'
+  | 'due_at_missing'
+  | 'next_action_overdue'
+  | 'followup_stale'
+  | 'followup_time_missing'
+  | 'no_followup_evidence'
+  | 'lifecycle_unknown'
+  | 'confirmed_task_overdue'
+  | 'confirmed_task_changed';
+
+export interface CustomerVisitBriefingQuestion {
+  code: CustomerVisitBriefingQuestionCode;
+  question: string;
+  reason: string;
+  opportunityRecordId: string | null;
+}
+
+export interface CustomerVisitBriefingAgendaItem {
+  sequence: number;
+  title: string;
+  purpose: string;
+}
+
+export interface CustomerVisitBriefingMetrics {
+  relatedOpportunityCount: number;
+  activeOpportunityCount: number;
+  riskOpportunityCount: number;
+  totalFollowupCount: number;
+  knownActiveExpectedAmount: number | null;
+}
+
+export interface CustomerVisitBriefingCoverage {
+  scope: 'self';
+  customers: 'complete' | 'partial' | 'unavailable';
+  opportunities: 'complete' | 'partial' | 'unavailable';
+  followups: 'complete' | 'partial' | 'unavailable';
+  taskPromises: 'agent_confirmed_only' | 'unavailable';
+  associations: 'explicit_record_links_only';
+}
+
+export interface CustomerVisitBriefingResponse {
+  referenceDate: string;
+  timezone: string;
+  status: CustomerVisitBriefingStatus;
+  generatedAt: string;
+  customer: CustomerVisitBriefingCustomer | null;
+  metrics: CustomerVisitBriefingMetrics;
+  opportunities: CustomerVisitBriefingOpportunity[];
+  recentFollowups: CustomerVisitBriefingFollowup[];
+  questions: CustomerVisitBriefingQuestion[];
+  agenda: CustomerVisitBriefingAgendaItem[];
+  coverage: CustomerVisitBriefingCoverage;
+  warnings: string[];
+}
+
 export type TaskFulfillmentStatus =
   | 'ready'
   | 'partial'

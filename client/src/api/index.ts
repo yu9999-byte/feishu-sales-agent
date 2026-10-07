@@ -4,6 +4,7 @@ import type {
   AgentExecutionResult,
   ConfirmFollowupDraftRequest,
   CreateFollowupDraftRequest,
+  CustomerVisitBriefingResponse,
   DailySalesReportResponse,
   FollowupDraftResponse,
   OpportunityDecisionResponse,
@@ -212,6 +213,24 @@ const getOpportunityDecisions = async (
   }
 };
 
+const getCustomerVisitBriefing = async (
+  customerRecordId: string,
+  referenceDate?: string,
+): Promise<CustomerVisitBriefingResponse> => {
+  try {
+    const query: string = referenceDate
+      ? `?date=${encodeURIComponent(referenceDate)}`
+      : '';
+    const response = await axios.get<CustomerVisitBriefingResponse>(
+      `/api/platform/customer-briefings/${encodeURIComponent(customerRecordId)}${query}`,
+      { withCredentials: true },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
 const getStaleOpportunityReadiness = async (): Promise<StaleOpportunityReadinessResponse> => {
   try {
     const response = await axios.get<StaleOpportunityReadinessResponse>(
@@ -337,6 +356,7 @@ const getFollowupExecution = async (
 export {
   confirmFollowupDraft,
   createFollowupDraft,
+  getCustomerVisitBriefing,
   getFollowupDraft,
   getFollowupExecution,
   getDailySalesReport,

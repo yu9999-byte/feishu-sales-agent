@@ -2,6 +2,13 @@
 
 状态：`Approved / Goal v3 aligned / automated Green / UI pending 2026-10-07`
 
+2026-10-07 `COP-017..022` 客户洞察与拜访准备 Agent v1 已实现：销售从 `/customers`
+选择本人可见客户并进入 `/customers/:customerRecordId/briefing`，查看客户概况、显式关联商机、
+最近 10 条跟进、风险、待确认问题和三段式议程。API 同时要求客户、商机和跟进读取权限，
+只按当前登录销售 `open_id` 读取；同名文本不关联，有冲突客户链接的跟进不会被商机链接覆盖。
+定向 `17/17`、Agent `516/516`、Postgres `20/20` 和完整质量门/启动冒烟通过。功能完全只读，
+不联系客户、不创建任务、不修改业务记录；未做真实登录态视觉验收，状态为 UI pending。
+
 2026-10-07 `COP-012..016` 主管团队客户与商机决策 Agent v1 已实现：manager 只聚合本人和
 递归下属，executive/admin 聚合租户全部 active 成员；复用每名销售的本人商机事实和确定性排序，
 输出团队排名、负责人、风险、建议管理动作和成员组合。新 API
@@ -216,6 +223,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | `REV-001` 个人日报 | B7 | Automated Green / API contract ready / UI pending | 日报聚合快照 3/3；Agent 全量 `245/245`、Postgres `8/8`、服务端/客户端/测试 TypeScript、ESLint、Agent/Web 构建通过；`GET /api/platform/daily-report` 已实现登录、租户、销售范围和 `review:read-personal` 权限边界，来源不可用/分页不完整安全降级；当前租户真实只读 Task 探针返回 5 条本人未完成任务、无分页警告 | 尚未在真实登录态回读日报内容，也未完成真实 Web/飞书 UI 验收 |
 | `COP-001..011` 客户商机决策 | C / P1-PROGRESS | Automated Green / Web implemented / API and bot integrated / UI pending | 本人客户、商机、历史跟进和 Agent 明确确认任务证据已形成只读组合；进行中/未知生命周期商机按确定性规则排序，关闭类排除；机器人、Web API、`/opportunities` 主从决策面和 `/customers` 客户组合摘要已接入。客户汇总保留无进行中商机客户，金额缺失不补 0，无明确客户关联的商机不猜绑；只读不执行建议 | 真实销售机器人回复和 Web 登录态/UI 尚未验收；完整 CRM 客户 360 和任何建议执行均未完成；团队聚合由 `COP-012..016` 承接 |
 | `COP-012..016` 主管团队客户与商机决策 | E / P1-PROGRESS | Automated Green / Web implemented / UI pending | manager 本人+递归下属、executive/admin 租户 active 范围与 sales-only/cross-tenant fail-closed 已测试；团队按健康、分数、真实金额、名称稳定排序并保留负责人/个人排名；单成员失败 partial、全部失败 unavailable、全员无商机 empty、未知金额 null。双权限 API 和 `/reviews/opportunities` 已接入，管理动作只建议不执行。定向 `30/30`、Agent `499/499`、Postgres `20/20`、发布器 `4/4`、调度客户端 `10/10` 及完整质量门/启动冒烟通过 | 真实主管/高管登录态的团队范围、内容、链接和视觉呈现未验收；自动派发、消息、客户触达和任何商机写入未实现 |
+| `COP-017..022` 客户洞察与拜访准备 | C / P1-PROGRESS | Automated Green / Web implemented / UI pending | 客户卡进入只读拜访准备页；精确客户 ID、客户链接优先的跟进规则、同名隔离、进行中商机决策复用、关闭商机历史背景、最近 10 条跟进、未知金额和缺口转问题均有测试。三权限 API 只传当前销售 open_id 和 URL 客户 ID。定向 `17/17`、Agent `516/516`、Postgres `20/20`、发布器 `4/4`、调度客户端 `10/10` 及完整质量门/启动冒烟通过 | 真实销售登录态的内容、原记录链接和响应式视觉未验收；联系客户、建任务、更新客户/商机/跟进均未实现且不得自动执行 |
 | `SIA-001..006` 问答、RAG 和操作 | D | Draft | 待 ACL/RAG/工具测试 | 待问答与操作验收 |
 | `REV-002..006` 团队 Review 和经营分析 | E | Automated Green / Web implemented / UI pending | `GET /api/platform/team-review` 已覆盖主管递归范围、高管租户范围、成员日报聚合、逾期/无跟进关注项、来源降级和无效成员 fail-closed；`/reviews/team` 已展示团队指标、关注成员、管理建议和逐人状态；团队/平台权限/导航 16 项定向回归、全量 Agent `264/264`、Postgres `11/11`、三套 TypeScript、全库 ESLint、Stylelint 和 Agent/Web 构建通过 | 尚未在真实主管/高管登录态核对团队范围、真实内容和视觉呈现；管理动作执行、调度和幂等仍未实现 |
 | `BPA-001..006` 最佳实践与 Playbook | F | Draft | 待样本/版本/审核测试 | 待管理员审核验收 |

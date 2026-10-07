@@ -10,6 +10,10 @@ import { AgentControlModule } from
 import { PlatformShellModule } from
   '@server/modules/platform-shell/platform-shell.module';
 import { WebAuthModule } from '@server/modules/web-auth/web-auth.module';
+import { CustomerVisitBriefingController } from
+  './customer-visit-briefing.controller';
+import { CustomerVisitBriefingService } from
+  './customer-visit-briefing.service';
 import { OpportunityDecisionController } from
   './opportunity-decision.controller';
 import { OpportunityDecisionService } from './opportunity-decision.service';
@@ -23,9 +27,13 @@ import { TaskFulfillmentModule } from './task-fulfillment.module';
     WebAuthModule,
     TaskFulfillmentModule,
   ],
-  controllers: [OpportunityDecisionController],
+  controllers: [
+    OpportunityDecisionController,
+    CustomerVisitBriefingController,
+  ],
   providers: [
     OpportunityDecisionService,
+    CustomerVisitBriefingService,
     {
       provide: OPPORTUNITY_DECISION_READER,
       useExisting: OpportunityDecisionService,
