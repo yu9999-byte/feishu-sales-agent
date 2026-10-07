@@ -9,6 +9,7 @@ import type {
   OpportunityDecisionResponse,
   PlatformSessionResponse,
   SalesContext,
+  SalesKnowledgeQaResponse,
 } from '@shared/api.interface';
 import { AgentWorkflowService } from '@server/modules/agent-core/agent-workflow.service';
 import { AgentActionExecutorService } from '@server/modules/agent-core/agent-action-executor.service';
@@ -52,6 +53,10 @@ import type {
   TaskCreationResult,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
+import type {
+  SalesKnowledgeQaInput,
+  SalesKnowledgeQaReader,
+} from '@server/modules/knowledge/sales-knowledge-qa.ports';
 
 const completeDraft: FollowupDraft = {
   customerName: '北辰制造',
@@ -290,6 +295,38 @@ class FakeOpportunityDecisionReader implements OpportunityDecisionReader {
   }
 }
 
+const answeredKnowledgeResponse: SalesKnowledgeQaResponse = {
+  status: 'answered',
+  answer: '根据企业资料：销售 Agent 可以读取客户、商机和跟进记录。\n' +
+    '原文：https://example.feishu.cn/docx/capabilities',
+  configuredSourceCount: 3,
+  checkedSourceCount: 3,
+  trustedResultCount: 1,
+  citations: [{
+    sourceId: 'capabilities',
+    sourceType: 'docx',
+    title: '销售 Agent 产品能力说明',
+    url: 'https://example.feishu.cn/docx/capabilities',
+    matchedTerms: ['产品能力'],
+    excerpt: '销售 Agent 可以读取客户、商机和跟进记录。',
+    citation: '正文第 2 段',
+    sourceVersion: 'revision:3',
+    applicability: '用于销售能力介绍，最终范围以合同为准。',
+    accessVerified: true,
+  }],
+  warnings: [],
+};
+
+class FakeSalesKnowledgeQaReader implements SalesKnowledgeQaReader {
+  response: SalesKnowledgeQaResponse = answeredKnowledgeResponse;
+
+  readonly answer = vi.fn(
+    async (
+      _input: SalesKnowledgeQaInput,
+    ): Promise<SalesKnowledgeQaResponse> => structuredClone(this.response),
+  );
+}
+
 class FakeMessenger implements FeishuMessenger {
   readonly texts: string[] = [];
   readonly textUpdates: Array<{ messageId: string; text: string }> = [];
@@ -471,6 +508,7 @@ class FakeTasks implements TaskGateway {
 interface FakePlatformSessions {
   activeMember: PlatformMember | null;
   activeRoles: PlatformSessionResponse['roles'];
+  activePermissions: PlatformSessionResponse['permissions'];
   failActiveMemberLookup: boolean;
   failRoleLookup: boolean;
   activeMemberChecks: number;
@@ -489,6 +527,7 @@ interface FakePlatformSessions {
 const createPlatformSession = (
   integration: TenantIntegration,
   roles: PlatformSessionResponse['roles'],
+  permissions?: PlatformSessionResponse['permissions'],
 ): PlatformSessionResponse => ({
   tenant: {
     id: integration.tenantId,
@@ -501,9 +540,9 @@ const createPlatformSession = (
     displayName: '销售',
   },
   roles,
-  permissions: roles.length > 0
-    ? ['followup:create-own', 'opportunity:read']
-    : [],
+  permissions: permissions ?? (roles.length > 0
+    ? ['followup:create-own', 'opportunity:read', 'playbook:read']
+    : []),
   navigation: [],
   policyVersion: 'test',
 });
@@ -519,6 +558,7 @@ interface TestHarness {
   conversation: FakeConversationAssistant;
   sessions: FakePlatformSessions;
   opportunityDecisions: FakeOpportunityDecisionReader;
+  salesKnowledge: FakeSalesKnowledgeQaReader;
   workflow: AgentWorkflowService;
 }
 
@@ -546,6 +586,8 @@ const createHarness = (
   const extractor: FixedExtractor = new FixedExtractor(draft);
   const conversation: FakeConversationAssistant =
     new FakeConversationAssistant();
+  const salesKnowledge: FakeSalesKnowledgeQaReader =
+    new FakeSalesKnowledgeQaReader();
   const executor: AgentActionExecutorService =
     new AgentActionExecutorService(
       store,
@@ -563,12 +605,21 @@ const createHarness = (
       status: 'active',
     },
     activeRoles: ['sales'],
+    activePermissions: [
+      'followup:create-own',
+      'opportunity:read',
+      'playbook:read',
+    ],
     failActiveMemberLookup: false,
     failRoleLookup: false,
     activeMemberChecks: 0,
     roleChecks: 0,
     getSession: async (): Promise<PlatformSessionResponse> =>
-      createPlatformSession(integrationA, sessions.activeRoles),
+      createPlatformSession(
+        integrationA,
+        sessions.activeRoles,
+        sessions.activePermissions,
+      ),
     getActiveMember: async (
       tenantId: string,
       feishuOpenId: string,
@@ -603,6 +654,7 @@ const createHarness = (
       const session: PlatformSessionResponse = createPlatformSession(
         integrationA,
         sessions.activeRoles,
+        sessions.activePermissions,
       );
       return {
         ...session,
@@ -632,6 +684,7 @@ const createHarness = (
     chatDrafts,
     records,
     platformSessions,
+    salesKnowledge,
     salesContext,
     opportunityDecisions,
   );
@@ -646,6 +699,7 @@ const createHarness = (
     conversation,
     sessions,
     opportunityDecisions,
+    salesKnowledge,
     workflow,
   };
 };
@@ -1223,7 +1277,7 @@ describe('AgentWorkflowService', (): void => {
 
   it.each([
     ['你好', '你好'],
-    ['客户一直压价怎么办？', '压价'],
+    ['客户一直压价怎么办？', '根据企业资料'],
     ['帮我写一封催客户确认方案的邮件', '邮件'],
     ['北辰制造最近进展怎么样？', '现在最该推进'],
   ])(
@@ -1243,6 +1297,79 @@ describe('AgentWorkflowService', (): void => {
       expect(harness.tasks.calls).toBe(0);
     },
   );
+
+  it('routes sales knowledge questions through ACL-checked enterprise evidence', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'sales_qa',
+      confidence: 0.98,
+      reply: '模型通用回答不应直接发送。',
+    };
+    const question: string = '销售 Agent 能做什么？';
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-sales-knowledge'),
+      text: question,
+    });
+
+    expect(harness.salesKnowledge.answer).toHaveBeenCalledWith({
+      integration: harness.integrationA,
+      actorOpenId: 'ou_sales',
+      question,
+    });
+    expect(harness.messenger.texts.at(-1)).toContain('根据企业资料');
+    expect(harness.messenger.texts.at(-1)).not.toContain('模型通用回答');
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+    const audit = harness.store.getAudits(harness.integrationA.tenantId)
+      .find((event): boolean =>
+        event.eventType === 'sales_knowledge_qa.read.v1');
+    expect(audit).toMatchObject({ outcome: 'succeeded' });
+    expect(audit?.details).toMatchObject({
+      status: 'answered',
+      configuredSourceCount: 3,
+      checkedSourceCount: 3,
+      trustedResultCount: 1,
+      sourceIds: ['capabilities'],
+    });
+    expect(JSON.stringify(audit?.details)).not.toContain(question);
+    expect(JSON.stringify(audit?.details)).not.toContain(
+      answeredKnowledgeResponse.citations[0]?.excerpt,
+    );
+  });
+
+  it('does not read enterprise knowledge without playbook permission', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    harness.sessions.activePermissions = [
+      'followup:create-own',
+      'opportunity:read',
+    ];
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'sales_qa',
+      confidence: 0.98,
+      reply: '模型回答不应作为权限兜底。',
+    };
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-sales-knowledge-forbidden'),
+      text: '资料权限怎么控制？',
+    });
+
+    expect(harness.salesKnowledge.answer).not.toHaveBeenCalled();
+    expect(harness.messenger.texts.at(-1)).toBe(
+      '你当前没有读取企业销售资料的权限。',
+    );
+    expect(harness.messenger.texts.at(-1)).not.toContain('模型回答');
+    expect(harness.store.getAudits(harness.integrationA.tenantId))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          eventType: 'sales_knowledge_qa.forbidden.v1',
+          outcome: 'failed',
+        }),
+      ]));
+  });
 
   it('routes business queries through owner-scoped opportunity evidence', async (): Promise<void> => {
     const harness: TestHarness = createHarness();
@@ -1409,7 +1536,7 @@ describe('AgentWorkflowService', (): void => {
       .toBe(true);
   });
 
-  it('routes a normal question through the model while a followup draft is collecting', async (): Promise<void> => {
+  it('routes a knowledge question through evidence while a followup draft is collecting', async (): Promise<void> => {
     const harness: TestHarness = createHarness();
     const receivedAt: Date = new Date();
     await harness.store.saveCollectingSession({
@@ -1438,7 +1565,13 @@ describe('AgentWorkflowService', (): void => {
     expect(harness.conversation.inputs[0]?.context?.activeWorkflow)
       .toBe('followup_collecting');
     expect(harness.extractor.calls).toBe(0);
-    expect(harness.messenger.texts.at(-1)).toContain('让步空间');
+    expect(harness.salesKnowledge.answer).toHaveBeenCalledWith({
+      integration: harness.integrationA,
+      actorOpenId: 'ou_sales',
+      question: '这次报价应该保留多少余地',
+    });
+    expect(harness.messenger.texts.at(-1)).toContain('根据企业资料');
+    expect(harness.messenger.texts.at(-1)).not.toContain('让步空间');
     await expect(harness.store.getOpenSession(
       harness.integrationA.tenantId,
       'ou_sales',
@@ -1718,7 +1851,7 @@ describe('AgentWorkflowService', (): void => {
     });
     harness.conversation.nextDecision = {
       schemaVersion: 'conversation-intent-v1',
-      intent: 'sales_qa',
+      intent: 'followup_analyze',
       confidence: 0.96,
       reply: '这会延长安全评审，应补充隔离方案与验证计划。',
     };
@@ -1737,6 +1870,46 @@ describe('AgentWorkflowService', (): void => {
     )).toBeNull();
     expect(harness.extractor.calls).toBe(0);
     expect(harness.messenger.actions).toHaveLength(0);
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+  });
+
+  it('switches a clarification session to ACL-checked knowledge QA', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    const receivedAt: Date = new Date();
+    await harness.store.saveIntentClarificationSession({
+      tenantId: harness.integrationA.tenantId,
+      actorOpenId: 'ou_sales',
+      chatId: 'oc_tenant-a',
+      sourceMessageId: 'om-clarification-source',
+      rawText: '客户提到权限隔离。',
+      expiresAt: new Date(receivedAt.getTime() + 24 * 60 * 60 * 1_000),
+    });
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'sales_qa',
+      confidence: 0.96,
+      reply: '模型企业事实不应发送。',
+    };
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-clarification-knowledge'),
+      text: '资料权限怎么控制？',
+      receivedAt,
+    });
+
+    expect(harness.salesKnowledge.answer).toHaveBeenCalledWith({
+      integration: harness.integrationA,
+      actorOpenId: 'ou_sales',
+      question: '资料权限怎么控制？',
+    });
+    expect(harness.messenger.texts.at(-1)).toContain('根据企业资料');
+    expect(harness.messenger.texts.at(-1)).not.toContain('模型企业事实');
+    await expect(harness.store.getOpenSession(
+      harness.integrationA.tenantId,
+      'ou_sales',
+    )).resolves.toBeNull();
+    expect(harness.extractor.calls).toBe(0);
     expect(harness.records.followupCalls).toBe(0);
     expect(harness.tasks.calls).toBe(0);
   });

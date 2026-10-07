@@ -15,6 +15,7 @@ import type {
   OpportunityDecisionResponse,
   PendingActionStatus,
   PlatformSessionResponse,
+  SalesKnowledgeQaResponse,
 } from '@shared/api.interface';
 import {
   CONTROL_STORE,
@@ -72,6 +73,10 @@ import {
 } from '@server/modules/platform-shell/platform-session.service';
 import type { PlatformMember } from
   '@server/modules/identity-access/identity-access.types';
+import {
+  SALES_KNOWLEDGE_QA,
+  type SalesKnowledgeQaReader,
+} from '@server/modules/knowledge/sales-knowledge-qa.ports';
 
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const ACTION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -106,6 +111,8 @@ export class AgentWorkflowService {
     @Inject(SALES_RECORDS_GATEWAY)
     private readonly records: SalesRecordsGateway,
     private readonly sessions: PlatformSessionService,
+    @Inject(SALES_KNOWLEDGE_QA)
+    private readonly salesKnowledge: SalesKnowledgeQaReader,
     @Optional()
     @Inject(SALES_CONTEXT_READER)
     private readonly salesContext?: SalesContextReader,
@@ -440,9 +447,25 @@ export class AgentWorkflowService {
         return;
       }
       if (
+        decision.intent === 'sales_qa' &&
+        decision.confidence >= 0.55
+      ) {
+        await this.store.closeSession(
+          integration.tenantId,
+          message.senderOpenId,
+        );
+        await this.auditIntentClarificationResolved(
+          integration,
+          message,
+          session,
+          'topic_switched',
+        );
+        await this.handleSalesKnowledgeQuestion(integration, message);
+        return;
+      }
+      if (
         decision.confidence >= 0.55 && (
-          decision.intent === 'followup_analyze' ||
-          decision.intent === 'sales_qa'
+          decision.intent === 'followup_analyze'
         )
       ) {
         await this.store.closeSession(
@@ -576,6 +599,17 @@ export class AgentWorkflowService {
         );
         return;
       }
+      if (
+        decision.intent === 'sales_qa' &&
+        decision.confidence >= 0.55
+      ) {
+        await this.handleSalesKnowledgeQuestion(
+          integration,
+          message,
+          waitingMessageId,
+        );
+        return;
+      }
       await this.replyToConversation(integration, message, {
         context,
         decision,
@@ -689,6 +723,21 @@ export class AgentWorkflowService {
         integration,
         message,
         decision,
+        waitingMessageId,
+      );
+      return;
+    }
+    if (
+      decision.intent === 'sales_qa' &&
+      decision.confidence >= 0.55
+    ) {
+      await this.store.closeSession(
+        integration.tenantId,
+        message.senderOpenId,
+      );
+      await this.handleSalesKnowledgeQuestion(
+        integration,
+        message,
         waitingMessageId,
       );
       return;
@@ -1116,6 +1165,118 @@ export class AgentWorkflowService {
         },
       });
     }
+  }
+
+  private async handleSalesKnowledgeQuestion(
+    integration: TenantIntegration,
+    message: IncomingMessage,
+    waitingMessageId?: string | null,
+  ): Promise<void> {
+    const progressMessageId: string | null = waitingMessageId === undefined
+      ? await this.sendConversationWaiting(integration, message)
+      : waitingMessageId;
+    try {
+      const member: PlatformMember | null = await this.sessions.getActiveMember(
+        integration.tenantId,
+        message.senderOpenId,
+      );
+      if (member === null) {
+        throw new PlatformAccessDeniedError();
+      }
+      const session: PlatformSessionResponse =
+        await this.sessions.getSessionByMembership(
+          integration.tenantId,
+          member.id,
+          message.receivedAt,
+        );
+      if (!session.permissions.includes('playbook:read')) {
+        throw new PlatformAccessDeniedError();
+      }
+      const result: SalesKnowledgeQaResponse =
+        await this.salesKnowledge.answer({
+          integration,
+          actorOpenId: message.senderOpenId,
+          question: message.text,
+        });
+      await this.finishConversationWaiting(
+        integration,
+        message,
+        progressMessageId,
+        result.answer,
+      );
+      const audit = this.salesKnowledgeAudit(result);
+      await this.store.appendAudit({
+        tenantId: integration.tenantId,
+        traceId: message.messageId,
+        eventType: audit.eventType,
+        actorOpenId: message.senderOpenId,
+        outcome: audit.outcome,
+        details: {
+          status: result.status,
+          configuredSourceCount: result.configuredSourceCount,
+          checkedSourceCount: result.checkedSourceCount,
+          trustedResultCount: result.trustedResultCount,
+          sourceIds: result.citations.map((citation) => citation.sourceId),
+        },
+      });
+    } catch (error: unknown) {
+      const denied: boolean = error instanceof PlatformAccessDeniedError;
+      this.logger.warn(
+        `Sales knowledge question failed: ${redactErrorMessage(
+          this.toError(error),
+        )}`,
+      );
+      await this.finishConversationWaiting(
+        integration,
+        message,
+        progressMessageId,
+        denied
+          ? '你当前没有读取企业销售资料的权限。'
+          : '企业资料暂时无法读取，我没有生成答案，请稍后再试。',
+      );
+      await this.store.appendAudit({
+        tenantId: integration.tenantId,
+        traceId: message.messageId,
+        eventType: denied
+          ? 'sales_knowledge_qa.forbidden.v1'
+          : 'sales_knowledge_qa.unavailable.v1',
+        actorOpenId: message.senderOpenId,
+        outcome: 'failed',
+        details: {
+          errorCode: denied ? 'ACCESS_DENIED' : this.errorCode(error),
+        },
+      });
+    }
+  }
+
+  private salesKnowledgeAudit(
+    result: SalesKnowledgeQaResponse,
+  ): {
+    eventType: string;
+    outcome: 'ignored' | 'succeeded' | 'failed';
+  } {
+    if (result.status === 'answered' || result.status === 'partial') {
+      return {
+        eventType: 'sales_knowledge_qa.read.v1',
+        outcome: 'succeeded',
+      };
+    }
+    if (result.status === 'no_trusted_match') {
+      return {
+        eventType: 'sales_knowledge_qa.no_match.v1',
+        outcome: 'ignored',
+      };
+    }
+    if (result.status === 'not_configured') {
+      return {
+        eventType: 'sales_knowledge_qa.not_configured.v1',
+        outcome: 'ignored',
+      };
+    }
+    return {
+      eventType: 'sales_knowledge_qa.unavailable.v1',
+      outcome: 'failed',
+    };
   }
 
   private localDateKey(value: Date, timezone: string): string {

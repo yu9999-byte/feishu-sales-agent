@@ -16,6 +16,8 @@ import {
 } from '@server/modules/llm/langgraph-checkpointer.service';
 import { LangGraphConversationAssistant } from '@server/modules/llm/langgraph-conversation.assistant';
 import { FollowupProjectRiskService } from '@server/modules/insight/followup-project-risk.service';
+import { SalesMaterialModule } from
+  '@server/modules/knowledge/sales-material.module';
 import { AgentActionExecutorService } from './agent-action-executor.service';
 import { SalesContextService } from './sales-context.service';
 import {
@@ -35,6 +37,7 @@ import {
   imports: [
     AgentControlModule,
     FeishuApiModule,
+    SalesMaterialModule,
     HttpModule.register({ timeout: 30_000, maxRedirects: 2 }),
   ],
   providers: [
@@ -78,6 +81,7 @@ import {
     SALES_RECORDS_GATEWAY,
     TASK_GATEWAY,
     SALES_CONTEXT_READER,
+    SalesMaterialModule,
   ],
 })
 class AgentExecutionModule {}

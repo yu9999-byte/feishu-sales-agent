@@ -773,6 +773,36 @@ export interface CustomerCommunicationMaterialSearch {
   warnings: string[];
 }
 
+export type SalesKnowledgeQaStatus =
+  | 'answered'
+  | 'partial'
+  | 'not_configured'
+  | 'no_trusted_match'
+  | 'unavailable';
+
+export interface SalesKnowledgeCitation {
+  sourceId: string;
+  sourceType: SalesMaterialSourceType;
+  title: string;
+  url: string;
+  matchedTerms: string[];
+  excerpt: string;
+  citation: string;
+  sourceVersion: string;
+  applicability: string;
+  accessVerified: true;
+}
+
+export interface SalesKnowledgeQaResponse {
+  status: SalesKnowledgeQaStatus;
+  answer: string;
+  configuredSourceCount: number;
+  checkedSourceCount: number;
+  trustedResultCount: number;
+  citations: SalesKnowledgeCitation[];
+  warnings: string[];
+}
+
 export type CustomerCommunicationDraftChannel = 'feishu' | 'email';
 
 export interface CustomerCommunicationDraft {
