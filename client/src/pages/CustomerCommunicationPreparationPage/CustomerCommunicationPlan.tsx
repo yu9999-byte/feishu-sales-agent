@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   CheckCircle2,
+  ExternalLink,
   FileQuestion,
   PackageOpen,
   Sparkles,
@@ -10,11 +11,15 @@ import {
 import type {
   CustomerCommunicationAngle,
   CustomerCommunicationMaterial,
+  CustomerCommunicationMaterialSearch,
   CustomerCommunicationObjective,
   CustomerCommunicationQuestion,
 } from '@shared/api.interface';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
+  customerCommunicationMaterialSearchStatusLabel,
+  customerCommunicationMaterialSourceTypeLabel,
   customerCommunicationMaterialStatusLabel,
 } from './customer-communication-preparation-view';
 
@@ -23,6 +28,7 @@ interface CustomerCommunicationPlanProps {
   angles: CustomerCommunicationAngle[];
   questions: CustomerCommunicationQuestion[];
   materials: CustomerCommunicationMaterial[];
+  materialSearch: CustomerCommunicationMaterialSearch;
 }
 
 const SourceCount: React.FC<{ sourceKeys: string[] }> = ({ sourceKeys }) => (
@@ -33,7 +39,7 @@ const SourceCount: React.FC<{ sourceKeys: string[] }> = ({ sourceKeys }) => (
 
 const CustomerCommunicationPlan: React.FC<
   CustomerCommunicationPlanProps
-> = ({ objective, angles, questions, materials }) => (
+> = ({ objective, angles, questions, materials, materialSearch }) => (
   <div className="space-y-6">
     <section className="rounded-xl border border-border bg-card p-6">
       <p className="flex items-center gap-2 text-sm font-medium text-primary">
@@ -130,8 +136,29 @@ const CustomerCommunicationPlan: React.FC<
           建议准备的材料
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          当前未接入经审核资料库，系统只列出所需材料，不生成虚构链接或附件。
+          只检索管理员白名单且已证明当前账号可读的资料，不生成虚构链接或附件。
         </p>
+      </div>
+      <div
+        className="rounded-xl border border-border bg-muted/40 px-5 py-4"
+        role="status"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-semibold">
+            {customerCommunicationMaterialSearchStatusLabel(
+              materialSearch.status,
+            )}
+          </p>
+          <span className="text-xs text-muted-foreground">
+            已核验 {materialSearch.checkedSourceCount}/
+            {materialSearch.configuredSourceCount} 个白名单来源
+          </span>
+        </div>
+        {materialSearch.warnings.length > 0 && (
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            {materialSearch.warnings.join('；')}
+          </p>
+        )}
       </div>
       <div
         className="grid gap-4 md:grid-cols-2"
@@ -156,6 +183,38 @@ const CustomerCommunicationPlan: React.FC<
             <p className="mt-2 break-words text-xs leading-5 text-muted-foreground">
               推荐原因：{material.reason}
             </p>
+            {material.status === 'recommended' && (
+              <div className="mt-4 space-y-3 border-t border-border pt-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary">
+                    {customerCommunicationMaterialSourceTypeLabel(
+                      material.sourceType,
+                    )}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    {material.sourceVersion} · {material.citation}
+                  </span>
+                </div>
+                <p className="break-words text-xs leading-5 text-muted-foreground">
+                  匹配依据：{material.matchReason}
+                </p>
+                <blockquote className="break-words border-l-2 border-primary/50 pl-3 text-sm leading-6">
+                  {material.excerpt}
+                </blockquote>
+                <p className="break-words text-xs leading-5 text-muted-foreground">
+                  适用边界：{material.applicability}
+                </p>
+                <Button variant="outline" size="sm" asChild>
+                  <a
+                    href={material.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    打开原资料<ExternalLink aria-hidden="true" />
+                  </a>
+                </Button>
+              </div>
+            )}
             <p className="mt-4 flex items-center gap-1.5 text-xs text-muted-foreground">
               <CheckCircle2 aria-hidden="true" className="size-3.5" />
               {material.sourceKeys.length} 条事实来源
@@ -168,4 +227,3 @@ const CustomerCommunicationPlan: React.FC<
 );
 
 export default CustomerCommunicationPlan;
-

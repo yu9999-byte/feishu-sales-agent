@@ -73,7 +73,12 @@ const platformSession: PlatformSessionResponse = {
     displayName: '销售 A',
   },
   roles: ['sales'],
-  permissions: ['customer:read', 'opportunity:read', 'followup:read'],
+  permissions: [
+    'customer:read',
+    'opportunity:read',
+    'followup:read',
+    'playbook:read',
+  ],
   navigation: [],
   policyVersion: 'test',
 };
@@ -88,6 +93,13 @@ const response: CustomerCommunicationPreparationResponse = {
   angles: [],
   questions: [],
   materials: [],
+  materialSearch: {
+    status: 'no_trusted_match',
+    configuredSourceCount: 0,
+    checkedSourceCount: 0,
+    trustedResultCount: 0,
+    warnings: ['客户信息不足，未检索资料'],
+  },
   drafts: [],
   evidence: [],
   coverage: {
@@ -176,7 +188,12 @@ describe('CustomerCommunicationPreparationController', (): void => {
     expect(result).toBe(response);
     expect(harness.shell.assertPermission.mock.calls.map(
       (call: unknown[]): unknown => call[1],
-    )).toEqual(['customer:read', 'opportunity:read', 'followup:read']);
+    )).toEqual([
+      'customer:read',
+      'opportunity:read',
+      'followup:read',
+      'playbook:read',
+    ]);
     expect(harness.preparations.generate).toHaveBeenCalledWith({
       integration,
       actorOpenId: OPEN_ID,
@@ -200,6 +217,7 @@ describe('CustomerCommunicationPreparationController', (): void => {
     'customer:read',
     'opportunity:read',
     'followup:read',
+    'playbook:read',
   ])('rejects when %s is missing', async (blockedPermission: string) => {
     const harness: Harness = setup();
     harness.shell.assertPermission.mockImplementation(
@@ -248,4 +266,3 @@ describe('CustomerCommunicationPreparationController', (): void => {
     },
   );
 });
-

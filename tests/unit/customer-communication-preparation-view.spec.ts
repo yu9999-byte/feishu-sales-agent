@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { WebPageController } from
@@ -6,6 +9,8 @@ import { WebPageController } from
 import {
   customerCommunicationDraftChannelLabel,
   customerCommunicationEvidenceKindLabel,
+  customerCommunicationMaterialSearchStatusLabel,
+  customerCommunicationMaterialSourceTypeLabel,
   customerCommunicationMaterialStatusLabel,
   customerCommunicationStatusLabel,
 } from '../../client/src/pages/CustomerCommunicationPreparationPage/customer-communication-preparation-view';
@@ -27,6 +32,21 @@ describe('customer communication preparation view helpers', (): void => {
     expect(customerCommunicationMaterialStatusLabel('material_pending')).toBe(
       '材料待补充',
     );
+    expect(customerCommunicationMaterialStatusLabel('recommended')).toBe(
+      '可信资料',
+    );
+    expect(customerCommunicationMaterialSearchStatusLabel('ready')).toBe(
+      '已找到可信材料',
+    );
+    expect(
+      customerCommunicationMaterialSearchStatusLabel('no_trusted_match'),
+    ).toBe('未找到可信材料');
+    expect(customerCommunicationMaterialSourceTypeLabel('docx')).toBe(
+      '飞书文档',
+    );
+    expect(customerCommunicationMaterialSourceTypeLabel('wiki')).toBe(
+      '飞书知识库',
+    );
     expect(customerCommunicationDraftChannelLabel('feishu')).toBe('飞书消息');
     expect(customerCommunicationDraftChannelLabel('email')).toBe('邮件');
   });
@@ -41,5 +61,23 @@ describe('customer communication preparation view helpers', (): void => {
       throw new Error('Web page routes are not registered');
     }
     expect(routes).toContain('customers/:customerRecordId/communication');
+  });
+
+  it('renders real material provenance without adding execution actions', (): void => {
+    const planSource: string = readFileSync(join(
+      process.cwd(),
+      'client/src/pages/CustomerCommunicationPreparationPage/' +
+        'CustomerCommunicationPlan.tsx',
+    ), 'utf8');
+
+    expect(planSource).toContain('material.sourceVersion');
+    expect(planSource).toContain('material.citation');
+    expect(planSource).toContain('material.excerpt');
+    expect(planSource).toContain('material.applicability');
+    expect(planSource).toContain('打开原资料');
+    expect(planSource).not.toContain('sendMessage');
+    expect(planSource).not.toContain('sendEmail');
+    expect(planSource).not.toContain('createTask');
+    expect(planSource).not.toContain('saveMaterial');
   });
 });

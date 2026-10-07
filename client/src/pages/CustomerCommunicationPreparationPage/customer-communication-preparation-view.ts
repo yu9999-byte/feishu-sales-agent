@@ -2,7 +2,9 @@ import type {
   CustomerCommunicationDraftChannel,
   CustomerCommunicationEvidenceKind,
   CustomerCommunicationMaterial,
+  CustomerCommunicationMaterialSearchStatus,
   CustomerCommunicationPreparationStatus,
+  SalesMaterialSourceType,
 } from '@shared/api.interface';
 
 const STATUS_LABELS: Record<
@@ -32,6 +34,22 @@ const DRAFT_CHANNEL_LABELS: Record<
   email: '邮件',
 };
 
+const MATERIAL_SEARCH_STATUS_LABELS: Record<
+  CustomerCommunicationMaterialSearchStatus,
+  string
+> = {
+  ready: '已找到可信材料',
+  not_configured: '资料库尚未配置',
+  no_trusted_match: '未找到可信材料',
+  partial: '已找到部分可信材料',
+  unavailable: '资料库暂时不可用',
+};
+
+const MATERIAL_SOURCE_TYPE_LABELS: Record<SalesMaterialSourceType, string> = {
+  docx: '飞书文档',
+  wiki: '飞书知识库',
+};
+
 const customerCommunicationStatusLabel = (
   status: CustomerCommunicationPreparationStatus,
 ): string => STATUS_LABELS[status];
@@ -42,7 +60,15 @@ const customerCommunicationEvidenceKindLabel = (
 
 const customerCommunicationMaterialStatusLabel = (
   status: CustomerCommunicationMaterial['status'],
-): string => status === 'material_pending' ? '材料待补充' : status;
+): string => status === 'material_pending' ? '材料待补充' : '可信资料';
+
+const customerCommunicationMaterialSearchStatusLabel = (
+  status: CustomerCommunicationMaterialSearchStatus,
+): string => MATERIAL_SEARCH_STATUS_LABELS[status];
+
+const customerCommunicationMaterialSourceTypeLabel = (
+  sourceType: SalesMaterialSourceType,
+): string => MATERIAL_SOURCE_TYPE_LABELS[sourceType];
 
 const customerCommunicationDraftChannelLabel = (
   channel: CustomerCommunicationDraftChannel,
@@ -51,7 +77,8 @@ const customerCommunicationDraftChannelLabel = (
 export {
   customerCommunicationDraftChannelLabel,
   customerCommunicationEvidenceKindLabel,
+  customerCommunicationMaterialSearchStatusLabel,
+  customerCommunicationMaterialSourceTypeLabel,
   customerCommunicationMaterialStatusLabel,
   customerCommunicationStatusLabel,
 };
-

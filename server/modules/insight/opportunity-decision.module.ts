@@ -10,6 +10,8 @@ import { AgentControlModule } from
 import { PlatformShellModule } from
   '@server/modules/platform-shell/platform-shell.module';
 import { WebAuthModule } from '@server/modules/web-auth/web-auth.module';
+import { SalesMaterialModule } from
+  '@server/modules/knowledge/sales-material.module';
 import { CustomerVisitBriefingController } from
   './customer-visit-briefing.controller';
 import { CustomerVisitBriefingService } from
@@ -29,6 +31,7 @@ import { TaskFulfillmentModule } from './task-fulfillment.module';
     AgentExecutionModule,
     PlatformShellModule,
     WebAuthModule,
+    SalesMaterialModule,
     TaskFulfillmentModule,
   ],
   controllers: [

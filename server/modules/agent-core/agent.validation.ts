@@ -346,6 +346,50 @@ const opportunityStatusSchema = z.enum([
   'closed',
 ]);
 
+const salesMaterialCategorySchema = z.enum([
+  'customer_context',
+  'needs_checklist',
+  'solution_overview',
+  'case_reference',
+  'commercial_boundary',
+  'meeting_agenda',
+]);
+
+const salesMaterialSourceSchema = z.object({
+  id: z.string().trim().min(1).max(100),
+  sourceType: z.enum(['docx', 'wiki']),
+  token: z.string().trim().min(1).max(500),
+  url: z.string().url().refine(
+    (value: string): boolean => new URL(value).protocol === 'https:',
+    'Sales material URL must use HTTPS',
+  ),
+  applicability: z.string().trim().min(1).max(500),
+  keywords: z.array(z.string().trim().min(1).max(100)).min(1).max(50),
+  categories: z.array(salesMaterialCategorySchema).min(1).max(6),
+}).strict().superRefine((source, context): void => {
+  const parsed: URL = new URL(source.url);
+  const hostname: string = parsed.hostname.toLocaleLowerCase('en-US');
+  const isFeishuHost: boolean = hostname === 'feishu.cn' ||
+    hostname.endsWith('.feishu.cn') ||
+    hostname === 'larksuite.com' ||
+    hostname.endsWith('.larksuite.com');
+  const expectedPath: string = `/${source.sourceType}/${source.token}`;
+  if (!isFeishuHost) {
+    context.addIssue({
+      code: 'custom',
+      path: ['url'],
+      message: 'Sales material URL must be a Feishu or Lark link',
+    });
+  }
+  if (!parsed.pathname.startsWith(expectedPath)) {
+    context.addIssue({
+      code: 'custom',
+      path: ['url'],
+      message: 'Sales material URL must match its source type and token',
+    });
+  }
+});
+
 const opportunityStatusUpdateSchema = z.object({
   recordId: z.string().trim().min(1),
   status: opportunityStatusSchema,
@@ -409,6 +453,14 @@ const tenantBaseMappingSchema = z.object({
       ownerOpenId: optionalFieldNameSchema,
     }),
   }),
+  knowledge: z.object({
+    sources: z.array(salesMaterialSourceSchema).min(1).max(50).refine(
+      (sources): boolean =>
+        new Set(sources.map((source): string => source.id)).size ===
+          sources.length,
+      'Sales material source IDs must be unique',
+    ),
+  }).strict().optional(),
 });
 
 const jsonValueSchema: z.ZodType<unknown> = z.lazy(() =>

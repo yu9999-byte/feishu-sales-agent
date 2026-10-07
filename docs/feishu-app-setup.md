@@ -80,9 +80,18 @@ POST /webhooks/feishu/cards
 | 创建任务 | `task:task:write` 或控制台等价 write-only 权限 | Task v2 Schema |
 | 读取 Base 结构与记录 | 控制台当前 Base 只读权限 | Base API 实际调用 |
 | 写 Base 记录 | 控制台当前 Base 记录写权限 | Base API 实际调用 |
+| 读取白名单 Docx 正文和元数据 | 文档只读相关最小权限 | Docx API 缺权响应 |
+| 解析白名单 Wiki 节点和空间 | 知识库只读相关最小权限 | Wiki API 缺权响应 |
+| 核验当前销售的资料 ACL | 云文档权限设置与协作者只读权限 | Drive Permission API 缺权响应 |
 
 飞书权限名称可能随控制台版本调整。除已由本机 Schema 返回的 scope 外，不凭记忆猜名称；
 首次失败时以响应中的 `permission_violations` 和控制台链接为准，只申请缺失权限。
+
+销售资料检索不因为应用身份可以读取就直接返回内容。租户配置必须在
+`base_mapping.knowledge.sources` 中逐条加入 Docx 或 Wiki 节点；运行时还会核验当前销售
+`open_id` 是否直接拥有阅读权，或资料是否明确为租户可读/知识空间公开。群、部门、应用或
+其他间接 ACL 在 v1 中不推导为个人权限。没有白名单时显示“资料库尚未配置”，不会扫描整个
+企业云空间。示例结构见 `migrations/004_agent_p0_demo_tenant.example.sql`。
 
 2026-09-18 控制台实测状态：
 
@@ -193,6 +202,7 @@ Base shortcut 的 `record-upsert` 不会按业务字段自动 upsert。Agent 必
 | 事件或回调已配置 | 已更新到当前临时 HTTPS 地址，两条公网 URL challenge 均已通过 |
 | Demo Base 已创建 | 已完成；目标应用身份可读写，三条验收记录已回读 |
 | 飞书任务创建权限 | 已创建并回读真实任务 |
+| 销售资料检索权限 | 代码与自动化契约已接入；真实白名单和对应 Docx/Wiki/Drive 只读权限待配置 |
 | 公开 HTTPS 回调 | 当前临时 Tunnelmole 已从公网通过两类 challenge；不是稳定生产地址 |
 
 2026-09-18 本地配置核对只检查了是否有值，未回显密钥：`FEISHU_APP_SECRET` 已设置，

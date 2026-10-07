@@ -9,6 +9,7 @@ import type { TenantIntegration } from
 import {
   CustomerCommunicationPreparationService,
   type CustomerCommunicationBriefingReader,
+  type CustomerCommunicationMaterialRetriever,
 } from '@server/modules/insight/customer-communication-preparation.service';
 
 const NOW = new Date('2026-10-07T05:00:00.000Z');
@@ -163,17 +164,23 @@ const briefing = (
 interface Harness {
   service: CustomerCommunicationPreparationService;
   reader: CustomerCommunicationBriefingReader;
+  materialRetriever?: CustomerCommunicationMaterialRetriever;
 }
 
 const setup = (
   result: CustomerVisitBriefingResponse = briefing(),
+  materialRetriever?: CustomerCommunicationMaterialRetriever,
 ): Harness => {
   const reader: CustomerCommunicationBriefingReader = {
     generate: vi.fn(async () => result),
   };
   return {
-    service: new CustomerCommunicationPreparationService(reader),
+    service: new CustomerCommunicationPreparationService(
+      reader,
+      materialRetriever,
+    ),
     reader,
+    materialRetriever,
   };
 };
 
@@ -259,6 +266,77 @@ describe('CustomerCommunicationPreparationService', (): void => {
     expect(result.drafts[1].subject).toContain('北辰科技');
   });
 
+  it('adds trusted retrieved materials without changing the communication plan', async (): Promise<void> => {
+    const materialRetriever: CustomerCommunicationMaterialRetriever = {
+      retrieve: vi.fn(async (input) => ({
+        materials: [{
+          id: 'source:solution',
+          category: 'solution_overview',
+          title: '数字化协同方案概览',
+          purpose: input.pendingMaterials[0].purpose,
+          reason: input.pendingMaterials[0].reason,
+          status: 'recommended',
+          sourceKeys: input.pendingMaterials[0].sourceKeys,
+          sourceType: 'docx',
+          url: 'https://example.feishu.cn/docx/docx_solution',
+          matchReason: '匹配“协同”',
+          excerpt: '支持跨部门协同。',
+          citation: '正文第 2 段',
+          sourceVersion: 'revision:17',
+          applicability: '最终能力以合同为准',
+          accessVerified: true,
+        }],
+        search: {
+          status: 'ready',
+          configuredSourceCount: 1,
+          checkedSourceCount: 1,
+          trustedResultCount: 1,
+          warnings: [],
+        },
+      })),
+    };
+    const result: CustomerCommunicationPreparationResponse =
+      await generate(setup(briefing(), materialRetriever).service);
+
+    expect(materialRetriever.retrieve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        integration,
+        actorOpenId: 'ou_sales_a',
+        evidence: result.evidence,
+      }),
+    );
+    expect(result.objective?.title).toContain('年度协同项目');
+    expect(result.materialSearch.status).toBe('ready');
+    expect(result.materials[0]).toMatchObject({
+      status: 'recommended',
+      title: '数字化协同方案概览',
+      accessVerified: true,
+    });
+  });
+
+  it('keeps the communication plan when material retrieval unexpectedly fails', async (): Promise<void> => {
+    const materialRetriever: CustomerCommunicationMaterialRetriever = {
+      retrieve: vi.fn(async () => {
+        throw new Error('sensitive source failure');
+      }),
+    };
+
+    const result: CustomerCommunicationPreparationResponse =
+      await generate(setup(briefing(), materialRetriever).service);
+
+    expect(result.status).toBe('ready');
+    expect(result.customer?.recordId).toBe('customer-a');
+    expect(result.objective).not.toBeNull();
+    expect(result.materials.every(
+      (item) => item.status === 'material_pending',
+    )).toBe(true);
+    expect(result.materialSearch).toMatchObject({
+      status: 'unavailable',
+      trustedResultCount: 0,
+      warnings: ['销售资料库暂时不可用'],
+    });
+  });
+
   it('uses a needs-discovery goal when there is no active opportunity', async (): Promise<void> => {
     const noOpportunity: CustomerVisitBriefingResponse = briefing();
     noOpportunity.opportunities = [];
@@ -310,4 +388,3 @@ describe('CustomerCommunicationPreparationService', (): void => {
     expect(result.warnings).toEqual(['客户拜访攻略暂时不可用']);
   });
 });
-

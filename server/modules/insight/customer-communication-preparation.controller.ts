@@ -43,6 +43,7 @@ const REQUIRED_PERMISSIONS: PlatformPermission[] = [
   'customer:read',
   'opportunity:read',
   'followup:read',
+  'playbook:read',
 ];
 
 const formatLocalDate = (value: Date, timezone: string): string => {

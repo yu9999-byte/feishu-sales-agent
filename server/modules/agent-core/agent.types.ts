@@ -1,9 +1,11 @@
 import type {
   AgentExecutionResult,
   AgentSessionState,
+  CustomerCommunicationMaterialCategory,
   FollowupDraft,
   JsonObject,
   PendingActionPayload,
+  SalesMaterialSourceType,
   PendingActionStatus,
   SalesContext,
   TaskFulfillmentChange,
@@ -86,6 +88,21 @@ export interface TenantBaseMapping {
   customers: BaseTableMapping<CustomerFieldMapping>;
   opportunities: OpportunityTableMapping;
   followups: BaseTableMapping<FollowupFieldMapping>;
+  knowledge?: TenantKnowledgeMapping;
+}
+
+export interface SalesMaterialSourceConfig {
+  id: string;
+  sourceType: SalesMaterialSourceType;
+  token: string;
+  url: string;
+  applicability: string;
+  keywords: string[];
+  categories: CustomerCommunicationMaterialCategory[];
+}
+
+export interface TenantKnowledgeMapping {
+  sources: SalesMaterialSourceConfig[];
 }
 
 export interface TenantIntegration {

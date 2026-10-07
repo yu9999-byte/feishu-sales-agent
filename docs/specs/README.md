@@ -43,6 +43,8 @@
 | `28-customer-visit-briefing-tdd.md` | 客户攻略、三权限、同名隔离、降级和页面状态测试 | Green |
 | `29-customer-communication-preparation-sdd.md` | 沟通目标、材料清单、消息/邮件草稿、来源与只读边界 | 已实现，UI 待验收 |
 | `30-customer-communication-preparation-tdd.md` | 沟通方案、材料待补充、草稿、权限、降级和零副作用测试 | Green |
+| `31-sales-material-retrieval-sdd.md` | 白名单 Docx/Wiki、销售本人 ACL、真实引用和只读推荐边界 | 已实现，真实资料源未配置，UI 待验收 |
+| `32-sales-material-retrieval-tdd.md` | 配置、飞书只读适配、权限、排序、降级和零副作用测试 | Green |
 
 ## 2. 规格状态
 

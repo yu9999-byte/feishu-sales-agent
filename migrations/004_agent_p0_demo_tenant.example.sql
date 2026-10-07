@@ -85,6 +85,28 @@ VALUES (
         "communicationAt": "本次沟通发生时间",
         "ownerOpenId": "负责人"
       }
+    },
+    "knowledge": {
+      "sources": [
+        {
+          "id": "solution-overview",
+          "sourceType": "docx",
+          "token": "<approved_docx_token>",
+          "url": "https://<tenant>.feishu.cn/docx/<approved_docx_token>",
+          "applicability": "售前方案介绍，最终能力与商务边界以审批和合同为准",
+          "keywords": ["方案", "协同", "数字化"],
+          "categories": ["solution_overview"]
+        },
+        {
+          "id": "case-reference",
+          "sourceType": "wiki",
+          "token": "<approved_wiki_node_token>",
+          "url": "https://<tenant>.feishu.cn/wiki/<approved_wiki_node_token>",
+          "applicability": "案例仅作背景参考，不代表对当前客户的交付承诺",
+          "keywords": ["案例", "客户"],
+          "categories": ["case_reference"]
+        }
+      ]
     }
   }
   $json$::jsonb,

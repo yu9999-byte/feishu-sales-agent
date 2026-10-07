@@ -116,6 +116,7 @@ const CustomerCommunicationPreparationPage: React.FC = () => {
             angles={report.angles}
             questions={report.questions}
             materials={report.materials}
+            materialSearch={report.materialSearch}
           />
           <CustomerCommunicationDrafts
             drafts={report.drafts}
@@ -202,4 +203,3 @@ const CommunicationUnavailable: React.FC<{
 };
 
 export default CustomerCommunicationPreparationPage;
-

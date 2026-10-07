@@ -724,7 +724,7 @@ export type CustomerCommunicationMaterialCategory =
   | 'commercial_boundary'
   | 'meeting_agenda';
 
-export interface CustomerCommunicationMaterial {
+export interface CustomerCommunicationPendingMaterial {
   id: string;
   category: CustomerCommunicationMaterialCategory;
   title: string;
@@ -732,6 +732,45 @@ export interface CustomerCommunicationMaterial {
   reason: string;
   status: 'material_pending';
   sourceKeys: string[];
+}
+
+export type SalesMaterialSourceType = 'docx' | 'wiki';
+
+export interface CustomerCommunicationRecommendedMaterial {
+  id: string;
+  category: CustomerCommunicationMaterialCategory;
+  title: string;
+  purpose: string;
+  reason: string;
+  status: 'recommended';
+  sourceKeys: string[];
+  sourceType: SalesMaterialSourceType;
+  url: string;
+  matchReason: string;
+  excerpt: string;
+  citation: string;
+  sourceVersion: string;
+  applicability: string;
+  accessVerified: true;
+}
+
+export type CustomerCommunicationMaterial =
+  | CustomerCommunicationPendingMaterial
+  | CustomerCommunicationRecommendedMaterial;
+
+export type CustomerCommunicationMaterialSearchStatus =
+  | 'ready'
+  | 'not_configured'
+  | 'no_trusted_match'
+  | 'partial'
+  | 'unavailable';
+
+export interface CustomerCommunicationMaterialSearch {
+  status: CustomerCommunicationMaterialSearchStatus;
+  configuredSourceCount: number;
+  checkedSourceCount: number;
+  trustedResultCount: number;
+  warnings: string[];
 }
 
 export type CustomerCommunicationDraftChannel = 'feishu' | 'email';
@@ -756,6 +795,7 @@ export interface CustomerCommunicationPreparationResponse {
   angles: CustomerCommunicationAngle[];
   questions: CustomerCommunicationQuestion[];
   materials: CustomerCommunicationMaterial[];
+  materialSearch: CustomerCommunicationMaterialSearch;
   drafts: CustomerCommunicationDraft[];
   evidence: CustomerCommunicationEvidence[];
   coverage: CustomerVisitBriefingCoverage;
