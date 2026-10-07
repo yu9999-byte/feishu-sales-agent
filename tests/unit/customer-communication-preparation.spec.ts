@@ -164,12 +164,26 @@ const briefing = (
 interface Harness {
   service: CustomerCommunicationPreparationService;
   reader: CustomerCommunicationBriefingReader;
-  materialRetriever?: CustomerCommunicationMaterialRetriever;
+  materialRetriever: CustomerCommunicationMaterialRetriever;
 }
+
+const notConfiguredRetriever = (): CustomerCommunicationMaterialRetriever => ({
+  retrieve: vi.fn(async (input) => ({
+    materials: input.pendingMaterials,
+    search: {
+      status: 'not_configured',
+      configuredSourceCount: 0,
+      checkedSourceCount: 0,
+      trustedResultCount: 0,
+      warnings: ['资料库尚未配置'],
+    },
+  })),
+});
 
 const setup = (
   result: CustomerVisitBriefingResponse = briefing(),
-  materialRetriever?: CustomerCommunicationMaterialRetriever,
+  materialRetriever: CustomerCommunicationMaterialRetriever =
+    notConfiguredRetriever(),
 ): Harness => {
   const reader: CustomerCommunicationBriefingReader = {
     generate: vi.fn(async () => result),

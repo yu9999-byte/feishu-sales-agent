@@ -237,6 +237,30 @@ describe('FeishuSalesMaterialGateway', (): void => {
     expect(harness.client.drive.permissionMember.list).not.toHaveBeenCalled();
   });
 
+  it('does not treat an internet-readable link as tenant-scoped access', async (): Promise<void> => {
+    const harness: ClientHarness = setup();
+    harness.client.drive.permissionPublic.get.mockResolvedValueOnce({
+      code: 0,
+      data: {
+        permission_public: { link_share_entity: 'anyone_readable' },
+      },
+    });
+    harness.client.drive.permissionMember.list.mockResolvedValueOnce({
+      code: 0,
+      data: { items: [] },
+    });
+
+    const result: SalesMaterialReadResult = await harness.gateway.readSource(
+      integration,
+      'ou_sales_a',
+      docxSource,
+    );
+
+    expect(result).toMatchObject({ status: 'access_denied' });
+    expect(harness.client.drive.permissionMember.list).toHaveBeenCalledOnce();
+    expect(harness.client.docx.document.get).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['bot app', 'appid'],
     ['chat', 'openchat'],

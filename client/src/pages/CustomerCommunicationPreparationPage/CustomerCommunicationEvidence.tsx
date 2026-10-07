@@ -7,17 +7,20 @@ import {
 
 import type {
   CustomerCommunicationEvidence,
+  CustomerCommunicationMaterialSearch,
   CustomerVisitBriefingCoverage,
 } from '@shared/api.interface';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   customerCommunicationEvidenceKindLabel,
+  customerCommunicationMaterialSearchNotice,
 } from './customer-communication-preparation-view';
 
 interface CustomerCommunicationEvidenceProps {
   evidence: CustomerCommunicationEvidence[];
   coverage: CustomerVisitBriefingCoverage;
+  materialSearch: CustomerCommunicationMaterialSearch;
   generatedAt: string;
 }
 
@@ -43,7 +46,7 @@ const formatGeneratedAt = (value: string): string => {
 
 const CustomerCommunicationEvidencePanel: React.FC<
   CustomerCommunicationEvidenceProps
-> = ({ evidence, coverage, generatedAt }) => (
+> = ({ evidence, coverage, materialSearch, generatedAt }) => (
   <>
     <section className="space-y-4">
       <div>
@@ -97,7 +100,7 @@ const CustomerCommunicationEvidencePanel: React.FC<
           <h2 className="text-sm font-semibold">本页只准备，不执行</h2>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
             Agent 不会发送飞书或邮件，不会创建任务，也不会修改客户、商机和跟进记录。
-            材料库尚未接入，因此所有材料均明确标记为待补充。
+            {customerCommunicationMaterialSearchNotice(materialSearch.status)}
           </p>
           <p className="mt-3 text-xs text-muted-foreground">
             客户 {coverageLabel(coverage.customers)} · 商机
@@ -112,4 +115,3 @@ const CustomerCommunicationEvidencePanel: React.FC<
 );
 
 export default CustomerCommunicationEvidencePanel;
-

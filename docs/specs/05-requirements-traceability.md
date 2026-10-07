@@ -5,8 +5,10 @@
 2026-10-07 `KNO-001..009` 销售资料检索与推荐 Agent v1 已实现：沟通准备页只从当前租户
 `base_mapping.knowledge.sources` 白名单读取单篇 Docx 或单个 Wiki 文档节点，并在排序前同时
 验证管理员授权和当前销售本人 ACL。推荐包含真实标题、类型、链接、命中理由、原文摘录、段落、
-版本和适用边界；无配置和无可信命中均诚实显示，不发送或写入任何业务数据。专项 `30/30`、
-Agent `567/567`、Postgres `20/20`、类型、Lint、双构建、迁移幂等和完整启动冒烟通过。真实
+版本和适用边界；无配置和无可信命中均诚实显示，不发送或写入任何业务数据。资料专项
+`33/33`、Agent `570/570`、Postgres `20/20`、类型、Lint、双构建、迁移幂等和完整启动冒烟
+通过。完成审计补充验证互联网公开链接不等同租户权限、token 必须与 URL 精确匹配、页面提示
+随检索状态变化且资料服务为必需依赖。真实
 控制库当前为 1 个 active 租户、0 个资料来源，所以状态为自动化完成、真实资料源未配置、
 UI pending，不得把测试替身当作真实资料验收。
 
@@ -240,7 +242,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | `COP-012..016` 主管团队客户与商机决策 | E / P1-PROGRESS | Automated Green / Web implemented / UI pending | manager 本人+递归下属、executive/admin 租户 active 范围与 sales-only/cross-tenant fail-closed 已测试；团队按健康、分数、真实金额、名称稳定排序并保留负责人/个人排名；单成员失败 partial、全部失败 unavailable、全员无商机 empty、未知金额 null。双权限 API 和 `/reviews/opportunities` 已接入，管理动作只建议不执行。定向 `30/30`、Agent `499/499`、Postgres `20/20`、发布器 `4/4`、调度客户端 `10/10` 及完整质量门/启动冒烟通过 | 真实主管/高管登录态的团队范围、内容、链接和视觉呈现未验收；自动派发、消息、客户触达和任何商机写入未实现 |
 | `COP-017..022` 客户洞察与拜访准备 | C / P1-PROGRESS | Automated Green / Web implemented / UI pending | 客户卡进入只读拜访准备页；精确客户 ID、客户链接优先的跟进规则、同名隔离、进行中商机决策复用、关闭商机历史背景、最近 10 条跟进、未知金额和缺口转问题均有测试。三权限 API 只传当前销售 open_id 和 URL 客户 ID。定向 `17/17`、Agent `516/516`、Postgres `20/20`、发布器 `4/4`、调度客户端 `10/10` 及完整质量门/启动冒烟通过 | 真实销售登录态的内容、原记录链接和响应式视觉未验收；联系客户、建任务、更新客户/商机/跟进均未实现且不得自动执行 |
 | `COP-023..029` 客户沟通内容准备 | C / P1-PROGRESS | Automated Green / Web implemented / UI pending | 复用精确客户攻略生成沟通目标、最多 3 个事实角度、待确认问题、全部标记为材料待补充的准备清单，以及飞书/邮件可编辑预览草稿；每项建议保留来源键与原记录链接。三权限 API 和 `/customers/:customerRecordId/communication` 已接入；专项 `17/17`、Agent `533/533`、Postgres `20/20`、发布器 `4/4`、调度客户端 `10/10` 及完整质量门/启动冒烟通过 | 真实登录态内容与响应式视觉未验收；真实资料检索、发送、保存编辑、建任务和业务写回均未实现，且不得由本切片自动执行 |
-| `KNO-001..009` 销售资料检索与推荐 | C / P1-PROGRESS | Automated Green / Web implemented / real source not configured / UI pending | 仅解析当前租户显式 Docx/Wiki 白名单；Docx 要求租户可读链接或销售 `open_id` 直接协作者，Wiki 要求公开空间或销售直接成员，群/部门/应用等间接 ACL 不推导。确定性分类、匹配、排序、去重最多返回 3 条，带真实引用和业务来源键；沟通准备 API 新增 `playbook:read`，页面展示五种检索状态。专项 `30/30`、Agent `567/567`、Postgres `20/20`、类型、Lint、双构建、两次迁移和 `3199` 端口启动冒烟通过 | 当前 1 个 active 租户的 `knowledge.sources` 数量为 0，尚无真实资料读取结果；按用户要求未做真实 UI。需管理员提供批准的 Docx/Wiki 链接、分类、关键词、适用边界并确保销售可读 |
+| `KNO-001..009` 销售资料检索与推荐 | C / P1-PROGRESS | Automated Green / Web implemented / real source not configured / UI pending | 仅解析当前租户显式 Docx/Wiki 白名单；Docx 要求租户可读链接或销售 `open_id` 直接协作者，Wiki 要求公开空间或销售直接成员，互联网公开链接、群、部门、应用等不推导为租户内本人权限。token 与 URL 路径精确匹配。确定性分类、匹配、排序、去重最多返回 3 条，带真实引用和业务来源键；沟通准备 API 新增 `playbook:read`，页面展示五种检索状态及对应安全说明，资料服务为必需依赖。资料专项 `33/33`、Agent `570/570`、Postgres `20/20`、类型、Lint、双构建、两次迁移和 `3199` 端口启动冒烟通过 | 当前 1 个 active 租户的 `knowledge.sources` 数量为 0，尚无真实资料读取结果；按用户要求未做真实 UI。需管理员提供批准的 Docx/Wiki 链接、分类、关键词、适用边界并确保销售可读 |
 | `SIA-001..006` 问答、RAG 和操作 | D | Draft | 待 ACL/RAG/工具测试 | 待问答与操作验收 |
 | `REV-002..006` 团队 Review 和经营分析 | E | Automated Green / Web implemented / UI pending | `GET /api/platform/team-review` 已覆盖主管递归范围、高管租户范围、成员日报聚合、逾期/无跟进关注项、来源降级和无效成员 fail-closed；`/reviews/team` 已展示团队指标、关注成员、管理建议和逐人状态；团队/平台权限/导航 16 项定向回归、全量 Agent `264/264`、Postgres `11/11`、三套 TypeScript、全库 ESLint、Stylelint 和 Agent/Web 构建通过 | 尚未在真实主管/高管登录态核对团队范围、真实内容和视觉呈现；管理动作执行、调度和幂等仍未实现 |
 | `BPA-001..006` 最佳实践与 Playbook | F | Draft | 待样本/版本/审核测试 | 待管理员审核验收 |

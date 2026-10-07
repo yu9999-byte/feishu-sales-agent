@@ -19,8 +19,6 @@ const SAFE_UNAVAILABLE_WARNING = '资料来源暂时不可用';
 const TENANT_READABLE_ENTITIES: Set<string> = new Set<string>([
   'tenant_readable',
   'tenant_editable',
-  'anyone_readable',
-  'anyone_editable',
 ]);
 
 interface WikiNodeSnapshot {

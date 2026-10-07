@@ -10,10 +10,11 @@
 
 1. 无 `knowledge.sources` 配置时不调用飞书适配器，返回 `not_configured`，原材料需求仍为
    `material_pending`。
-2. 白名单 schema 拒绝空 ID、非 HTTPS URL、未知来源类型、空 token、空适用边界、空关键词和
-   空分类；不接受“扫描全部”配置。
+2. 白名单 schema 拒绝空 ID、非 HTTPS URL、未知来源类型、空 token、含路径分隔符 token、
+   token 前缀碰撞、空适用边界、空关键词和空分类；不接受“扫描全部”配置。
 3. Docx 来源依次读取公开权限、直接协作者、文档元数据和纯文本，版本来自 `revision_id`。
-4. Docx 只有 bot/app 协作者、群、部门或未知 ACL 时返回 access denied，且不读取正文。
+4. Docx 只有互联网公开链接、bot/app 协作者、群、部门或未知 ACL 时返回 access denied，且不
+   读取正文；只有租户可读/可编辑或当前销售直接协作者才通过。
 5. Wiki 来源先解析节点和空间，再验证公开空间或当前销售直接成员；只接受映射到 `docx` 的节点。
 6. Wiki 私有空间不含当前销售、节点失效、对象类型不支持或 ACL 查询失败时不泄露元数据。
 7. 文档、Wiki API 非零 code、缺少关键字段或正文为空时返回受控来源失败。
@@ -49,7 +50,8 @@
 
 - 有效 Red 已先于实现运行；缺失的配置契约、飞书网关、检索服务、共享响应字段和页面状态均按
   预期失败，随后以最小只读闭环转 Green。
-- 专项 `30/30`、Agent 全量 `567/567`、Postgres `20/20` 通过；三套 TypeScript、ESLint、统一
+- 完成审计新增 3 项安全测试及动态页面提示断言，先出现 5 个有效 Red 后转 Green；资料专项
+  `33/33`、跨层定向 `45/45`、Agent 全量 `570/570`、Postgres `20/20` 通过；三套 TypeScript、ESLint、统一
   Lint、Stylelint、Agent/Web 构建、两次迁移和完整 Nest 启动冒烟通过。
 - 当前真实环境没有任何 `knowledge.sources`，所以只验证到诚实的 `not_configured` 运行边界；
   真实 Docx/Wiki 读取和 UI 验收等待管理员提供明确批准且销售可读的白名单来源。

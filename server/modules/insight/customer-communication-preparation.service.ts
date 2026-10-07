@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import type {
   CustomerCommunicationMaterial,
@@ -56,9 +56,8 @@ class CustomerCommunicationPreparationService {
   constructor(
     @Inject(CustomerVisitBriefingService)
     private readonly briefings: CustomerCommunicationBriefingReader,
-    @Optional()
     @Inject(SalesMaterialRetrievalService)
-    private readonly materialRetrieval?: CustomerCommunicationMaterialRetriever,
+    private readonly materialRetrieval: CustomerCommunicationMaterialRetriever,
   ) {}
 
   async generate(
@@ -80,7 +79,6 @@ class CustomerCommunicationPreparationService {
     const preparation: CustomerCommunicationPreparationResponse =
       buildCustomerCommunicationPreparation(briefing, now.toISOString());
     if (
-      this.materialRetrieval === undefined ||
       preparation.status === 'empty' ||
       preparation.status === 'unavailable'
     ) {

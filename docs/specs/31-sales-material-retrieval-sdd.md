@@ -98,8 +98,9 @@
 ## 10. 实现证据
 
 - 有效 Red 已覆盖白名单解析、Docx/Wiki 只读适配、销售本人 ACL、确定性检索、Controller 权限、
-  页面状态和零副作用；实现后专项测试为 `30/30`。
-- Agent 全量 `567/567`、Postgres `20/20`、三套 TypeScript、ESLint、统一 Lint、Stylelint、
+  页面状态和零副作用；完成审计新增互联网公开链接拒绝、token/URL 精确匹配和动态安全提示，
+  先出现 5 个有效 Red 后转 Green。资料专项测试为 `33/33`，跨层定向为 `45/45`。
+- Agent 全量 `570/570`、Postgres `20/20`、三套 TypeScript、ESLint、统一 Lint、Stylelint、
   Agent/Web 构建和迁移连续两次幂等通过。
 - 完整 Nest 在隔离端口 `3199` 启动且无依赖注入或路由错误；首页与沟通准备深链接返回 `200`，
   未登录沟通准备 API 返回 `401`。

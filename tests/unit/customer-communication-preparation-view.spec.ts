@@ -10,6 +10,7 @@ import {
   customerCommunicationDraftChannelLabel,
   customerCommunicationEvidenceKindLabel,
   customerCommunicationMaterialSearchStatusLabel,
+  customerCommunicationMaterialSearchNotice,
   customerCommunicationMaterialSourceTypeLabel,
   customerCommunicationMaterialStatusLabel,
   customerCommunicationStatusLabel,
@@ -47,6 +48,21 @@ describe('customer communication preparation view helpers', (): void => {
     expect(customerCommunicationMaterialSourceTypeLabel('wiki')).toBe(
       '飞书知识库',
     );
+    expect(customerCommunicationMaterialSearchNotice('ready')).toContain(
+      '白名单与本人权限核验',
+    );
+    expect(
+      customerCommunicationMaterialSearchNotice('not_configured'),
+    ).toContain('尚未配置');
+    expect(
+      customerCommunicationMaterialSearchNotice('no_trusted_match'),
+    ).toContain('未找到可信材料');
+    expect(customerCommunicationMaterialSearchNotice('partial')).toContain(
+      '部分来源',
+    );
+    expect(
+      customerCommunicationMaterialSearchNotice('unavailable'),
+    ).toContain('暂时无法核验');
     expect(customerCommunicationDraftChannelLabel('feishu')).toBe('飞书消息');
     expect(customerCommunicationDraftChannelLabel('email')).toBe('邮件');
   });
@@ -79,5 +95,22 @@ describe('customer communication preparation view helpers', (): void => {
     expect(planSource).not.toContain('sendEmail');
     expect(planSource).not.toContain('createTask');
     expect(planSource).not.toContain('saveMaterial');
+
+    const evidenceSource: string = readFileSync(join(
+      process.cwd(),
+      'client/src/pages/CustomerCommunicationPreparationPage/' +
+        'CustomerCommunicationEvidence.tsx',
+    ), 'utf8');
+    const contentSource: string = readFileSync(join(
+      process.cwd(),
+      'server/modules/insight/' +
+        'customer-communication-preparation-content.ts',
+    ), 'utf8');
+
+    expect(evidenceSource).toContain(
+      'customerCommunicationMaterialSearchNotice',
+    );
+    expect(evidenceSource).not.toContain('材料库尚未接入');
+    expect(contentSource).not.toContain('v1 尚未接入经审核案例库');
   });
 });

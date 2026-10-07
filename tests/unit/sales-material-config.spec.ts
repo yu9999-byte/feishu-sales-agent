@@ -84,6 +84,13 @@ describe('sales material whitelist configuration', (): void => {
     ['mismatched token', {
       url: 'https://example.feishu.cn/docx/docx_other',
     }],
+    ['token prefix collision', {
+      url: 'https://example.feishu.cn/docx/docx_a-extra',
+    }],
+    ['token containing a path separator', {
+      token: 'folder/docx_a',
+      url: 'https://example.feishu.cn/docx/folder/docx_a',
+    }],
   ])('rejects %s rather than widening the search', (
     _label: string,
     override: Record<string, unknown>,

@@ -242,7 +242,7 @@ const buildCommunicationMaterials = (
       category: 'case_reference',
       title: '与当前场景相关的客户案例',
       purpose: '在需求得到确认后补充可信案例，不在当前页面虚构案例内容。',
-      reason: `${top.name}需要场景佐证，但 v1 尚未接入经审核案例库。`,
+      reason: `${top.name}需要场景佐证，必须从经审核资料中选择，不得编造案例。`,
       sourceKeys: [opportunityKey],
     }));
     if (top.expectedAmount !== null) {

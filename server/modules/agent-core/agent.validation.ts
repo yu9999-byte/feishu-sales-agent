@@ -358,7 +358,10 @@ const salesMaterialCategorySchema = z.enum([
 const salesMaterialSourceSchema = z.object({
   id: z.string().trim().min(1).max(100),
   sourceType: z.enum(['docx', 'wiki']),
-  token: z.string().trim().min(1).max(500),
+  token: z.string().trim().min(1).max(500).regex(
+    /^[A-Za-z0-9_-]+$/u,
+    'Sales material token must be a single Feishu token',
+  ),
   url: z.string().url().refine(
     (value: string): boolean => new URL(value).protocol === 'https:',
     'Sales material URL must use HTTPS',
@@ -381,7 +384,8 @@ const salesMaterialSourceSchema = z.object({
       message: 'Sales material URL must be a Feishu or Lark link',
     });
   }
-  if (!parsed.pathname.startsWith(expectedPath)) {
+  const normalizedPath: string = parsed.pathname.replace(/\/+$/u, '');
+  if (normalizedPath !== expectedPath) {
     context.addIssue({
       code: 'custom',
       path: ['url'],

@@ -125,6 +125,7 @@ const CustomerCommunicationPreparationPage: React.FC = () => {
           <CustomerCommunicationEvidencePanel
             evidence={report.evidence}
             coverage={report.coverage}
+            materialSearch={report.materialSearch}
             generatedAt={report.generatedAt}
           />
         </>
