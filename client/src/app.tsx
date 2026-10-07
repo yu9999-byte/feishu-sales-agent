@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom';
 
 import Layout from './components/Layout';
 import CustomerPortfolioPage from './pages/CustomerPortfolioPage/CustomerPortfolioPage';
+import CustomerCommunicationPreparationPage from './pages/CustomerCommunicationPreparationPage/CustomerCommunicationPreparationPage';
 import CustomerVisitBriefingPage from './pages/CustomerVisitBriefingPage/CustomerVisitBriefingPage';
 import HomePage from './pages/HomePage/HomePage';
 import NotFound from './pages/NotFound/NotFound';
@@ -26,6 +27,10 @@ const RoutesComponent: React.FC = () => (
       <Route
         path="customers/:customerRecordId/briefing"
         element={<CustomerVisitBriefingPage />}
+      />
+      <Route
+        path="customers/:customerRecordId/communication"
+        element={<CustomerCommunicationPreparationPage />}
       />
       <Route path="opportunities" element={<OpportunityDecisionPage />} />
       <Route path="followups" element={<SectionPage sectionKey="followups" />} />

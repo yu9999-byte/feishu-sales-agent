@@ -14,6 +14,10 @@ import { CustomerVisitBriefingController } from
   './customer-visit-briefing.controller';
 import { CustomerVisitBriefingService } from
   './customer-visit-briefing.service';
+import { CustomerCommunicationPreparationController } from
+  './customer-communication-preparation.controller';
+import { CustomerCommunicationPreparationService } from
+  './customer-communication-preparation.service';
 import { OpportunityDecisionController } from
   './opportunity-decision.controller';
 import { OpportunityDecisionService } from './opportunity-decision.service';
@@ -30,10 +34,12 @@ import { TaskFulfillmentModule } from './task-fulfillment.module';
   controllers: [
     OpportunityDecisionController,
     CustomerVisitBriefingController,
+    CustomerCommunicationPreparationController,
   ],
   providers: [
     OpportunityDecisionService,
     CustomerVisitBriefingService,
+    CustomerCommunicationPreparationService,
     {
       provide: OPPORTUNITY_DECISION_READER,
       useExisting: OpportunityDecisionService,

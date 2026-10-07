@@ -11,6 +11,7 @@ class WebPageController {
     'stale-opportunity-readiness',
     'customers',
     'customers/:customerRecordId/briefing',
+    'customers/:customerRecordId/communication',
     'opportunities',
     'followups',
     'followups/new',

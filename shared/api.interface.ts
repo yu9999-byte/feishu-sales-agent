@@ -674,6 +674,94 @@ export interface CustomerVisitBriefingResponse {
   warnings: string[];
 }
 
+export type CustomerCommunicationPreparationStatus =
+  | 'ready'
+  | 'partial'
+  | 'empty'
+  | 'unavailable';
+
+export type CustomerCommunicationEvidenceKind =
+  | 'customer'
+  | 'opportunity'
+  | 'followup';
+
+export interface CustomerCommunicationEvidence {
+  key: string;
+  kind: CustomerCommunicationEvidenceKind;
+  label: string;
+  value: string;
+  occurredAt: string | null;
+  source: CustomerVisitBriefingSource;
+}
+
+export interface CustomerCommunicationObjective {
+  id: string;
+  title: string;
+  detail: string;
+  sourceKeys: string[];
+}
+
+export interface CustomerCommunicationAngle {
+  id: string;
+  title: string;
+  guidance: string;
+  sourceKeys: string[];
+}
+
+export interface CustomerCommunicationQuestion {
+  code: CustomerVisitBriefingQuestionCode;
+  question: string;
+  reason: string;
+  opportunityRecordId: string | null;
+  sourceKeys: string[];
+}
+
+export type CustomerCommunicationMaterialCategory =
+  | 'customer_context'
+  | 'needs_checklist'
+  | 'solution_overview'
+  | 'case_reference'
+  | 'commercial_boundary'
+  | 'meeting_agenda';
+
+export interface CustomerCommunicationMaterial {
+  id: string;
+  category: CustomerCommunicationMaterialCategory;
+  title: string;
+  purpose: string;
+  reason: string;
+  status: 'material_pending';
+  sourceKeys: string[];
+}
+
+export type CustomerCommunicationDraftChannel = 'feishu' | 'email';
+
+export interface CustomerCommunicationDraft {
+  channel: CustomerCommunicationDraftChannel;
+  title: string;
+  subject: string | null;
+  body: string;
+  editable: true;
+  execution: 'preview_only';
+  sourceKeys: string[];
+}
+
+export interface CustomerCommunicationPreparationResponse {
+  referenceDate: string;
+  timezone: string;
+  status: CustomerCommunicationPreparationStatus;
+  generatedAt: string;
+  customer: CustomerVisitBriefingCustomer | null;
+  objective: CustomerCommunicationObjective | null;
+  angles: CustomerCommunicationAngle[];
+  questions: CustomerCommunicationQuestion[];
+  materials: CustomerCommunicationMaterial[];
+  drafts: CustomerCommunicationDraft[];
+  evidence: CustomerCommunicationEvidence[];
+  coverage: CustomerVisitBriefingCoverage;
+  warnings: string[];
+}
+
 export type TaskFulfillmentStatus =
   | 'ready'
   | 'partial'
