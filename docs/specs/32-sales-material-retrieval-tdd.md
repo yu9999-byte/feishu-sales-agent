@@ -1,7 +1,7 @@
 # 销售资料检索与推荐 Agent v1 TDD
 
 日期：2026-10-07  
-状态：`Green / automated implementation complete / real source not configured / UI pending`
+状态：`Green / real source verified / read-only retrieval verified / UI pending`
 
 关联 SDD：
 [销售资料检索与推荐 Agent v1 SDD](31-sales-material-retrieval-sdd.md)。
@@ -43,15 +43,19 @@
 - 有效 Red：新增契约、适配器、检索服务和页面测试在实现前因符号/行为缺失而失败。
 - Green：记录专项与合并回归测试数量，证明权限拒绝、来源失败、无结果和零副作用路径。
 - 质量门：记录全量用例数、三套 TypeScript、Lint、构建、迁移和启动冒烟结果。
-- 运行边界：若没有真实白名单或飞书读取权限，明确记录“自动化实现完成、真实资料源未配置”，
-  不将 mock 或 UI pending 写成真实生产验收。
+- 运行边界：真实白名单或飞书读取权限缺失时必须明确记录未配置；配置完成后也必须以真实 API
+  回读、ACL 和版本证据为准，不将 mock 或 UI pending 写成真实生产验收。
 
 ## 4. 最终结果
 
 - 有效 Red 已先于实现运行；缺失的配置契约、飞书网关、检索服务、共享响应字段和页面状态均按
   预期失败，随后以最小只读闭环转 Green。
-- 完成审计新增 3 项安全测试及动态页面提示断言，先出现 5 个有效 Red 后转 Green；资料专项
-  `33/33`、跨层定向 `45/45`、Agent 全量 `570/570`、Postgres `20/20` 通过；三套 TypeScript、ESLint、统一
+- 完成审计新增 3 项安全测试及动态页面提示断言，先出现 5 个有效 Red 后转 Green。真实接入后
+  又增加/调整 Gateway 回归，删除会触发飞书 `1063001` 的非法 `fields` 参数，并验证先检查销售
+  直接协作者、未命中再检查租户链接权限的顺序；其他 ACL 类型继续 fail closed。
+- Gateway `13/13`、资料与沟通准备定向 `50/50`、跨层定向 `89/89`、Agent 全量 `570/570`、
+  Postgres `20/20`、发布器 `4/4`、调度客户端 `10/10` 通过；三套 TypeScript、ESLint、统一
   Lint、Stylelint、Agent/Web 构建、两次迁移和完整 Nest 启动冒烟通过。
-- 当前真实环境没有任何 `knowledge.sources`，所以只验证到诚实的 `not_configured` 运行边界；
-  真实 Docx/Wiki 读取和 UI 验收等待管理员提供明确批准且销售可读的白名单来源。
+- 真实环境已配置 3 份明确批准且销售可读的 Docx。应用权限均为 `view`；生产 Gateway 检查和
+  可信结果 `3/3`、无 warning，三份均返回真实正文摘录、`revision:3` 和
+  `accessVerified=true`。真实 UI 按用户要求保持 pending。

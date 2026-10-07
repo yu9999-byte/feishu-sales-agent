@@ -1,7 +1,7 @@
 # 销售资料检索与推荐 Agent v1 SDD
 
 日期：2026-10-07  
-状态：`Implemented / automated Green / real source not configured / UI pending`
+状态：`Implemented / real source verified / read-only retrieval verified / UI pending`
 
 关联路线：`P1-PROGRESS / KNO-001..009`。关联测试：
 [销售资料检索与推荐 Agent v1 TDD](32-sales-material-retrieval-tdd.md)。
@@ -99,11 +99,18 @@
 
 - 有效 Red 已覆盖白名单解析、Docx/Wiki 只读适配、销售本人 ACL、确定性检索、Controller 权限、
   页面状态和零副作用；完成审计新增互联网公开链接拒绝、token/URL 精确匹配和动态安全提示，
-  先出现 5 个有效 Red 后转 Green。资料专项测试为 `33/33`，跨层定向为 `45/45`。
-- Agent 全量 `570/570`、Postgres `20/20`、三套 TypeScript、ESLint、统一 Lint、Stylelint、
-  Agent/Web 构建和迁移连续两次幂等通过。
+  先出现 5 个有效 Red 后转 Green。
+- 当前租户已配置 3 份明确批准的 Docx；应用对三份文档均只有 `view`，唯一 active 销售
+  `open_id` 与三份直接所有者 ACL 精确匹配。真实生产 Gateway 返回 `ready`，配置/检查/可信
+  结果均为 `3/3`、`warnings=[]`，每份结果均带真实标题、链接、摘录、`revision:3` 和
+  `accessVerified=true`。
+- 真实接入发现飞书 SDK 协作者列表请求传入 `fields=member_type,member_id,perm` 会返回
+  `1063001 Invalid parameter`；这些字段本来默认返回，现已删除该参数。Docx ACL 改为先读取
+  协作者列表，命中销售本人即通过，未命中才检查租户链接权限；其他身份和未知权限仍 fail closed。
+- Gateway `13/13`、资料与沟通准备定向 `50/50`、跨层定向 `89/89`、Agent 全量 `570/570`、
+  Postgres `20/20`、发布器 `4/4`、调度客户端 `10/10`、三套 TypeScript、ESLint、统一 Lint、
+  Stylelint、Agent/Web 构建和迁移连续两次幂等通过。
 - 完整 Nest 在隔离端口 `3199` 启动且无依赖注入或路由错误；首页与沟通准备深链接返回 `200`，
   未登录沟通准备 API 返回 `401`。
-- 真实控制库当前只有 1 个 active 租户且 `knowledge.sources` 为 0。实现可以安全返回
-  `not_configured`，但尚无真实资料检索结果；按用户要求也未做真实 UI，因此不能标记
-  `UI Verified` 或真实资料已上线。
+- 真实控制库为 1 个 active 租户、3 个资料来源，真实只读检索已验收。按用户要求未做真实 UI，
+  因此不能标记 `UI Verified`；发送、编辑资料和业务写回也不属于 v1。

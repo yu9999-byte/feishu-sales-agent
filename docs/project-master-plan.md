@@ -95,7 +95,7 @@ Playbook 优化。当前销售
 | 主管团队客户与商机决策 Agent v1 | `Automated Green / Web implemented / UI pending` | manager 按本人+递归下属、executive/admin 按租户 active 成员聚合个人商机决策，输出跨销售优先级、负责人、风险、建议管理动作和成员组合；双权限 API 与 `/reviews/opportunities` 已接入。未知金额不补 0，成员失败安全降级，只读不派发、不提醒、不写业务数据；真实主管/高管 UI 待验收 |
 | 客户洞察与拜访准备 Agent v1 | `Automated Green / Web implemented / UI pending` | 销售从客户组合进入单客户只读攻略，查看客户概况、显式关联商机、最近跟进、风险、待确认问题和议程；三权限 API 只读本人 open_id 范围，同名与冲突链接不串联。定向 `17/17`、Agent `516/516`、Postgres `20/20` 及完整质量门通过；真实销售 UI 待验收，不联系客户、不建任务、不修改业务记录 |
 | 客户沟通内容准备 Agent v1 | `Automated Green / Web implemented / UI pending` | 销售从拜访攻略继续获得事实驱动的沟通目标、角度、问题、材料待补充清单和飞书/邮件预览草稿；每项建议可回到本人客户、商机或跟进来源。专项 `17/17`、Agent `533/533`、Postgres `20/20` 及完整质量门通过；不发送、不保存、不建任务、不写业务数据 |
-| 销售资料检索与推荐 Agent v1 | `Automated Green / Web implemented / real source not configured / UI pending` | 沟通准备现在只检索管理员在 `base_mapping.knowledge.sources` 中明确配置的单篇 Docx 或单个 Wiki 文档节点，并同时验证租户白名单和当前销售本人 ACL；结果包含真实标题、类型、链接、匹配理由、原文摘录、段落位置、版本和适用边界。无配置显示“资料库尚未配置”，无可信结果显示“未找到可信材料”。资料专项 `33/33`、Agent `570/570`、Postgres `20/20`、类型、Lint、双构建、迁移幂等和启动冒烟通过；完成审计另修正互联网公开链接不等同租户权限、token 前缀碰撞和页面旧提示。真实环境为 1 个 active 租户、0 个资料来源，因此尚无真实检索或 UI 验收证据 |
+| 销售资料检索与推荐 Agent v1 | `Real source verified / read-only retrieval verified / Web implemented / UI pending` | 当前租户已明确配置 3 份 Docx：产品能力说明、客户沟通与拜访准备指南、数据安全与权限边界说明。应用均只有 `view`，当前销售直接 ACL 精确匹配；生产 Gateway 为 `ready`、检查/可信结果 `3/3`、无 warning，返回真实标题、链接、摘录和 `revision:3`。实现继续同时验证租户白名单和销售本人 ACL，无可信结果不返回资料。真实接入修复飞书 SDK 非法 `fields` 参数和 ACL 检查顺序；Gateway `13/13`、资料定向 `50/50`、跨层 `89/89`、Agent `570/570`、Postgres `20/20` 及完整质量门通过。按用户要求 UI 仍 pending；只推荐，不发送、不编辑、不写业务数据 |
 | 单次跟进推进判断 | `Automated Green / UI pending` | 已基于本次沟通与业务上下文生成版本化的变化、缺口、风险和行动建议；既有商机状态已具备聊天确认执行入口，主动停滞扫描仍属于 S4 |
 | 管理 Review | `Automated Green / Web implemented / UI pending` | `/api/platform/team-review` 已按主管/高管权限聚合个人日报、团队风险和管理建议；`/reviews/team` 已展示指标、关注成员、管理建议和逐人状态；真实主管 UI、管理动作执行和调度仍未验收 |
 | Playbook 优化 | `Draft` | 依赖足够赢单/丢单与阶段数据，尚未开始 |
@@ -402,10 +402,10 @@ Playbook 的共同基础，优先级高于语音、报告、RAG 和管理看板�
 - [x] 完成 `KNO-001..009` 销售资料检索与推荐：仅检索管理员明确配置的单篇 Docx/Wiki 节点，
   同时校验租户白名单和当前销售本人 ACL，返回真实标题、链接、命中原因、摘录、位置、版本和
   适用边界；无配置、无可信命中、部分失败和全部不可用均诚实降级。
-- [ ] 由管理员提供至少一个明确批准的真实 Docx/Wiki 链接及适用边界、关键词和材料分类，并
-  确认目标销售具有直接或租户级读取权限；完成只读真实检索和页面验收前保持
-  `real source not configured / UI pending`。任何发送、保存、建任务或业务写回继续走独立人工
-  确认执行规格。
+- [x] 已配置 3 份明确批准的真实 Docx，应用只授予 `view`，并确认目标销售直接 ACL；生产
+  Gateway 只读检索 `3/3`、无 warning，真实摘录和 `revision:3` 已回读。
+- [ ] 按用户要求页面验收保持 `UI pending`。任何发送、保存、建任务或业务写回继续走独立
+  人工确认执行规格。
 - [ ] 在真实销售登录态验收拜访准备的本人范围、真实内容、来源链接和响应式页面；任何联系
   客户、建任务或会后写回必须另立预览、确认、幂等、回读和审计规格。
 - [ ] 在真实主管/高管登录态验收团队范围、真实内容、链接和视觉状态；再按业务需求增补完整

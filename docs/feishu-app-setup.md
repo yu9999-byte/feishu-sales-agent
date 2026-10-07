@@ -111,6 +111,27 @@ POST /webhooks/feishu/cards
 `base:record:read` 的控制台名称“检索特定记录”并不覆盖 `search` / `list` 接口。真实
 OpenAPI 返回 `99991672` 后，按其最小缺权提示补充了 `base:record:retrieve`。
 
+2026-10-07 销售资料只读权限与白名单实测：
+
+| 项目 | 状态 |
+| --- | --- |
+| `docx:document:readonly` | 已开通，仅用于读取白名单 Docx 正文和元数据 |
+| `docs:permission.setting:read` | 已开通，仅用于核验文档链接权限 |
+| `docs:permission.member:retrieve` | 已开通，仅用于读取协作者并核验销售本人 ACL |
+| 产品能力说明 | 已加入白名单；应用 `view`；真实读取 `revision:3` |
+| 客户沟通与拜访准备指南 | 已加入白名单；应用 `view`；真实读取 `revision:3` |
+| 数据安全与权限边界说明 | 已加入白名单；应用 `view`；真实读取 `revision:3` |
+
+三份文档链接分别为：
+
+- `https://ldkj.feishu.cn/docx/PszbdzajSoVtFrxzefdcPj25nmc`
+- `https://ldkj.feishu.cn/docx/FxHIdIRiroE8ehxo9bbcxfldnQc`
+- `https://ldkj.feishu.cn/docx/VIKXdGjvRo9b31xqVkVcT5QMnnh`
+
+唯一 active 销售李胜彬的 `open_id` 与三份文档直接所有者 ACL 精确匹配；机器人身份读取正文
+成功，生产 Gateway 配置/检查/可信结果为 `3/3` 且无 warning。协作者列表 API 不接受自定义
+`fields=member_type,member_id,perm`，SDK 请求必须只传文档类型；返回字段由接口默认提供。
+
 ## 6. 消息处理约束
 
 P0 只接受：

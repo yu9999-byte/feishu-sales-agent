@@ -182,6 +182,25 @@ class FeishuSalesMaterialGateway implements SalesMaterialGateway {
     actorOpenId: string,
     token: string,
   ): Promise<boolean> {
+    const members = await client.drive.permissionMember.list({
+      params: { type: 'docx' },
+      path: { token },
+    }, options);
+    assertFeishuSuccess(
+      members.code,
+      members.msg,
+      'read sales material collaborators',
+    );
+    const directlyReadable: boolean = (members.data?.items ?? []).some(
+      (member): boolean =>
+        member.member_type === 'openid' &&
+        member.member_id === actorOpenId &&
+        ['view', 'edit', 'full_access'].includes(member.perm),
+    );
+    if (directlyReadable) {
+      return true;
+    }
+
     const publicPermission = await client.drive.permissionPublic.get({
       params: { type: 'docx' },
       path: { token },
@@ -196,22 +215,7 @@ class FeishuSalesMaterialGateway implements SalesMaterialGateway {
     if (linkScope && TENANT_READABLE_ENTITIES.has(linkScope)) {
       return true;
     }
-
-    const members = await client.drive.permissionMember.list({
-      params: { type: 'docx', fields: 'member_type,member_id,perm' },
-      path: { token },
-    }, options);
-    assertFeishuSuccess(
-      members.code,
-      members.msg,
-      'read sales material collaborators',
-    );
-    return (members.data?.items ?? []).some(
-      (member): boolean =>
-        member.member_type === 'openid' &&
-        member.member_id === actorOpenId &&
-        ['view', 'edit', 'full_access'].includes(member.perm),
-    );
+    return false;
   }
 
   private async canReadWiki(

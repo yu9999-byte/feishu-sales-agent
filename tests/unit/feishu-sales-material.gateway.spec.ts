@@ -211,15 +211,20 @@ describe('FeishuSalesMaterialGateway', (): void => {
     });
     expect(harness.client.drive.permissionMember.list).toHaveBeenCalledWith(
       expect.objectContaining({
-        params: expect.objectContaining({ type: 'docx' }),
+        params: { type: 'docx' },
         path: { token: docxSource.token },
       }),
       undefined,
     );
+    expect(harness.client.drive.permissionPublic.get).not.toHaveBeenCalled();
   });
 
   it('accepts tenant-readable docx without requiring direct membership', async (): Promise<void> => {
     const harness: ClientHarness = setup();
+    harness.client.drive.permissionMember.list.mockResolvedValueOnce({
+      code: 0,
+      data: { items: [] },
+    });
     harness.client.drive.permissionPublic.get.mockResolvedValueOnce({
       code: 0,
       data: {
@@ -234,7 +239,7 @@ describe('FeishuSalesMaterialGateway', (): void => {
     );
 
     expect(result.status).toBe('ready');
-    expect(harness.client.drive.permissionMember.list).not.toHaveBeenCalled();
+    expect(harness.client.drive.permissionMember.list).toHaveBeenCalledOnce();
   });
 
   it('does not treat an internet-readable link as tenant-scoped access', async (): Promise<void> => {
@@ -410,6 +415,10 @@ describe('FeishuSalesMaterialGateway', (): void => {
 
   it('turns upstream failures into a source-safe unavailable result', async (): Promise<void> => {
     const harness: ClientHarness = setup();
+    harness.client.drive.permissionMember.list.mockResolvedValueOnce({
+      code: 0,
+      data: { items: [] },
+    });
     harness.client.drive.permissionPublic.get.mockResolvedValueOnce({
       code: 99991663,
       msg: 'forbidden document title',
