@@ -13,10 +13,7 @@ import type {
 } from '@shared/api.interface';
 import type { TenantIntegration } from '@server/modules/agent-core/agent.types';
 import { PlatformSessionService } from '@server/modules/platform-shell/platform-session.service';
-import {
-  buildFollowupTaskCandidates,
-  hasVerifiedTaskContext,
-} from './followup-task-preview';
+import { buildFollowupTaskCandidates } from './followup-task-preview';
 import { FollowupQualityService } from './followup-quality.service';
 import { FollowupProgressService } from './followup-progress.service';
 import type {
@@ -257,21 +254,28 @@ class FollowupChatDraftService {
     payload.operationKind = current.operationKind;
     payload.revisionOfActionId = current.revisionOfActionId;
     payload.executionTarget = current.executionTarget;
-    payload.selectedTaskCandidateIds = this.readTaskSelection(
-      formValue,
-      payload.taskCandidates ?? [],
-    );
     return { payload, contentChanged };
   }
 
   isConfirmable(payload: PendingActionPayload): boolean {
     const draft: FollowupDraft = payload.draft;
+    const readyTaskIds: string[] = (payload.taskCandidates ?? [])
+      .filter((candidate: FollowupTaskCandidate): boolean =>
+        candidate.status === 'ready',
+      )
+      .map((candidate: FollowupTaskCandidate): string => candidate.id);
+    const selectedTaskIds: string[] =
+      payload.selectedTaskCandidateIds ?? [];
     return Boolean(
-      payload.quality?.confirmable &&
       draft.customerName &&
       draft.nextAction &&
       draft.dueAt &&
-      !Number.isNaN(Date.parse(draft.dueAt)),
+      !Number.isNaN(Date.parse(draft.dueAt)) &&
+      readyTaskIds.length > 0 &&
+      selectedTaskIds.length === readyTaskIds.length &&
+      readyTaskIds.every((id: string): boolean =>
+        selectedTaskIds.includes(id),
+      ),
     );
   }
 
@@ -294,16 +298,13 @@ class FollowupChatDraftService {
       input.now,
     );
     const taskCandidates: FollowupTaskCandidate[] =
-      progressAssessment.recommendation === null ||
-      !hasVerifiedTaskContext(input.draft, input.salesContext)
-        ? []
-        : buildFollowupTaskCandidates({
-          draftId: input.actionId,
-          version: input.draftVersion,
-          ownerMemberId: input.ownerMemberId,
-          draft: input.draft,
-          now: input.now,
-        });
+      buildFollowupTaskCandidates({
+        draftId: input.actionId,
+        version: input.draftVersion,
+        ownerMemberId: input.ownerMemberId,
+        draft: input.draft,
+        now: input.now,
+      });
     const payload: PendingActionPayload = {
       version: 1,
       interactionStage: 'draft',
@@ -381,7 +382,7 @@ class FollowupChatDraftService {
     const nextAction: string = draft.nextAction ?? '待补充';
     const dueAt: string = draft.dueAt ?? '待补充';
     return `${customer}：${draft.summary}\n本次进展：${progress}` +
-      `\n下一步：${nextAction}；截止时间：${dueAt}`;
+      `\n待办：${nextAction}；截止时间：${dueAt}`;
   }
 
   private readText(
@@ -451,22 +452,6 @@ class FollowupChatDraftService {
       .filter((participant: string): boolean => participant.length > 0);
   }
 
-  private readTaskSelection(
-    values: JsonObject,
-    candidates: FollowupTaskCandidate[],
-  ): string[] {
-    return candidates
-      .filter((candidate: FollowupTaskCandidate, index: number): boolean =>
-        candidate.status === 'ready' &&
-        this.readBoolean(values[`task_${index}`]),
-      )
-      .map((candidate: FollowupTaskCandidate): string => candidate.id);
-  }
-
-  private readBoolean(value: JsonValue | undefined): boolean {
-    return value === true || value === 'true' || value === 'on' ||
-      value === '1';
-  }
 }
 
 export { FollowupChatDraftService };

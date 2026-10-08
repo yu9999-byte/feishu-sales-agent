@@ -1,13 +1,9 @@
 import type {
   AgentExecutionResult,
   FollowupDraft,
-  FollowupQualitySnapshot,
   FollowupTaskCandidate,
-  FollowupTaskMissingField,
-  FollowupProgressSnapshot,
   JsonObject,
   JsonValue,
-  SalesContext,
 } from '@shared/api.interface';
 import type { FollowupProjectRiskInsight } from '@server/modules/insight/followup-project-risk.service';
 import type { PendingAction } from './agent.types';
@@ -17,20 +13,6 @@ const escapeMarkdown = (value: string): string =>
     const code: number = character.codePointAt(0) ?? 0;
     return `&#${code};`;
   });
-
-const formatList = (items: string[]): string =>
-  items.length > 0
-    ? items.map((item: string): string => escapeMarkdown(item)).join('；')
-    : '未识别';
-
-const formatAmount = (amount: number | null): string =>
-  amount === null
-    ? '未提供'
-    : new Intl.NumberFormat('zh-CN', {
-        style: 'currency',
-        currency: 'CNY',
-        maximumFractionDigits: 0,
-      }).format(amount);
 
 const createSourceLink = (url: string | null, label: string): string => {
   if (url === null) return '';
@@ -97,180 +79,6 @@ const createBaseCard = (
   },
 });
 
-const createDraftFields = (draft: FollowupDraft): JsonObject => ({
-  tag: 'div',
-  fields: [
-    {
-      is_short: true,
-      text: {
-        tag: 'lark_md',
-        content: `**客户**\n${escapeMarkdown(draft.customerName ?? '未识别')}`,
-      },
-    },
-    {
-      is_short: true,
-      text: {
-        tag: 'lark_md',
-        content: `**联系人**\n${escapeMarkdown(draft.contactName ?? '未提供')}`,
-      },
-    },
-    {
-      is_short: true,
-      text: {
-        tag: 'lark_md',
-        content: `**预计金额**\n${escapeMarkdown(formatAmount(draft.expectedAmount))}`,
-      },
-    },
-    {
-      is_short: true,
-      text: {
-        tag: 'lark_md',
-        content: `**截止时间**\n${escapeMarkdown(draft.dueAt ?? '未提供')}`,
-      },
-    },
-  ],
-});
-
-const createSalesContextBlock = (context: SalesContext): JsonObject => {
-  const lines: string[] = ['**本人可见的业务上下文**'];
-  if (context.customer) {
-    lines.push(
-      `客户：${escapeMarkdown(context.customer.name)}（来源记录 ` +
-      `${escapeMarkdown(context.customer.source.recordId)}）` +
-      createSourceLink(context.customer.source.recordUrl, '查看客户'),
-    );
-    if (context.customer.latestSummary) {
-      lines.push(`最近摘要：${escapeMarkdown(context.customer.latestSummary)}`);
-    }
-  }
-  if (context.customerCandidates.length > 0) {
-    lines.push('客户匹配不唯一，请核对：');
-    for (const candidate of context.customerCandidates) {
-      lines.push(
-        `- ${escapeMarkdown(candidate.name)}（记录 ` +
-        `${escapeMarkdown(candidate.source.recordId)}）`,
-      );
-    }
-  }
-  for (const opportunity of context.opportunities.slice(0, 3)) {
-    lines.push(
-      `商机：${escapeMarkdown(opportunity.name)}；进展：` +
-      `${escapeMarkdown(opportunity.progress ?? '未提供')}；来源记录 ` +
-      `${escapeMarkdown(opportunity.source.recordId)}` +
-      createSourceLink(opportunity.source.recordUrl, '查看商机'),
-    );
-  }
-  for (const followup of context.recentFollowups.slice(0, 3)) {
-    lines.push(
-      `近期跟进：${escapeMarkdown(followup.summary)}（记录 ` +
-      `${escapeMarkdown(followup.source.recordId)}）` +
-      createSourceLink(followup.source.recordUrl, '查看跟进'),
-    );
-  }
-  for (const conflict of context.conflicts.slice(0, 3)) {
-    const fieldName: string = conflict.field === 'nextAction'
-      ? '下一步'
-      : '截止时间';
-    const newerSource: string = {
-      opportunity: '商机记录较新',
-      followup: '跟进记录较新',
-      same: '两条记录时间相同',
-      unknown: '无法比较记录时间',
-    }[conflict.newerSource];
-    lines.push(
-      `上下文冲突（${fieldName}）：商机记录“` +
-      `${escapeMarkdown(conflict.opportunityValue)}”与跟进记录“` +
-      `${escapeMarkdown(conflict.followupValue)}”；${newerSource}。` +
-      createSourceLink(conflict.opportunitySource.recordUrl, '查看商机') +
-      createSourceLink(conflict.followupSource.recordUrl, '查看跟进'),
-    );
-  }
-  for (const task of context.tasks.slice(0, 3)) {
-    lines.push(
-      `本人待办：${escapeMarkdown(task.title)}；状态：` +
-      `${escapeMarkdown(task.status)}；任务 ${escapeMarkdown(task.guid)}` +
-      createSourceLink(task.url, '查看待办'),
-    );
-  }
-  if (context.warnings.length > 0 || context.status !== 'ready') {
-    if (context.warnings.includes('sales_context_source_conflict')) {
-      lines.push('来源信息不一致，已保留双方事实；请核对后再确认。');
-    }
-    lines.push(
-      context.warnings.includes('business_context_permission_denied')
-        ? '无权读取部分业务资料，本次草稿未将缺失信息当作事实。'
-        : '上下文不完整，本次草稿未将缺失信息当作事实。',
-    );
-  }
-  return { tag: 'markdown', content: lines.join('\n') };
-};
-
-const createProgressAssessmentBlock = (
-  assessment: FollowupProgressSnapshot,
-): JsonObject => {
-  const stateLabels: Record<FollowupProgressSnapshot['state'], string> = {
-    advanced: '有新的进展',
-    steady: '暂未发现明显变化',
-    needs_attention: '还有信息需要补齐',
-    at_risk: '存在需要优先处理的风险',
-    insufficient: '暂时无法完整判断',
-  };
-  const kindLabels: Record<string, string> = {
-    change: '进展变化',
-    gap: '还需确认',
-    risk: '风险提示',
-  };
-  const lines: string[] = [
-    `**当前判断：${stateLabels[assessment.state]}**`,
-    escapeMarkdown(assessment.headline),
-    '**事实依据**',
-  ];
-  for (const fact of assessment.facts.slice(0, 5)) {
-    const sourceLink: string = fact.source === null
-      ? ''
-      : createSourceLink(fact.source.recordUrl, '查看来源');
-    lines.push(
-      `- ${escapeMarkdown(fact.label)}：${escapeMarkdown(fact.content)}` +
-      sourceLink,
-    );
-  }
-  if (assessment.facts.length === 0) {
-    lines.push('- 暂无可定位的业务事实');
-  }
-  lines.push('**Agent 判断**');
-  for (const kind of ['change', 'gap', 'risk']) {
-    const items = assessment.findings.filter((finding) => finding.kind === kind);
-    if (items.length === 0) continue;
-    lines.push(`**${kindLabels[kind]}**`);
-    for (const item of items.slice(0, 4)) {
-      const evidence: string = item.evidenceIds
-        .map((id) => assessment.facts.find((fact) => fact.id === id)?.content)
-        .filter((content): content is string => Boolean(content))
-        .slice(0, 2)
-        .join('；');
-      lines.push(`- ${escapeMarkdown(item.title)}：${escapeMarkdown(item.detail)}`);
-      if (evidence) lines.push(`  依据：${escapeMarkdown(evidence)}`);
-    }
-  }
-  if (assessment.recommendation !== null) {
-    const dueAt = assessment.recommendation.dueAt ?? '时间待补充';
-    lines.push(
-      `**建议下一步**\n${escapeMarkdown(assessment.recommendation.action)}；` +
-      `时间：${escapeMarkdown(dueAt)}\n` +
-      `${escapeMarkdown(assessment.recommendation.reason)}\n确认后才会执行。`,
-    );
-  } else {
-    lines.push('**建议下一步**\n当前没有可直接执行的建议，请先补充或确认信息。');
-  }
-  lines.push(
-    '**确认后执行**\n确认后才会保存本次跟进，并仅创建你勾选的本人任务。',
-  );
-  if (assessment.warnings.length > 0) {
-    lines.push(`**资料提示**\n${assessment.warnings.map(escapeMarkdown).join('；')}`);
-  }
-  return { tag: 'markdown', content: lines.join('\n') };
-};
-
 const toPickerDateTime = (value: string | null): string | undefined => {
   if (value === null) return undefined;
   const localMatch: RegExpMatchArray | null = value.match(
@@ -308,177 +116,6 @@ const toPickerDateTime = (value: string | null): string | undefined => {
   return `${year}-${month}-${day} ${hour}:${minute}`;
 };
 
-const missingTaskLabels = (
-  fields: FollowupTaskMissingField[],
-): string => {
-  const labels: Record<FollowupTaskMissingField, string> = {
-    dueAt: '时间',
-    pastDueAt: '执行时间已过期，请修改',
-    channel: '地点/方式',
-    participants: '参与人',
-  };
-  return fields.map((field: FollowupTaskMissingField): string =>
-    labels[field]).join('、');
-};
-
-const createQualityBlock = (
-  quality: FollowupQualitySnapshot | undefined,
-): JsonObject => {
-  const fieldLabels: Record<string, string> = {
-    customerName: '客户名称',
-    contactName: '联系人',
-    communicationMethod: '沟通方式',
-    communicationAt: '沟通时间',
-    topic: '沟通主题',
-    nextAction: '下一步动作',
-    dueAt: '下一步时间',
-    nextActionOwner: '下一步负责人',
-    nextActionParticipants: '下一步参与人',
-  };
-  const blockingFields: Set<string> = new Set([
-    'customerName',
-    'nextAction',
-    'dueAt',
-  ]);
-  const missingItems: string[] = quality?.missingItems ?? [];
-  const blockers: string[] = missingItems
-    .filter((field: string): boolean => blockingFields.has(field))
-    .map((field: string): string => fieldLabels[field] ?? field);
-  if ((quality?.invalidEvidence.length ?? 0) > 0) {
-    blockers.push('存在无法在沟通原文中定位的事实');
-  }
-  const ready: boolean = quality?.confirmable !== false &&
-    blockers.length === 0;
-  const blockingText: string = ready
-    ? '关键事实已具备，可以确认保存'
-    : `请先确认：${blockers.map(escapeMarkdown).join('、')}`;
-  const missingSuggestions: string[] = missingItems
-    .filter((field: string): boolean => !blockingFields.has(field))
-    .flatMap((field: string): string[] => {
-      const label: string | undefined = fieldLabels[field];
-      return label ? [`补充${label}`] : [];
-    });
-  const localizedSuggestions: string[] = (quality?.suggestions ?? []).map(
-    (suggestion: string): string => {
-      let localized: string = suggestion;
-      let referencedInternalField: boolean = false;
-      Object.entries(fieldLabels).forEach(
-        ([field, label]: [string, string]): void => {
-          if (!localized.includes(field)) return;
-          referencedInternalField = true;
-          localized = localized.split(field).join(label);
-        },
-      );
-      if (
-        !referencedInternalField &&
-        /^请补充\s+[A-Za-z][A-Za-z0-9]*$/u.test(localized)
-      ) {
-        return '';
-      }
-      return referencedInternalField
-        ? localized.replace(/^请补充\s*/u, '补充')
-        : localized;
-    },
-  ).filter((suggestion: string): boolean => suggestion.length > 0);
-  const suggestions: string[] = Array.from(new Set([
-    ...missingSuggestions,
-    ...localizedSuggestions,
-  ]));
-  const suggestionText: string = suggestions.length > 0
-    ? suggestions.slice(0, 3).map(escapeMarkdown).join('；')
-    : '没有额外建议；未知信息可在后续沟通中补充';
-  return {
-    tag: 'column_set',
-    flex_mode: 'none',
-    horizontal_spacing: '12px',
-    columns: [
-      {
-        tag: 'column',
-        width: 'weighted',
-        weight: 1,
-        background_style: 'blue-50',
-        padding: '12px',
-        elements: [{
-          tag: 'markdown',
-          text_size: 'normal',
-          content: `**保存前检查**\n**${ready ? '可以保存' : '需要确认'}**\n` +
-            `<font color='grey'>${blockingText}</font>`,
-        }],
-      },
-      {
-        tag: 'column',
-        width: 'weighted',
-        weight: 2,
-        background_style: 'grey-50',
-        padding: '12px',
-        elements: [{
-          tag: 'markdown',
-          content: `**建议补充**\n${suggestionText}`,
-        }],
-      },
-    ],
-  };
-};
-
-const createTaskFormElements = (action: PendingAction): JsonValue[] => {
-  const candidates: FollowupTaskCandidate[] =
-    action.payload.taskCandidates ?? [];
-  if (candidates.length === 0) {
-    const hasNextStep: boolean = Boolean(
-      action.payload.progressAssessment?.recommendation,
-    );
-    return [{
-      tag: 'markdown',
-      content: hasNextStep
-        ? '**待办预览**\n下一步建议已保留；本次无法核对客户、商机或本人任务，不创建待办。'
-        : '**待办预览**\n本次未识别到可创建的下一步待办。',
-    }];
-  }
-  const selected: Set<string> = new Set(
-    action.payload.selectedTaskCandidateIds ?? candidates
-      .filter((candidate: FollowupTaskCandidate): boolean =>
-        candidate.status === 'ready',
-      )
-      .map((candidate: FollowupTaskCandidate): string => candidate.id),
-  );
-  const elements: JsonValue[] = [{
-    tag: 'markdown',
-    content: '**待办预览**\n只会创建你勾选的本人待办。',
-  }];
-  candidates.forEach((candidate: FollowupTaskCandidate, index: number): void => {
-    const ready: boolean = candidate.status === 'ready';
-    const hasPastDueAt: boolean = candidate.missingFields.includes(
-      'pastDueAt',
-    );
-    const detail: string = ready
-      ? `${candidate.dueAt ?? ''} · ` +
-        `${candidate.channel ?? '执行方式未提供'} · ` +
-        (candidate.participants.length > 0
-          ? candidate.participants.join('、')
-          : '参与人未提供')
-      : hasPastDueAt
-        ? missingTaskLabels(candidate.missingFields)
-        : `待补充：${missingTaskLabels(candidate.missingFields)}`;
-    elements.push({
-      tag: 'checker',
-      name: `task_${index}`,
-      checked: ready && selected.has(candidate.id),
-      disabled: !ready,
-      disabled_tips: !ready ? {
-        tag: 'plain_text',
-        content: detail,
-      } : undefined,
-      text: {
-        tag: 'lark_md',
-        content: `**${escapeMarkdown(candidate.title)}**\n` +
-          `<font color='grey'>${escapeMarkdown(detail)}</font>`,
-      },
-      padding: '8px 0px',
-    });
-  });
-  return elements;
-};
-
 const createFollowupInputCard = (action: PendingAction): JsonObject => {
   const form = action.payload.inputForm ?? {};
   const communicationAt: string | undefined = form.communicationAt
@@ -497,7 +134,7 @@ const createFollowupInputCard = (action: PendingAction): JsonObject => {
     : [];
   return createBaseCard(
     '录入销售跟进',
-    '填写沟通内容后，AI 会先生成草案并检查可用性；此步不会写入业务系统',
+    '填写沟通内容后，AI 会先生成可编辑草案；此步不会写入业务系统',
     'blue',
     '待填写',
     [
@@ -574,14 +211,14 @@ const createFollowupInputCard = (action: PendingAction): JsonObject => {
         {
           tag: 'input',
           name: 'nextAction',
-          label: { tag: 'plain_text', content: '下一步计划' },
+          label: { tag: 'plain_text', content: '待办内容' },
           default_value: form.nextAction ?? '',
           max_length: 500,
           width: 'fill',
         },
         {
           tag: 'markdown',
-          content: '**下一步时间**',
+          content: '**待办截止时间**',
           text_size: 'notation',
         },
         {
@@ -597,7 +234,7 @@ const createFollowupInputCard = (action: PendingAction): JsonObject => {
         {
           tag: 'input',
           name: 'nextActionChannel',
-          label: { tag: 'plain_text', content: '下一步地点 / 方式' },
+          label: { tag: 'plain_text', content: '待办执行方式' },
           default_value: form.nextActionChannel ?? '',
           max_length: 200,
           width: 'fill',
@@ -605,7 +242,7 @@ const createFollowupInputCard = (action: PendingAction): JsonObject => {
         {
           tag: 'input',
           name: 'nextActionParticipants',
-          label: { tag: 'plain_text', content: '下一步参与人' },
+          label: { tag: 'plain_text', content: '待办参与人' },
           default_value: (form.nextActionParticipants ?? []).join('、'),
           max_length: 500,
           width: 'fill',
@@ -615,7 +252,7 @@ const createFollowupInputCard = (action: PendingAction): JsonObject => {
           name: 'submit_followup_input',
           text: {
             tag: 'plain_text',
-            content: '生成草案并检查',
+            content: '生成跟进草案',
           },
           type: 'primary_filled',
           width: 'fill',
@@ -630,7 +267,7 @@ const createFollowupInputCard = (action: PendingAction): JsonObject => {
 const createDraftGenerationProcessingCard = (): JsonObject =>
   createBaseCard(
     '正在生成跟进草案',
-    'AI 正在整理沟通内容并执行保存前检查',
+    'AI 正在整理沟通内容',
     'blue',
     '生成中',
     [{
@@ -713,26 +350,38 @@ const createConfirmationCard = (action: PendingAction): JsonObject => {
   }
   const draft: FollowupDraft = action.payload.draft;
   const draftVersion: number = action.payload.draftVersion ?? 1;
-  const hasReadyTask: boolean = (action.payload.taskCandidates ?? []).some(
+  const taskCandidate: FollowupTaskCandidate | undefined =
+    (action.payload.taskCandidates ?? [])[0];
+  const readyTask: FollowupTaskCandidate | undefined =
+    (action.payload.taskCandidates ?? []).find(
     (candidate: FollowupTaskCandidate): boolean =>
       candidate.status === 'ready',
   );
   const dueAt: string | undefined = toPickerDateTime(draft.dueAt);
+  const communicationAt: string | undefined = toPickerDateTime(
+    action.payload.inputForm?.communicationAt ??
+      draft.communicationAt ??
+      null,
+  );
+  const taskIssue: string | null = readyTask
+    ? null
+    : draft.nextAction === null || draft.nextAction.trim().length === 0 ||
+      taskCandidate === undefined
+      ? '请补充可执行的待办内容后再提交。'
+      : draft.dueAt === null || Number.isNaN(Date.parse(draft.dueAt))
+        ? '请补充有效的待办截止时间后再提交。'
+        : '待办截止时间已过期，请修改后再提交。';
+  const followupIssue: string | null = draft.customerName === null ||
+    draft.customerName.trim().length === 0
+    ? '请补充客户后再提交。'
+    : null;
 
   return createBaseCard(
     '销售跟进草案',
-    `v${draftVersion} · 检查无误后一次性确认提交`,
+    `v${draftVersion} · 确认后将同时保存跟进并创建待办`,
     'blue',
     '待确认',
     [
-      ...(action.payload.progressAssessment
-        ? [createProgressAssessmentBlock(action.payload.progressAssessment)]
-        : []),
-      ...(action.payload.salesContext
-        ? [createSalesContextBlock(action.payload.salesContext)]
-        : []),
-      createDraftFields(draft),
-      createQualityBlock(action.payload.quality),
       {
         tag: 'form',
         name: 'followup_draft_form',
@@ -741,9 +390,17 @@ const createConfirmationCard = (action: PendingAction): JsonObject => {
         padding: '12px',
         elements: [
           {
+            tag: 'markdown',
+            content: '**一、跟进内容**',
+          },
+          ...(followupIssue === null ? [] : [{
+            tag: 'markdown',
+            content: `<font color='red'>${followupIssue}</font>`,
+          }]),
+          {
             tag: 'input',
             name: 'generatedBody',
-            label: { tag: 'plain_text', content: 'AI 跟进正文' },
+            label: { tag: 'plain_text', content: '跟进内容' },
             input_type: 'multiline_text',
             rows: 4,
             max_length: 1000,
@@ -777,11 +434,18 @@ const createConfirmationCard = (action: PendingAction): JsonObject => {
             width: 'fill',
           },
           {
-            tag: 'input',
+            tag: 'markdown',
+            content: '**沟通时间**',
+            text_size: 'notation',
+          },
+          {
+            tag: 'picker_datetime',
             name: 'communicationAt',
-            label: { tag: 'plain_text', content: '沟通时间' },
-            default_value: action.payload.inputForm?.communicationAt ?? '',
-            max_length: 100,
+            initial_datetime: communicationAt,
+            placeholder: communicationAt ? undefined : {
+              tag: 'plain_text',
+              content: '请选择沟通时间',
+            },
             width: 'fill',
           },
           {
@@ -793,9 +457,20 @@ const createConfirmationCard = (action: PendingAction): JsonObject => {
             width: 'fill',
           },
           {
+            tag: 'hr',
+          },
+          {
+            tag: 'markdown',
+            content: '**二、待办**',
+          },
+          ...(taskIssue === null ? [] : [{
+            tag: 'markdown',
+            content: `<font color='red'>${taskIssue}</font>`,
+          }]),
+          {
             tag: 'input',
             name: 'nextAction',
-            label: { tag: 'plain_text', content: '下一步计划' },
+            label: { tag: 'plain_text', content: '待办内容' },
             required: true,
             default_value: draft.nextAction ?? '',
             max_length: 500,
@@ -803,7 +478,7 @@ const createConfirmationCard = (action: PendingAction): JsonObject => {
           },
           {
             tag: 'markdown',
-            content: '**执行时间**',
+            content: '**待办截止时间**',
             text_size: 'notation',
           },
           {
@@ -820,7 +495,7 @@ const createConfirmationCard = (action: PendingAction): JsonObject => {
           {
             tag: 'input',
             name: 'nextActionChannel',
-            label: { tag: 'plain_text', content: '地点 / 方式' },
+            label: { tag: 'plain_text', content: '待办执行方式' },
             default_value: draft.nextActionChannel ?? '',
             max_length: 200,
             width: 'fill',
@@ -828,39 +503,35 @@ const createConfirmationCard = (action: PendingAction): JsonObject => {
           {
             tag: 'input',
             name: 'nextActionParticipants',
-            label: { tag: 'plain_text', content: '参与人' },
+            label: { tag: 'plain_text', content: '待办参与人' },
             default_value: (draft.nextActionParticipants ?? []).join('、'),
             max_length: 500,
             width: 'fill',
           },
-          ...createTaskFormElements(action),
+          {
+            tag: 'markdown',
+            content: '**待办负责人**\n当前销售本人',
+            text_size: 'notation',
+          },
+          {
+            tag: 'hr',
+          },
+          {
+            tag: 'markdown',
+            content: '**三、提交**\n提交后将一次性保存跟进并创建上述待办。',
+          },
           {
             tag: 'button',
             name: `confirm_followup_v${draftVersion}`,
             text: {
               tag: 'plain_text',
-              content: hasReadyTask
-                ? '确认保存并创建所示待办'
-                : '确认保存（不创建待办）',
+              content: '保存跟进并创建待办',
             },
             type: 'primary_filled',
             width: 'fill',
             form_action_type: 'submit',
           },
         ],
-      },
-      {
-        tag: 'button',
-        text: { tag: 'plain_text', content: '取消本次跟进' },
-        type: 'text',
-        width: 'fill',
-        behaviors: [{
-          type: 'callback',
-          value: {
-            action: 'cancel',
-            pendingActionId: action.id,
-          },
-        }],
       },
     ],
   );
@@ -869,7 +540,7 @@ const createConfirmationCard = (action: PendingAction): JsonObject => {
 const createProcessingCard = (): JsonObject =>
   createBaseCard(
     '正在执行销售动作',
-    '已收到确认，正在保存业务记录并处理所选待办',
+    '已收到确认，正在保存跟进并创建待办',
     'blue',
     '执行中',
     [
@@ -888,7 +559,7 @@ const createProcessingCard = (): JsonObject =>
                 tag: 'markdown',
                 content:
                   '**执行中，请等待**\n将依次写入客户、商机、跟进，' +
-                  '并按你的选择处理飞书待办。',
+                  '并创建飞书待办。',
               },
             ],
           },

@@ -9,6 +9,7 @@ import {
 
 import type {
   AgentExecutionResult,
+  FollowupTaskCandidate,
   PendingActionStatus,
 } from '@shared/api.interface';
 import {
@@ -263,6 +264,7 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
     if (action.payload.actionKind === 'opportunity_status') {
       return this.executeOpportunityStatusUpdate(integration, action, result);
     }
+    this.assertMandatoryFollowupTask(action);
     if (result.customerRecordId && !result.customerRecordUrl) {
       result.customerRecordUrl = this.fallbackRecordUrl(
         integration,
@@ -346,10 +348,7 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
       await this.persistProgress(integration, action, result);
     }
 
-    const shouldCreateTask: boolean =
-      action.payload.selectedTaskCandidateIds === undefined ||
-      action.payload.selectedTaskCandidateIds.length > 0;
-    if (shouldCreateTask && result.taskGuid &&
+    if (result.taskGuid &&
       action.payload.operationKind === 'update' && this.tasks.updateTask) {
       const task: TaskCreationResult = await this.tasks.updateTask(
         integration,
@@ -361,7 +360,7 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
       result.taskUrl = task.url;
       result.taskAction = 'updated';
       await this.persistProgress(integration, action, result);
-    } else if (shouldCreateTask && !result.taskGuid) {
+    } else if (!result.taskGuid) {
       const task: TaskCreationResult = await this.tasks.createTask(
         integration,
         action,
@@ -371,10 +370,8 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
       result.taskUrl = task.url;
       result.taskAction = 'created';
       await this.persistProgress(integration, action, result);
-    } else if (result.taskGuid) {
-      result.taskAction = 'unchanged';
     } else {
-      result.taskAction = 'skipped';
+      result.taskAction = 'unchanged';
     }
     return result;
   }
@@ -635,6 +632,23 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
     }
   }
 
+  private assertMandatoryFollowupTask(action: PendingAction): void {
+    const selectedIds: string[] | undefined =
+      action.payload.selectedTaskCandidateIds;
+    if (selectedIds === undefined) return;
+    const selectedCandidate: FollowupTaskCandidate | undefined =
+      action.payload.taskCandidates?.find(
+        (candidate: FollowupTaskCandidate): boolean =>
+          candidate.id === selectedIds[0],
+      );
+    if (
+      selectedIds.length !== 1 ||
+      selectedCandidate?.status !== 'ready'
+    ) {
+      throw new MandatoryFollowupTaskError();
+    }
+  }
+
   private async withTimeout(
     operation: Promise<AgentExecutionResult>,
   ): Promise<AgentExecutionResult> {
@@ -733,6 +747,15 @@ class ActionExecutionTimeoutError extends Error {
   constructor() {
     super('执行超过时间上限，已停止并可安全重试。');
     this.name = 'ActionExecutionTimeoutError';
+  }
+}
+
+class MandatoryFollowupTaskError extends Error {
+  readonly code: string = 'FOLLOWUP_TASK_REQUIRED';
+
+  constructor() {
+    super('跟进必须同时创建待办，请补充待办内容和截止时间。');
+    this.name = 'MandatoryFollowupTaskError';
   }
 }
 

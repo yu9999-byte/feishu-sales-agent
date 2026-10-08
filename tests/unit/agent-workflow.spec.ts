@@ -789,7 +789,6 @@ const createDraftFormAction = (
     nextActionChannel: pending.payload.draft.nextActionChannel ?? '',
     nextActionParticipants:
       (pending.payload.draft.nextActionParticipants ?? []).join('、'),
-    task_0: true,
     ...edits,
   },
   receivedAt: new Date('2026-09-17T10:01:00+08:00'),
@@ -1705,7 +1704,7 @@ describe('AgentWorkflowService', (): void => {
       });
     expect(JSON.stringify(createConfirmationCard(
       harness.messenger.actions[0],
-    ))).toContain('执行时间已过期，请修改');
+    ))).toContain('待办截止时间已过期，请修改');
     expect(harness.records.followupCalls).toBe(0);
     expect(harness.tasks.calls).toBe(0);
     expect(harness.store.getAudits(harness.integrationA.tenantId)
@@ -1894,7 +1893,7 @@ describe('AgentWorkflowService', (): void => {
     expect(pending.payload.selectedTaskCandidateIds)
       .toEqual([`${pending.id}:v1:task:0`]);
     expect(JSON.stringify(createConfirmationCard(pending)))
-      .toContain('执行方式未提供');
+      .toContain('待办执行方式');
   });
 
   it('analyzes the previous raw message and closes clarification without writes', async (): Promise<void> => {
@@ -2185,7 +2184,7 @@ describe('AgentWorkflowService', (): void => {
     expect(harness.messenger.actions[0].payload.salesContext).toEqual(context);
     expect(JSON.stringify(
       createConfirmationCard(harness.messenger.actions[0]),
-    )).toContain('customer-1');
+    )).not.toContain('customer-1');
   });
 
   it('opens an owned Card 2.0 intake form for 写跟进 without model routing', async (): Promise<void> => {
@@ -2207,7 +2206,7 @@ describe('AgentWorkflowService', (): void => {
     expect(JSON.stringify(createConfirmationCard(intake)))
       .toContain('沟通原文');
     expect(JSON.stringify(createConfirmationCard(intake)))
-      .toContain('生成草案并检查');
+      .toContain('生成跟进草案');
     expect(harness.records.customerCalls).toBe(0);
     expect(harness.tasks.calls).toBe(0);
   });
@@ -2401,8 +2400,8 @@ describe('AgentWorkflowService', (): void => {
       harness.messenger.actions[0],
     ));
     expect(card).toContain('客户');
-    expect(card).toContain('下一步计划');
-    expect(card).toContain('执行时间');
+    expect(card).toContain('待办内容');
+    expect(card).toContain('待办截止时间');
     expect(harness.records.customerCalls).toBe(0);
     expect(harness.tasks.calls).toBe(0);
   });
@@ -2645,7 +2644,7 @@ describe('AgentWorkflowService', (): void => {
         completed.cardMessageId,
       ),
     );
-    expect(JSON.stringify(editCard)).toContain('确认保存');
+    expect(JSON.stringify(editCard)).toContain('保存跟进并创建待办');
     expect(JSON.stringify(editCard)).not.toContain('跟进登记成功');
 
     const revision: PendingAction | null =
@@ -2942,7 +2941,8 @@ describe('AgentWorkflowService', (): void => {
             dispatcher,
             createCardAction('tenant-a', original.id, 'edit', 'evt-e2e-edit'),
           );
-          expect(JSON.stringify(editCard)).toContain('确认保存');
+          expect(JSON.stringify(editCard))
+            .toContain('保存跟进并创建待办');
           const revision: PendingAction | null =
             await harness.store.getPendingActionByCardMessage(
               harness.integrationA.tenantId,

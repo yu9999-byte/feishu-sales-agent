@@ -123,7 +123,23 @@ const execute = async (
     },
     ...(selectedTaskCandidateIds === undefined
       ? {}
-      : { selectedTaskCandidateIds }),
+      : {
+          taskCandidates: [{
+            id: 'draft-1:v1:task:0',
+            draftId: 'draft-1',
+            draftVersion: 1,
+            ownerMemberId: 'member-1',
+            title: '发送实施计划',
+            dueAt: '2026-09-20T18:00:00+08:00',
+            channel: null,
+            participants: [],
+            customerName: '北辰制造',
+            opportunityName: '试点项目',
+            status: 'ready' as const,
+            missingFields: [],
+          }],
+          selectedTaskCandidateIds,
+        }),
   };
   const action: PendingAction = await store.createPendingAction({
     id: `action-${selectedTaskCandidateIds?.length ?? 'legacy'}`,
@@ -150,10 +166,14 @@ const execute = async (
 };
 
 describe('AgentActionExecutorService task selection', (): void => {
-  it('writes all Base records and skips Task when the user selected none', async (): Promise<void> => {
+  it('rejects an empty task selection before any business write', async (): Promise<void> => {
     const result = await execute([]);
-    expect(result.order).toEqual(['customer', 'opportunity', 'followup']);
+    expect(result.order).toEqual([]);
     expect(result.tasks.createTask).not.toHaveBeenCalled();
+    expect(result.result).toMatchObject({
+      status: 'failed',
+      errorCode: 'FOLLOWUP_TASK_REQUIRED',
+    });
   });
 
   it('creates Task only after all Base writes when a candidate was selected', async (): Promise<void> => {
@@ -174,7 +194,7 @@ describe('AgentActionExecutorService task selection', (): void => {
   });
 
   it('persists Base record URLs in the execution result', async (): Promise<void> => {
-    const execution = await execute([]);
+    const execution = await execute(['draft-1:v1:task:0']);
 
     expect(execution.result.customerRecordUrl)
       .toBe('https://base.example/customers/rec-customer');
@@ -369,6 +389,20 @@ const executeWithMessaging = async (
         dueAt: '2026-09-22T14:00:00+08:00',
         evidenceQuotes: [],
       },
+      taskCandidates: [{
+        id: 'candidate-1',
+        draftId: 'action-messaging',
+        draftVersion: 1,
+        ownerMemberId: 'member-1',
+        title: '安排技术交流',
+        dueAt: '2026-09-22T14:00:00+08:00',
+        channel: null,
+        participants: [],
+        customerName: '北辰制造',
+        opportunityName: '试点项目',
+        status: 'ready',
+        missingFields: [],
+      }],
       selectedTaskCandidateIds: ['candidate-1'],
     },
     expiresAt: new Date('2026-09-23T00:00:00+08:00'),

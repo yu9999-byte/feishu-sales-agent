@@ -425,7 +425,7 @@ describe('follow-up validation', (): void => {
     })).toThrow();
   });
 
-  it('shows both sources when business context facts conflict', (): void => {
+  it('keeps internal sales context out of the confirmation card', (): void => {
     const opportunitySource = {
       recordId: 'opportunity-1',
       recordUrl: 'https://feishu.cn/opportunity-1',
@@ -474,11 +474,12 @@ describe('follow-up validation', (): void => {
       }) as JsonObject,
     ).join('\n');
 
-    expect(visibleContent).toContain(
-      '上下文冲突（下一步）：商机记录“提交实施方案”与跟进记录“发送合同”',
-    );
-    expect(visibleContent).toContain('跟进记录较新');
-    expect(visibleContent).toContain('来源信息不一致');
+    expect(visibleContent).toContain('一、跟进内容');
+    expect(visibleContent).toContain('二、待办');
+    expect(visibleContent).toContain('三、提交');
+    expect(visibleContent).not.toContain('上下文冲突');
+    expect(visibleContent).not.toContain('opportunity-1');
+    expect(visibleContent).not.toContain('followup-1');
   });
 
   it('builds a Card 2.0 confirmation with opaque callback values', (): void => {
@@ -534,40 +535,44 @@ describe('follow-up validation', (): void => {
     expect(serialized).toContain('"schema":"2.0"');
     expect(serialized).toContain('"tag":"form"');
     expect(serialized).toContain('"name":"generatedBody"');
-    expect(serialized).toContain('"name":"task_0"');
+    expect(serialized).not.toContain('"name":"task_0"');
+    expect(serialized).not.toContain('"tag":"checker"');
     expect(serialized).not.toContain('"name":"review_followup_v1"');
     expect(serialized).toContain('"name":"confirm_followup_v1"');
     expect(serialized).toContain('"form_action_type":"submit"');
-    expect(serialized).toContain('"action":"cancel"');
-    expect(serialized).toContain(
-      '"pendingActionId":"00000000-0000-4000-8000-000000000001"',
-    );
+    expect(serialized.match(/"tag":"button"/gu)).toHaveLength(1);
+    expect(serialized).not.toContain('"action":"cancel"');
+    expect(serialized).not.toContain('"pendingActionId"');
     expect(serialized).not.toContain('tenantId');
     expect(serialized).not.toContain('rawText');
     expect(serialized).not.toContain('appToken');
-    expect(serialized).toContain('保存前检查');
-    expect(serialized).toContain('建议补充');
-    expect(serialized).not.toContain('保存前质检');
+    expect(serialized).not.toContain('保存前检查');
+    expect(serialized).not.toContain('建议补充');
     expect(serialized).not.toContain('等级 B');
     expect(serialized).not.toContain('>76<');
-    expect(serialized).not.toContain('保存修改并重新质检');
-    expect(serialized).not.toContain('检查修改');
-    expect(visibleContent).not.toContain('communicationMethod');
-    expect(visibleContent).not.toContain('communicationAt');
-    expect(visibleContent.match(/补充沟通方式/gu)).toHaveLength(1);
-    expect(visibleContent.match(/补充沟通时间/gu)).toHaveLength(1);
-    expect(visibleContent).toContain('事实依据');
-    expect(visibleContent).toContain('Agent 判断');
-    expect(visibleContent).toContain('建议下一步');
-    expect(visibleContent).toContain('确认后执行');
-    expect(visibleContent).toContain('查看来源');
+    expect(visibleContent).toContain('一、跟进内容');
+    expect(visibleContent).toContain('二、待办');
+    expect(visibleContent).toContain('三、提交');
+    expect(visibleContent).toContain('待办内容');
+    expect(visibleContent).toContain('待办截止时间');
+    expect(visibleContent).toContain('待办执行方式');
+    expect(visibleContent).toContain('待办参与人');
+    expect(visibleContent).toContain('保存跟进并创建待办');
+    expect(visibleContent).not.toContain('事实依据');
+    expect(visibleContent).not.toContain('Agent 判断');
+    expect(visibleContent).not.toContain('查看来源');
   });
 
-  it('labels a withheld task preview without denying the recognized next step', (): void => {
+  it('keeps the mandatory task fields editable when task data is incomplete', (): void => {
     const action: PendingAction = {
       ...pendingAction,
       payload: {
         ...pendingAction.payload,
+        draft: {
+          ...pendingAction.payload.draft,
+          nextAction: null,
+          dueAt: null,
+        },
         progressAssessment,
         taskCandidates: [],
         selectedTaskCandidateIds: [],
@@ -577,9 +582,9 @@ describe('follow-up validation', (): void => {
       createConfirmationCard(action) as JsonObject,
     ).join('\n');
 
-    expect(visibleContent).toContain('下一步建议已保留');
-    expect(visibleContent).toContain('不创建待办');
-    expect(visibleContent).not.toContain('本次未识别到可创建的下一步待办');
+    expect(visibleContent).toContain('请补充可执行的待办内容后再提交');
+    expect(visibleContent).toContain('保存跟进并创建待办');
+    expect(visibleContent).not.toContain('不创建待办');
   });
 
   it('describes a successful save without claiming an uncreated task', (): void => {

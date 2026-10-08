@@ -141,7 +141,13 @@ describe('FollowupChatDraftService', (): void => {
     );
     expect(payload.quality?.missingItems).not.toContain('communicationAt');
     expect(payload.progressAssessment?.state).toBe('insufficient');
-    expect(payload.taskCandidates).toEqual([]);
+    expect(payload.taskCandidates?.[0]).toMatchObject({
+      status: 'ready',
+      title: '发送实施计划',
+    });
+    expect(payload.selectedTaskCandidateIds).toEqual([
+      '00000000-0000-4000-8000-000000000009:v1:task:0',
+    ]);
   });
 
   it('creates a quality snapshot and version-bound ready task preview', async (): Promise<void> => {
@@ -180,7 +186,7 @@ describe('FollowupChatDraftService', (): void => {
     ]);
   });
 
-  it('keeps a recommendation but offers no task when task reading is denied', async (): Promise<void> => {
+  it('creates the entered task even when task history reading is denied', async (): Promise<void> => {
     const service = createService();
     const payload = await service.createPayload({
       integration,
@@ -199,11 +205,16 @@ describe('FollowupChatDraftService', (): void => {
 
     expect(payload.progressAssessment?.recommendation?.action)
       .toBe('发送实施计划');
-    expect(payload.taskCandidates).toEqual([]);
-    expect(payload.selectedTaskCandidateIds).toEqual([]);
+    expect(payload.taskCandidates?.[0]).toMatchObject({
+      status: 'ready',
+      title: '发送实施计划',
+    });
+    expect(payload.selectedTaskCandidateIds).toEqual([
+      '00000000-0000-4000-8000-000000000001:v1:task:0',
+    ]);
   });
 
-  it('does not offer a task for an unmatched opportunity', async (): Promise<void> => {
+  it('creates the entered task without requiring an opportunity match', async (): Promise<void> => {
     const service = createService();
     const payload = await service.createPayload({
       integration,
@@ -218,8 +229,13 @@ describe('FollowupChatDraftService', (): void => {
 
     expect(payload.progressAssessment?.recommendation?.action)
       .toBe('发送实施计划');
-    expect(payload.taskCandidates).toEqual([]);
-    expect(payload.selectedTaskCandidateIds).toEqual([]);
+    expect(payload.taskCandidates?.[0]).toMatchObject({
+      status: 'ready',
+      opportunityName: '未核实的新项目',
+    });
+    expect(payload.selectedTaskCandidateIds).toEqual([
+      '00000000-0000-4000-8000-000000000001:v1:task:0',
+    ]);
   });
 
   it('turns card edits into a new reviewed version and recomputes tasks', async (): Promise<void> => {
@@ -242,7 +258,6 @@ describe('FollowupChatDraftService', (): void => {
       dueAt: '2026-09-22 14:00 +0800',
       nextActionChannel: '客户现场',
       nextActionParticipants: '张总、售前王工',
-      task_0: true,
     };
 
     const reviewed = service.reviewForm(
@@ -261,9 +276,37 @@ describe('FollowupChatDraftService', (): void => {
       id: '00000000-0000-4000-8000-000000000001:v2:task:0',
       status: 'ready',
     });
+    expect(reviewed.payload.selectedTaskCandidateIds).toEqual([
+      '00000000-0000-4000-8000-000000000001:v2:task:0',
+    ]);
     expect(reviewed.payload.progressAssessment?.recommendation).toMatchObject({
       action: '安排现场技术交流',
       requiresConfirmation: true,
     });
+  });
+
+  it('requires a ready task but does not use quality scoring as a gate', async (): Promise<void> => {
+    const service = createService();
+    const payload = await service.createPayload({
+      integration,
+      actionId: '00000000-0000-4000-8000-000000000001',
+      actorOpenId: 'ou_owner',
+      sourceMessageId: 'om_source',
+      rawText: '北辰制造客户认可方案。',
+      draft,
+      now: new Date('2026-09-20T10:00:00+08:00'),
+    });
+    if (payload.quality === undefined) {
+      throw new Error('Expected quality snapshot');
+    }
+
+    expect(service.isConfirmable({
+      ...payload,
+      quality: { ...payload.quality, confirmable: false },
+    })).toBe(true);
+    expect(service.isConfirmable({
+      ...payload,
+      selectedTaskCandidateIds: [],
+    })).toBe(false);
   });
 });
