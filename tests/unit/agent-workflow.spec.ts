@@ -2069,7 +2069,7 @@ describe('AgentWorkflowService', (): void => {
     }
   });
 
-  it('trusts the LLM followup intent instead of a keyword gate', async (): Promise<void> => {
+  it('prefills an intake form from facts routed by the LLM', async (): Promise<void> => {
     const harness: TestHarness = createHarness();
     harness.conversation.nextDecision = {
       schemaVersion: 'conversation-intent-v1',
@@ -2077,16 +2077,34 @@ describe('AgentWorkflowService', (): void => {
       confidence: 0.99,
       reply: '已经记录。',
     };
+    const source: string =
+      '今天与华南科技张总通过飞书沟通，确认报价方案已提交内部预算审批，' +
+      '预计下周五反馈；缺最终决策人和采购流程。下一步发送权限隔离说明和报价对比材料。';
 
     await harness.workflow.handleMessage({
       ...createMessage(),
-      text: '张总说预算下周批',
+      text: `${source}\n\n把这个内容写到表单里，根据上面内容先填进去。`,
     });
 
-    expect(harness.extractor.calls).toBe(0);
+    expect(harness.extractor.calls).toBe(1);
+    expect(harness.extractor.lastInput?.currentText).toBe(source);
     expect(harness.messenger.actions).toHaveLength(1);
-    expect(harness.messenger.actions[0].payload.interactionStage)
-      .toBe('input');
+    const intake: PendingAction = harness.messenger.actions[0];
+    expect(intake.payload.interactionStage).toBe('input');
+    expect(intake.payload.inputForm).toMatchObject({
+      communicationContent: source,
+      customerName: completeDraft.customerName,
+      contactName: completeDraft.contactName,
+      nextAction: completeDraft.nextAction,
+      dueAt: completeDraft.dueAt,
+      nextActionChannel: completeDraft.nextActionChannel,
+      nextActionParticipants: completeDraft.nextActionParticipants,
+    });
+    const card: string = JSON.stringify(createConfirmationCard(intake));
+    expect(card).toContain(`\"default_value\":\"${source}`);
+    expect(card).toContain(
+      `\"default_value\":\"${completeDraft.customerName}\"`,
+    );
     expect(harness.messenger.texts.at(-1)).not.toContain('不会直接写入');
     expect(harness.records.followupCalls).toBe(0);
     expect(harness.tasks.calls).toBe(0);

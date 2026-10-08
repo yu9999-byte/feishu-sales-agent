@@ -51,12 +51,37 @@ class FollowupChatDraftService {
     private readonly progress?: FollowupProgressService,
   ) {}
 
-  createInputPayload(sourceMessageId: string): PendingActionPayload {
+  createInputPayload(
+    sourceMessageId: string,
+    sourceText?: string,
+    extractedDraft?: FollowupDraft,
+  ): PendingActionPayload {
+    const rawText: string = sourceText?.trim() ?? '';
+    const inputForm: FollowupCardFormInput = rawText.length > 0 ||
+      extractedDraft !== undefined
+      ? {
+          communicationContent: rawText.length > 0
+            ? rawText.slice(0, 1_000)
+            : undefined,
+          customerName: extractedDraft?.customerName ?? undefined,
+          contactName: extractedDraft?.contactName ?? undefined,
+          communicationMethod:
+            extractedDraft?.communicationMethod ?? undefined,
+          communicationAt: extractedDraft?.communicationAt ?? undefined,
+          topic: extractedDraft?.topic ?? undefined,
+          nextAction: extractedDraft?.nextAction ?? undefined,
+          dueAt: extractedDraft?.dueAt ?? undefined,
+          nextActionChannel:
+            extractedDraft?.nextActionChannel ?? undefined,
+          nextActionParticipants:
+            extractedDraft?.nextActionParticipants ?? [],
+        }
+      : {};
     return {
       version: 1,
       interactionStage: 'input',
       sourceMessageId,
-      rawText: '',
+      rawText,
       draft: {
         customerName: null,
         contactName: null,
@@ -76,7 +101,7 @@ class FollowupChatDraftService {
       draftVersion: 0,
       taskCandidates: [],
       selectedTaskCandidateIds: [],
-      inputForm: {},
+      inputForm,
     };
   }
 

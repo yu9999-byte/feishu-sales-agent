@@ -570,13 +570,21 @@ export class AgentWorkflowService {
         decision.intent === 'followup_capture' &&
         decision.confidence >= 0.55
       ) {
+        const prefillSource: string | null =
+          this.followupInputPrefillSource(message.text);
         await this.finishConversationWaiting(
           integration,
           message,
           waitingMessageId,
-          '已识别为跟进记录，请填写下面的表单。',
+          prefillSource === null
+            ? '已识别为跟进记录，请填写下面的表单。'
+            : '已识别为跟进记录，正在根据你提供的内容预填表单。',
         );
-        await this.openFollowupInputForm(integration, message);
+        await this.openFollowupInputForm(
+          integration,
+          message,
+          prefillSource ?? undefined,
+        );
         return;
       }
       if (decision.intent === 'memory_save' && decision.confidence >= 0.55) {
@@ -1547,14 +1555,36 @@ export class AgentWorkflowService {
   private async openFollowupInputForm(
     integration: TenantIntegration,
     message: IncomingMessage,
+    prefillSource?: string,
   ): Promise<void> {
+    let extractedDraft: FollowupDraft | undefined;
+    if (prefillSource !== undefined) {
+      try {
+        extractedDraft = await this.extractor.extract({
+          currentText: prefillSource,
+          combinedText: prefillSource,
+          previousDraft: null,
+          timezone: 'Asia/Shanghai',
+          now: message.receivedAt,
+        });
+      } catch (error: unknown) {
+        const normalized: Error = this.toError(error);
+        this.logger.warn(
+          `Followup form prefill failed: ${redactErrorMessage(normalized)}`,
+        );
+      }
+    }
     const actionId: string = randomUUID();
     const pending: PendingAction = await this.store.createPendingAction({
       id: actionId,
       tenantId: integration.tenantId,
       actorOpenId: message.senderOpenId,
       chatId: message.chatId,
-      payload: this.chatDrafts.createInputPayload(message.messageId),
+      payload: this.chatDrafts.createInputPayload(
+        message.messageId,
+        prefillSource,
+        extractedDraft,
+      ),
       expiresAt: new Date(message.receivedAt.getTime() + ACTION_TTL_MS),
     });
     const cardMessageId: string =
@@ -1575,7 +1605,11 @@ export class AgentWorkflowService {
       actorOpenId: message.senderOpenId,
       entityId: pending.id,
       outcome: 'succeeded',
-      details: { cardMessageId },
+      details: {
+        cardMessageId,
+        prefillRequested: prefillSource !== undefined,
+        prefillGenerated: extractedDraft !== undefined,
+      },
     });
   }
 
@@ -2434,6 +2468,37 @@ export class AgentWorkflowService {
     if (!pattern) return null;
     const source: string = normalized.replace(pattern, '').trim();
     return /^[。！!]*$/u.test(source) ? '' : source;
+  }
+
+  private followupInputPrefillSource(text: string): string | null {
+    const normalized: string = text.trim();
+    const lines: string[] = normalized
+      .split(/\n+/u)
+      .map((line: string): string => line.trim())
+      .filter((line: string): boolean => line.length > 0);
+    const trailingInstruction: RegExp =
+      /^(?:请|麻烦)?把.*(?:表单|填(?:入|写|进去)|写进去)/u;
+    while (
+      lines.length > 1 &&
+      trailingInstruction.test(lines[lines.length - 1] ?? '')
+    ) {
+      lines.pop();
+    }
+    const candidate: string = lines.join('\n').trim();
+    const requestOnlyPatterns: RegExp[] = [
+      /^(?:请|麻烦)?把(?:刚才|以上|上面|上述|这些|这个)?(?:的)?(?:内容|信息)?整理成(?:一条)?(?:销售)?跟进(?:记录)?[。！!]?$/u,
+      /^(?:那就|请|帮我)?(?:记录|记)(?:一下|下来)(?:吧)?[。！!]?$/u,
+      /^(?:请)?帮我写一下(?:跟进)?[。！!]?$/u,
+    ];
+    if (
+      candidate.length < 8 ||
+      requestOnlyPatterns.some((pattern: RegExp): boolean =>
+        pattern.test(candidate),
+      )
+    ) {
+      return null;
+    }
+    return candidate;
   }
 
   private isFollowupCancelCommand(text: string): boolean {
