@@ -803,6 +803,62 @@ export interface SalesKnowledgeQaResponse {
   warnings: string[];
 }
 
+export type PlaybookOptimizationCandidateStatus =
+  | 'observing'
+  | 'pending_review'
+  | 'accepted_for_authoring'
+  | 'dismissed';
+
+export type PlaybookOptimizationReason =
+  | 'no_trusted_answer'
+  | 'frequent_question'
+  | 'source_unavailable'
+  | 'source_revision_changed';
+
+export interface PlaybookOptimizationSourceRef {
+  sourceId: string;
+  sourceVersion: string | null;
+}
+
+export interface PlaybookOptimizationCandidate {
+  id: string;
+  topicPreview: string;
+  lastQaStatus: SalesKnowledgeQaStatus;
+  occurrenceCount: number;
+  reasons: PlaybookOptimizationReason[];
+  sources: PlaybookOptimizationSourceRef[];
+  status: PlaybookOptimizationCandidateStatus;
+  firstObservedAt: string;
+  lastObservedAt: string;
+  updatedAt: string;
+}
+
+export interface PlaybookOptimizationCandidateListResponse {
+  status: 'ready';
+  items: PlaybookOptimizationCandidate[];
+  summary: {
+    pendingReview: number;
+    observing: number;
+    acceptedForAuthoring: number;
+    dismissed: number;
+  };
+}
+
+export type PlaybookOptimizationReviewDecision =
+  | 'accept_for_authoring'
+  | 'dismiss';
+
+export interface PlaybookOptimizationReviewRequest {
+  decision: PlaybookOptimizationReviewDecision;
+  expectedUpdatedAt: string;
+  note: string;
+}
+
+export interface PlaybookOptimizationReviewResponse {
+  candidate: PlaybookOptimizationCandidate;
+  reviewId: string;
+}
+
 export type CustomerCommunicationDraftChannel = 'feishu' | 'email';
 
 export interface CustomerCommunicationDraft {

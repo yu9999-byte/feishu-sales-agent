@@ -57,6 +57,10 @@ import type {
   SalesKnowledgeQaInput,
   SalesKnowledgeQaReader,
 } from '@server/modules/knowledge/sales-knowledge-qa.ports';
+import type {
+  PlaybookOptimizationObservationInput,
+  PlaybookOptimizationObserver,
+} from '@server/modules/knowledge/playbook-optimization.ports';
 
 const completeDraft: FollowupDraft = {
   customerName: '北辰制造',
@@ -327,6 +331,21 @@ class FakeSalesKnowledgeQaReader implements SalesKnowledgeQaReader {
   );
 }
 
+class FakePlaybookOptimizationObserver
+implements PlaybookOptimizationObserver {
+  failNext: boolean = false;
+
+  readonly observe = vi.fn(async (
+    _input: PlaybookOptimizationObservationInput,
+  ): Promise<null> => {
+    if (this.failNext) {
+      this.failNext = false;
+      throw new Error('Injected playbook optimization failure');
+    }
+    return null;
+  });
+}
+
 class FakeMessenger implements FeishuMessenger {
   readonly texts: string[] = [];
   readonly textUpdates: Array<{ messageId: string; text: string }> = [];
@@ -559,6 +578,7 @@ interface TestHarness {
   sessions: FakePlatformSessions;
   opportunityDecisions: FakeOpportunityDecisionReader;
   salesKnowledge: FakeSalesKnowledgeQaReader;
+  playbookOptimization: FakePlaybookOptimizationObserver;
   workflow: AgentWorkflowService;
 }
 
@@ -588,6 +608,7 @@ const createHarness = (
     new FakeConversationAssistant();
   const salesKnowledge: FakeSalesKnowledgeQaReader =
     new FakeSalesKnowledgeQaReader();
+  const playbookOptimization = new FakePlaybookOptimizationObserver();
   const executor: AgentActionExecutorService =
     new AgentActionExecutorService(
       store,
@@ -685,6 +706,7 @@ const createHarness = (
     records,
     platformSessions,
     salesKnowledge,
+    playbookOptimization,
     salesContext,
     opportunityDecisions,
   );
@@ -700,6 +722,7 @@ const createHarness = (
     sessions,
     opportunityDecisions,
     salesKnowledge,
+    playbookOptimization,
     workflow,
   };
 };
@@ -1318,6 +1341,12 @@ describe('AgentWorkflowService', (): void => {
       actorOpenId: 'ou_sales',
       question,
     });
+    expect(harness.playbookOptimization.observe).toHaveBeenCalledWith({
+      integration: harness.integrationA,
+      question,
+      result: answeredKnowledgeResponse,
+      observedAt: new Date('2026-09-17T10:00:00+08:00'),
+    });
     expect(harness.messenger.texts.at(-1)).toContain('根据企业资料');
     expect(harness.messenger.texts.at(-1)).not.toContain('模型通用回答');
     expect(harness.records.followupCalls).toBe(0);
@@ -1337,6 +1366,35 @@ describe('AgentWorkflowService', (): void => {
     expect(JSON.stringify(audit?.details)).not.toContain(
       answeredKnowledgeResponse.citations[0]?.excerpt,
     );
+  });
+
+  it('keeps the trusted answer available when optimization observation fails', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    harness.playbookOptimization.failNext = true;
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'sales_qa',
+      confidence: 0.98,
+      reply: '模型回答不应直接发送。',
+    };
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-optimization-failure'),
+      text: '销售 Agent 能做什么？',
+    });
+
+    expect(harness.messenger.texts.at(-1)).toContain('根据企业资料');
+    expect(harness.store.getAudits(harness.integrationA.tenantId))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          eventType: 'playbook_optimization.observe_failed.v1',
+          outcome: 'failed',
+          details: expect.not.objectContaining({
+            question: expect.anything(),
+            answer: expect.anything(),
+          }),
+        }),
+      ]));
   });
 
   it('does not read enterprise knowledge without playbook permission', async (): Promise<void> => {

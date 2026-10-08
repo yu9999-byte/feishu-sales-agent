@@ -18,6 +18,8 @@ import { LangGraphConversationAssistant } from '@server/modules/llm/langgraph-co
 import { FollowupProjectRiskService } from '@server/modules/insight/followup-project-risk.service';
 import { SalesMaterialModule } from
   '@server/modules/knowledge/sales-material.module';
+import { PlaybookOptimizationModule } from
+  '@server/modules/knowledge/playbook-optimization.module';
 import { AgentActionExecutorService } from './agent-action-executor.service';
 import { SalesContextService } from './sales-context.service';
 import {
@@ -38,6 +40,7 @@ import {
     AgentControlModule,
     FeishuApiModule,
     SalesMaterialModule,
+    PlaybookOptimizationModule,
     HttpModule.register({ timeout: 30_000, maxRedirects: 2 }),
   ],
   providers: [
@@ -82,6 +85,7 @@ import {
     TASK_GATEWAY,
     SALES_CONTEXT_READER,
     SalesMaterialModule,
+    PlaybookOptimizationModule,
   ],
 })
 class AgentExecutionModule {}

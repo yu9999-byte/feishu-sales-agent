@@ -14,6 +14,10 @@ import { SALES_KNOWLEDGE_QA } from
   '@server/modules/knowledge/sales-knowledge-qa.ports';
 import { SalesMaterialModule } from
   '@server/modules/knowledge/sales-material.module';
+import { PlaybookOptimizationModule } from
+  '@server/modules/knowledge/playbook-optimization.module';
+import { PLAYBOOK_OPTIMIZATION_OBSERVER } from
+  '@server/modules/knowledge/playbook-optimization.ports';
 
 interface DeclaredDependency {
   index: number;
@@ -33,6 +37,8 @@ describe('Agent knowledge QA module assembly', (): void => {
 
     expect(imports).toContain(SalesMaterialModule);
     expect(exports).toContain(SalesMaterialModule);
+    expect(imports).toContain(PlaybookOptimizationModule);
+    expect(exports).toContain(PlaybookOptimizationModule);
   });
 
   it('requires the knowledge QA port in the workflow constructor', (): void => {
@@ -44,6 +50,10 @@ describe('Agent knowledge QA module assembly', (): void => {
     expect(dependencies).toContainEqual({
       index: 8,
       param: SALES_KNOWLEDGE_QA,
+    });
+    expect(dependencies).toContainEqual({
+      index: 9,
+      param: PLAYBOOK_OPTIMIZATION_OBSERVER,
     });
   });
 });

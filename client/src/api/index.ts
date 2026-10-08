@@ -9,6 +9,9 @@ import type {
   DailySalesReportResponse,
   FollowupDraftResponse,
   OpportunityDecisionResponse,
+  PlaybookOptimizationCandidateListResponse,
+  PlaybookOptimizationReviewRequest,
+  PlaybookOptimizationReviewResponse,
   UpdateFollowupDraftRequest,
   PlatformSectionKey,
   PlatformSectionResponse,
@@ -297,6 +300,34 @@ const getPlatformSection = async (
   }
 };
 
+const getPlaybookCandidates = async (): Promise<PlaybookOptimizationCandidateListResponse> => {
+  try {
+    const response = await axios.get<PlaybookOptimizationCandidateListResponse>(
+      '/api/platform/playbook-candidates',
+      { withCredentials: true },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
+const reviewPlaybookCandidate = async (
+  candidateId: string,
+  input: PlaybookOptimizationReviewRequest,
+): Promise<PlaybookOptimizationReviewResponse> => {
+  try {
+    const response = await axios.post<PlaybookOptimizationReviewResponse>(
+      `/api/platform/playbook-candidates/${encodeURIComponent(candidateId)}/review`,
+      input,
+      { withCredentials: true },
+    );
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
 const createFollowupDraft = async (
   input: CreateFollowupDraftRequest,
 ): Promise<FollowupDraftResponse> => {
@@ -381,6 +412,7 @@ export {
   getFollowupExecution,
   getDailySalesReport,
   getOpportunityDecisions,
+  getPlaybookCandidates,
   getTaskFulfillment,
   getTeamOpportunityDecisions,
   getTeamReview,
@@ -389,6 +421,7 @@ export {
   getPlatformSection,
   getPlatformSession,
   getWorkspace,
+  reviewPlaybookCandidate,
   updateFollowupDraft,
 };
 export type { ProductApiError };

@@ -16,6 +16,7 @@ import StaleOpportunityReadinessPage from './pages/StaleOpportunityReadinessPage
 import TeamReviewPage from './pages/TeamReviewPage/TeamReviewPage';
 import TeamOpportunityDecisionPage from './pages/TeamOpportunityDecisionPage/TeamOpportunityDecisionPage';
 import TaskFulfillmentPage from './pages/TaskFulfillmentPage/TaskFulfillmentPage';
+import PlaybookOptimizationPage from './pages/PlaybookOptimizationPage/PlaybookOptimizationPage';
 
 const RoutesComponent: React.FC = () => (
   <Routes>
@@ -40,7 +41,7 @@ const RoutesComponent: React.FC = () => (
       <Route path="reviews/team" element={<TeamReviewPage />} />
       <Route path="reviews/opportunities" element={<TeamOpportunityDecisionPage />} />
       <Route path="analytics" element={<SectionPage sectionKey="analytics" />} />
-      <Route path="playbooks" element={<SectionPage sectionKey="playbooks" />} />
+      <Route path="playbooks" element={<PlaybookOptimizationPage />} />
       <Route path="admin/members" element={<SectionPage sectionKey="admin-members" />} />
       <Route path="admin/audit" element={<SectionPage sectionKey="admin-audit" />} />
     </Route>

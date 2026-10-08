@@ -86,9 +86,10 @@ const SECTION_DEFINITIONS: SectionDefinition[] = [
   {
     key: 'playbooks',
     title: '知识与打法',
-    status: 'planned',
+    status: 'available',
     phase: 'F',
     permission: 'playbook:read',
+    message: '知识问答反馈可形成优化候选，知识审核角色可人工决定是否进入待编写。',
   },
   {
     key: 'admin-members',

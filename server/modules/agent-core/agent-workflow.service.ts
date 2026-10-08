@@ -77,6 +77,10 @@ import {
   SALES_KNOWLEDGE_QA,
   type SalesKnowledgeQaReader,
 } from '@server/modules/knowledge/sales-knowledge-qa.ports';
+import {
+  PLAYBOOK_OPTIMIZATION_OBSERVER,
+  type PlaybookOptimizationObserver,
+} from '@server/modules/knowledge/playbook-optimization.ports';
 
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const ACTION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -113,6 +117,8 @@ export class AgentWorkflowService {
     private readonly sessions: PlatformSessionService,
     @Inject(SALES_KNOWLEDGE_QA)
     private readonly salesKnowledge: SalesKnowledgeQaReader,
+    @Inject(PLAYBOOK_OPTIMIZATION_OBSERVER)
+    private readonly playbookOptimization: PlaybookOptimizationObserver,
     @Optional()
     @Inject(SALES_CONTEXT_READER)
     private readonly salesContext?: SalesContextReader,
@@ -1219,6 +1225,11 @@ export class AgentWorkflowService {
           sourceIds: result.citations.map((citation) => citation.sourceId),
         },
       });
+      await this.observePlaybookOptimization(
+        integration,
+        message,
+        result,
+      );
     } catch (error: unknown) {
       const denied: boolean = error instanceof PlatformAccessDeniedError;
       this.logger.warn(
@@ -1246,6 +1257,43 @@ export class AgentWorkflowService {
           errorCode: denied ? 'ACCESS_DENIED' : this.errorCode(error),
         },
       });
+    }
+  }
+
+  private async observePlaybookOptimization(
+    integration: TenantIntegration,
+    message: IncomingMessage,
+    result: SalesKnowledgeQaResponse,
+  ): Promise<void> {
+    try {
+      await this.playbookOptimization.observe({
+        integration,
+        question: message.text,
+        result,
+        observedAt: message.receivedAt,
+      });
+    } catch (error: unknown) {
+      this.logger.warn(
+        `Playbook optimization observation failed: ${redactErrorMessage(
+          this.toError(error),
+        )}`,
+      );
+      try {
+        await this.store.appendAudit({
+          tenantId: integration.tenantId,
+          traceId: message.messageId,
+          eventType: 'playbook_optimization.observe_failed.v1',
+          actorOpenId: message.senderOpenId,
+          outcome: 'failed',
+          details: { errorCode: this.errorCode(error) },
+        });
+      } catch (auditError: unknown) {
+        this.logger.error(
+          `Playbook optimization failure audit failed: ${redactErrorMessage(
+            this.toError(auditError),
+          )}`,
+        );
+      }
     }
   }
 
