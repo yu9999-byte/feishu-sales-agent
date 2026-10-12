@@ -20,6 +20,9 @@ describe('proactive notification card', (): void => {
     });
     const serialized: string = JSON.stringify(card);
     expect(card.schema).toBe('2.0');
+    expect(serialized).toContain('"tag":"column_set"');
+    expect(serialized).toContain('"tag":"button"');
+    expect(serialized).not.toContain('"tag":"note"');
     expect(serialized).toContain('查看任务履约');
     expect(serialized).toContain('https://agent.example.com/tasks');
     expect(serialized).not.toContain('六');

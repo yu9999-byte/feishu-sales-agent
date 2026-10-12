@@ -22,12 +22,27 @@ const trustedUrl = (value: string | undefined): string | null => {
 
 const sectionElement = (
   section: ProactiveNotificationSection,
+  color: 'blue' | 'green' | 'orange' | 'red',
 ): JsonValue => ({
-  tag: 'markdown',
-  content: `**${escapeMarkdown(section.title)}**\n${section.lines
-    .slice(0, 5)
-    .map((line: string): string => `- ${escapeMarkdown(line)}`)
-    .join('\n')}`,
+  tag: 'column_set',
+  flex_mode: 'none',
+  columns: [{
+    tag: 'column',
+    width: 'weighted',
+    weight: 1,
+    background_style: `${color}-50`,
+    padding: '12px',
+    vertical_spacing: '4px',
+    elements: [{
+      tag: 'markdown',
+      content: `**<font color='${color}'>${
+        escapeMarkdown(section.title)
+      }</font>**\n${section.lines
+        .slice(0, 5)
+        .map((line: string): string => `- ${escapeMarkdown(line)}`)
+        .join('\n')}`,
+    }],
+  }],
 });
 
 const templateForKind = (
@@ -42,26 +57,31 @@ const templateForKind = (
 const createProactiveNotificationCard = (
   message: ProactiveNotificationMessage,
 ): JsonObject => {
+  const template: 'blue' | 'green' | 'orange' | 'red' =
+    templateForKind(message.kind);
   const elements: JsonValue[] = message.sections
     .filter((section: ProactiveNotificationSection): boolean =>
       section.lines.length > 0)
-    .map(sectionElement);
+    .map((section: ProactiveNotificationSection): JsonValue =>
+      sectionElement(section, template));
   const url: string | null = trustedUrl(message.actionUrl);
   if (url !== null && message.actionLabel) {
     elements.push({
-      tag: 'markdown',
-      content: `[${escapeMarkdown(message.actionLabel)}](<${url}>)`,
+      tag: 'button',
+      text: {
+        tag: 'plain_text',
+        content: message.actionLabel.slice(0, 100),
+      },
+      type: 'primary_filled',
+      width: 'fill',
+      behaviors: [{ type: 'open_url', default_url: url }],
     });
   }
   elements.push({
-    tag: 'note',
-    elements: [{
-      tag: 'plain_text',
-      content: '以上为只读提醒；涉及业务变更时仍需人工确认。',
-    }],
+    tag: 'markdown',
+    content: '<font color=\'grey\'>以上为只读提醒；涉及业务变更时仍需人工确认。</font>',
+    text_size: 'notation',
   });
-  const template: 'blue' | 'green' | 'orange' | 'red' =
-    templateForKind(message.kind);
   return {
     schema: '2.0',
     config: {

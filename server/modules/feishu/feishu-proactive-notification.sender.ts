@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
 
+import { isAxiosError } from 'axios';
+
 import type { TenantIntegration } from '@server/modules/agent-core/agent.types';
 import {
   createProactiveNotificationCard,
@@ -38,23 +40,31 @@ implements ProactiveNotificationSender {
     const requestOptions: ReturnType<
       FeishuClientFactory['getRequestOptions']
     > = this.resolveRequestOptions(integration);
-    const response = await client.im.message.create(
-      {
-        params: { receive_id_type: 'open_id' },
-        data: {
-          receive_id: message.recipientOpenId,
-          msg_type: 'interactive',
-          content: JSON.stringify(createProactiveNotificationCard(message)),
-          uuid: this.uuid([
-            message.tenantId,
-            message.recipientMemberId,
-            message.kind,
-            message.notificationKey,
-          ].join(':')),
+    let response: Awaited<ReturnType<typeof client.im.message.create>>;
+    try {
+      response = await client.im.message.create(
+        {
+          params: { receive_id_type: 'open_id' },
+          data: {
+            receive_id: message.recipientOpenId,
+            msg_type: 'interactive',
+            content: JSON.stringify(createProactiveNotificationCard(message)),
+            uuid: this.uuid([
+              message.tenantId,
+              message.recipientMemberId,
+              message.kind,
+              message.notificationKey,
+            ].join(':')),
+          },
         },
-      },
-      requestOptions,
-    );
+        requestOptions,
+      );
+    } catch (error: unknown) {
+      const rejection: RetryableProactiveNotificationError | null =
+        this.explicitHttpRejection(error);
+      if (rejection !== null) throw rejection;
+      throw error;
+    }
     try {
       assertFeishuSuccess(
         response.code,
@@ -143,6 +153,29 @@ implements ProactiveNotificationSender {
 
   private uuid(value: string): string {
     return createHash('sha256').update(value).digest('hex').slice(0, 40);
+  }
+
+  private explicitHttpRejection(
+    error: unknown,
+  ): RetryableProactiveNotificationError | null {
+    if (!isAxiosError(error)) return null;
+    const status: number | undefined = error.response?.status;
+    if (
+      status === undefined || status < 400 || status >= 500 ||
+      status === 408 || status === 409
+    ) return null;
+    const data: unknown = error.response?.data;
+    const responseCode: unknown = typeof data === 'object' && data !== null
+      ? Reflect.get(data, 'code')
+      : undefined;
+    const codeSuffix: string =
+      typeof responseCode === 'string' || typeof responseCode === 'number'
+        ? `, code ${String(responseCode)}`
+        : '';
+    return new RetryableProactiveNotificationError(
+      `Feishu rejected proactive notification request ` +
+        `(HTTP ${String(status)}${codeSuffix})`,
+    );
   }
 }
 

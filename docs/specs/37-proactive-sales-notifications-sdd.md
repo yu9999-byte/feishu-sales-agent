@@ -1,6 +1,6 @@
 # 主动销售通知 SDD
 
-状态：`Automated Green / PostgreSQL verified / delivery disabled 2026-10-12`
+状态：`Real personal delivery verified / default disabled / cron off 2026-10-12`
 
 ## 1. 目标
 
@@ -157,7 +157,7 @@ HTTPS、Secret 和失败告警的 cron/Job 平台调用单次 Node 调度客户�
 | PN-T06 | 日报、个人周报、团队周报分别按权限和范围生成，来源异常不伪造数字 |
 | PN-T07 | 并发 claim 只有一个成功；租约、重试次数和 retry_after 生效 |
 | PN-T08 | dispatching 后未知结果进入 uncertain 且重复执行不重发 |
-| PN-T09 | Card 2.0 标题、摘要、数据截止时间、受信 HTTPS 跳转和数量上限正确 |
+| PN-T09 | Card 2.0 标题、摘要、数据截止时间、组件白名单、受信 HTTPS 跳转和数量上限正确 |
 | PN-T10 | Controller 凭证、模块装配、迁移和外部单次调度客户端通过 |
 | PN-T11 | 全量既有 Agent 测试、三套 TypeScript、Lint、Agent/Web build 回归通过 |
 
@@ -169,13 +169,25 @@ HTTPS、Secret 和失败告警的 cron/Job 平台调用单次 Node 调度客户�
   17:00 个人周报与有权限主管的团队周报。任务按人按天合并；空活动日报不发送。
 - TDD Red 证据包括：空活动日报仍生成卡片、空 `message_id` 被错误归为可重试、请求参数
   配置异常未归类为发送前失败；修复后相关专项 `16/16` 通过。
-- 自动化结果：Agent `74 files / 622 tests`、外部 runner `5/5`，服务端、测试和客户端
+- 自动化结果：主动通知单元 `26/26`、Agent `74 files / 623 tests`、外部 runner `5/5`，服务端、测试和客户端
   TypeScript、ESLint、Stylelint、Agent build（141 files）、Web build、`git diff --check`
   均通过。构建仅保留既有 Vite 模块类型和大 chunk warning。
 - 已恢复 loopback 项目 PostgreSQL；第一次迁移完整 apply 到 020，第二次全部 skip。主动通知
   仓储集成 `3/3` 通过，覆盖并发 claim、sent 去重及风险基线租户/成员隔离；全套 PostgreSQL
   `26 passed / 3 controlled live probes skipped`。
-- 两个运行开关仍为默认 `false`；未安装或启用 cron，未发送真实飞书消息，未写 Base/Task。
+- 产品负责人确认后，以固定当地 `18:05` 执行本人个人日报门禁。plan-only 为 1 个租户、1 个
+  活动销售成员、1 张计划、0 发送、0 警告；成员与既有 tenant/member/open_id 白名单完全一致，
+  无主管角色和汇报关系。
+- 首次真实调用被飞书 HTTP 400 明确拒绝且没有 message ID。根因是 Card 2.0 混入旧版 `note`
+  组件，并且 Axios 4xx 未被发送器识别为明确拒绝。新增两条测试先 Red，再改为合法的
+  `column_set + button(open_url) + markdown` 和明确 4xx 有界重试；定向 `9/9`、服务端类型、
+  目标 ESLint、Agent 141 文件构建及 diff 检查通过。
+- 人工对账 400 为未送达后，以同一业务键和稳定 UUID 重试成功。账本唯一一行状态为 `sent`、
+  `attempt_count=2`，message ID `om_x100b63fb8345e0a8b1a888ac59ac51e`；相同调用复验为
+  0 新发送、1 个 `already_sent` 跳过。飞书回读确认 interactive 卡片标题为“销售日报”并包含
+  HTTPS 查看入口。
+- 测试只发本人，没有主管/群消息，没有 Base/Task 写入。两个运行开关仅在单次进程临时开启，
+  持久配置仍为默认 `false`；未安装或启用 cron。
 
 ## 9. 发布门禁
 

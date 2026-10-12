@@ -1,6 +1,6 @@
 # 当前工程说明
 
-## 2026-10-12 主动任务、风险、日报与周报通知（自动化与 PostgreSQL Green，真实投递关闭）
+## 2026-10-12 主动任务、风险、日报与周报通知（本人真实投递已验收，默认关闭）
 
 - 已把现有任务履约、商机决策、个人日报和团队 Review 接入统一主动通知链。独立调度客户端
   每 5 分钟调用受保护内部入口，由服务端按每个租户时区命中：09:00 任务行动卡、10:00
@@ -12,12 +12,24 @@
 - 新增通用持久投递账本、风险观察状态、5 分钟租约、5 分钟重试、最多 3 次尝试和
   `claimed -> dispatching -> sent/failed/uncertain` 状态机。明确 API 拒绝可重试；网络中断或
   空消息 ID 冻结为 unknown，避免重复打扰。
-- TDD 专项 `16/16`、外部 runner `5/5`、Agent 全量 `74 files / 622 tests` 通过；服务端、
+- 主动通知单元 `26/26`、外部 runner `5/5`、Agent 全量 `74 files / 623 tests` 通过；服务端、
   测试和客户端 TypeScript、ESLint、Stylelint、Agent/Web build 与 diff 检查均通过。
 - 已恢复只监听 `127.0.0.1:55432` 的项目 PostgreSQL，并为当前项目初始化独立本地角色和
   数据库；迁移 003..020 首次 apply、再次全部 skip。主动通知仓储 `3/3`、全套 PostgreSQL
   `26 passed / 3 controlled live probes skipped`，持久并发领取、sent 去重和风险状态隔离通过。
-- 两个主动通知开关仍默认关闭，未安装 cron、未发送真实飞书消息、未写 Base/Task。
+- 产品负责人明确确认后完成一次本人个人日报真实投递。投递前固定当地 `18:05` 的
+  plan-only 结果为 1 个租户、1 个销售成员、1 张计划、0 发送、0 警告；唯一活动成员与既有
+  tenant/member/open_id 三重白名单完全一致，且没有主管角色或汇报关系。
+- 首次真实请求被飞书 HTTP 400 明确拒绝，未产生消息。根因是 Card 2.0 混入旧版 `note`
+  组件，同时发送器把明确 4xx 误记为 `uncertain`。新增 Red 测试复现后，卡片改为合法的
+  `column_set + button + markdown`，明确 4xx 进入有界重试；定向测试 `9/9`、服务端类型、
+  目标 ESLint、Agent 141 文件构建和 diff 检查通过。
+- 人工对账确认 400 未送达后，以相同业务键和稳定 UUID 重试成功。账本只有 1 行，状态
+  `sent`、`attempt_count=2`、message ID `om_x100b63fb8345e0a8b1a888ac59ac51e`；重复运行
+  为 0 新发送、1 个 `already_sent` 跳过。飞书用户身份回读确认它是标题“销售日报”的
+  interactive 卡片，并包含 HTTPS 查看入口。
+- 本次没有向主管或群发送，没有写 Base/Task。两个主动通知开关只在单次进程中临时开启，
+  `.env.local` 持久值仍为默认 `false`；没有安装或启用 cron。
 - 权威规格与恢复步骤见
   [主动销售通知 SDD](specs/37-proactive-sales-notifications-sdd.md)和
   [运行手册](runbooks/proactive-sales-notifications.md)。

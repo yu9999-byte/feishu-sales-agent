@@ -6,6 +6,25 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-12 主动通知 Card 2.0 首次真实投递被 HTTP 400 拒绝（已解决）
+
+- 复现：本人个人日报 plan-only 唯一命中后，首次真实投递返回 `failedCount=1`；账本为
+  `uncertain`、无 message ID，脱敏失败证据为 HTTP 400。飞书没有生成消息。
+- 根因一：主动卡声明 `schema: 2.0`，但尾注仍使用仅属于旧版结构的 `note` 组件；原测试只断言
+  schema、链接与数量上限，没有阻断非法组件混用。
+- 根因二：飞书 SDK 对 HTTP 400 直接抛出 Axios 错误，发送器只处理 SDK 正常响应中的业务错误，
+  因而把“有明确 HTTP 响应的未送达”误判成结果未知。
+- 处理：先新增 Card 2.0 组件与 HTTP 400 分类测试并取得 Red；卡片改为
+  `column_set + button(open_url) + markdown`，明确、非 408/409 的 4xx 转为可重试拒绝，真正
+  网络中断和空 message ID 仍冻结为 unknown。定向 `9/9`、服务端 TypeScript、目标 ESLint、
+  Agent 构建和 diff 检查通过；主动通知单元 `26/26`、Agent 全量 `74 files / 623 tests`。
+- 真实证据：人工对账首个 400 为未送达后，用相同业务键和稳定 UUID 重试成功。账本唯一一行
+  为 `sent`、`attempt_count=2`、message ID `om_x100b63fb8345e0a8b1a888ac59ac51e`；相同调用
+  再执行为 0 发送、1 个 `already_sent` 跳过。飞书回读为标题“销售日报”的 interactive 卡片，
+  且有 HTTPS 查看入口。
+- 状态：`Resolved / real personal delivery verified / default disabled`。
+- 边界：只发当前本人，没有主管或群消息，没有 Base/Task 写入，没有安装 cron；持久开关仍 false。
+
 ## 2026-10-12 主动销售通知持久账本缺少本地 PostgreSQL 验收（已解决）
 
 - 现象：`npm run migrate:agent` 和主动通知仓储集成测试均连接

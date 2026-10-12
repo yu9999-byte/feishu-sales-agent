@@ -182,6 +182,38 @@ describe('FeishuProactiveNotificationSender', (): void => {
     );
   });
 
+  it('classifies an explicit HTTP 400 rejection as retryable', async (): Promise<void> => {
+    const rejection: Error & {
+      isAxiosError: boolean;
+      response: { status: number; data: { code: number; msg: string } };
+    } = Object.assign(new Error('Request failed with status code 400'), {
+      isAxiosError: true,
+      response: {
+        status: 400,
+        data: { code: 230099, msg: 'invalid card content' },
+      },
+    });
+    const createMessage = vi.fn(async (): Promise<never> => {
+      throw rejection;
+    });
+    const clients = {
+      getClient: (): unknown => ({
+        im: { message: { create: createMessage } },
+      }),
+      getRequestOptions: (): undefined => undefined,
+    } as unknown as FeishuClientFactory;
+    const sender = new FeishuProactiveNotificationSender({
+      resolveTenantById: vi.fn(async () => integration()),
+    }, clients);
+
+    await expect(sender.send(message())).rejects.toEqual(
+      expect.objectContaining({
+        name: 'RetryableProactiveNotificationError',
+        message: expect.stringContaining('HTTP 400'),
+      }),
+    );
+  });
+
   it('treats a success without message ID as unknown', async (): Promise<void> => {
     const current: SenderHarness = harness({
       code: 0,
