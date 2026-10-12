@@ -604,6 +604,23 @@
 更新规则：发现问题时先补复现证据；修复后记录对应测试或运行证据；没有真实 UI 证据时不得把
 `Open` 改为 `Resolved`，也不得把 `Automated Green / UI pending` 写成 `UI Verified`。
 
+## 2026-10-13 通用主动通知缺少 unknown 对账产品入口
+
+- 问题：2026-10-12 本人真实投递测试中，明确 HTTP 400 曾被旧发送器归为 `uncertain`。虽然
+  已确认消息未送达，但恢复只能直接修改数据库；通用任务、风险、日报和周报账本没有受权限
+  保护的只读清单、乐观并发裁决、不可变审计或 Web 管理入口。
+- 风险：继续直接改库会丢失操作人和证据，并发处理可能覆盖终态；简单把 `uncertain` 自动改为
+  可重试又可能造成重复消息。
+- 处理：按 D-056 和
+  [主动通知未知投递对账 SDD](specs/38-proactive-notification-reconciliation-sdd.md)完成独立
+  通用对账闭环。管理员页面、租户/权限保护、三类裁决、乐观并发、单次重试释放和不可变审计
+  已实现；提交中对话框不可误关。状态：`Resolved / automated green / UI pending`。
+- 证据：Agent `643/643`、PostgreSQL `31 passed / 3 controlled live probes skipped`，主动通知
+  仓储 `8/8`；runner、observer、publisher、三套 TypeScript、全仓 Lint、双构建、迁移 021
+  幂等和隔离启动冒烟通过。页面 `200`，未登录 API `401`。
+- 本轮边界保持：未发送真实消息、未启用 cron、未写 Base/Task，隔离 PostgreSQL 测试租户均
+  已清理。真实组织没有 admin 角色，管理员 UI 仍待验收。
+
 ## 2026-09-30 团队 Review 自动化切片
 
 - `REV-002..006` 已从 Draft 进入 `Automated Green / API contract ready / UI pending`：新增

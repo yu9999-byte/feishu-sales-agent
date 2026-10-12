@@ -78,7 +78,8 @@ Base 通过 `SalesDataSourcePort` 访问。未来 CRM 连接器只能实现同�
 | `QualityAssessment` | score、dimensions、gaps、risks、policy/model version |
 | `SalesSignal` | type、severity、evidence、resourceRef、lifecycle |
 | `ExternalTaskBinding` | internalActionId、taskGuid、status、sync cursor |
-| `NotificationDelivery` | rule、recipient、dedupeKey、status、attempts |
+| `NotificationDelivery` | 稳定 UUID、rule、recipient、dedupeKey、status、attempts、attemptLimit、dispatch/error evidence |
+| `NotificationReconciliation` | deliveryId、expectedVersion、decision、operator、note、message evidence、original evidence、reconciledAt |
 | `Conversation` | actor、authorized scope snapshot、expiry |
 | `IntentDecision` | tenant/actor/chat/message、schemaVersion、intent、confidence、outcome；审计不存原文 |
 | `KnowledgeChunk` | sourceRef/version、ACL snapshot、content hash |
@@ -116,6 +117,17 @@ provider + bindingId + objectType + externalId + sourceVersion
 - `task.created|status.changed|overdue`
 - `report.generated|delivery.failed`
 - `playbook.suggestion.created|version.published`
+
+### 5.2.1 主动通知投递与人工恢复
+
+- 通用主动通知使用 `claimed -> dispatching -> sent/failed/uncertain` 状态机；网络结果不确定时
+  冻结，禁止自动重发。
+- 人工对账只允许当前租户、具备 `admin:manage-policies` 的 Web Session。客户端只提交通知
+  UUID、期望版本、裁决和证据，租户与操作人由服务端注入。
+- `confirm_sent` 写入真实消息 ID/发送时间并清理失败状态；`authorize_retry` 把尝试上限固定为
+  当前次数加一；`keep_frozen` 保持 unknown。裁决请求本身不调用 sender。
+- 通知状态更新和不可变审计使用同一 PostgreSQL CTE 原子完成；旧版本、跨租户或非 unknown
+  状态零写入。
 
 ### 5.4 原聊天卡片与一次确认契约
 

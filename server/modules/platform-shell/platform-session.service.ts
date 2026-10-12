@@ -89,6 +89,12 @@ const NAVIGATION_DEFINITIONS: NavigationDefinition[] = [
     requiredPermission: 'playbook:read',
   },
   {
+    key: 'notification-operations',
+    label: '通知运营',
+    path: '/admin/notification-deliveries',
+    requiredPermission: 'admin:manage-policies',
+  },
+  {
     key: 'admin',
     label: '管理',
     path: '/admin/members',

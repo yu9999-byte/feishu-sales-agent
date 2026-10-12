@@ -22,6 +22,7 @@ class WebPageController {
     'reviews/opportunities',
     'analytics',
     'playbooks',
+    'admin/notification-deliveries',
     'admin/members',
     'admin/audit',
   ])

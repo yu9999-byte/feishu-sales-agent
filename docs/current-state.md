@@ -1,5 +1,25 @@
 # 当前工程说明
 
+## 2026-10-13 当前切片：主动通知 unknown 对账与恢复（已实现，UI 待验收）
+
+- 主 Goal 继续执行；本轮没有复用上次的一次性真实投递授权，没有发送飞书消息、启用 cron 或
+  写入 Base/Task。
+- 已完成通用主动通知 `uncertain` 的正式运营闭环：当前租户管理员可以在
+  `/admin/notification-deliveries` 查看最小证据，并选择确认已送达、确认未送达并只释放一次
+  重试、或继续冻结。请求不接受客户端租户或 open_id。
+- 状态更新和独立审计由同一 PostgreSQL CTE 原子完成；`expectedUpdatedAt` 防止并发覆盖，跨
+  租户通知 ID 返回 not found。`confirm_sent` 写入真实消息证据并阻断重复领取；
+  `authorize_retry` 只设置 `attempt_limit = attempt_count + 1`，裁决本身不调用 sender。
+- 页面覆盖 loading、empty、error、conflict、提交中和成功；提交时隐藏关闭按钮、阻止
+  Esc/遮罩误关、禁用字段并展示旋转状态，直到成功或失败。
+- 自动化证据：Agent `77 files / 643 tests`；PostgreSQL
+  `31 passed / 3 controlled live probes skipped`，其中主动通知仓储 `8/8`；runner `5/5`、
+  observer `10/10`、publisher `4/4`、三套 TypeScript、全仓 Lint、Agent/Web 构建和迁移 021
+  幂等通过。隔离端口 `3213` 页面返回 `200`，未登录 API 返回 `401`。
+- 当前真实组织没有 admin 角色，因此只能标记 `Implemented / UI pending`，没有伪造管理员 UI
+  证据。后续唯一 UI 解锁条件是为受控测试账号授予 admin 角色，再查看空态或隔离 unknown 并
+  完成一次人工裁决。
+
 ## 2026-10-12 主动任务、风险、日报与周报通知（本人真实投递已验收，默认关闭）
 
 - 已把现有任务履约、商机决策、个人日报和团队 Review 接入统一主动通知链。独立调度客户端

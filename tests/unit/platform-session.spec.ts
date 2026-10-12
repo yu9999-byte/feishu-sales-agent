@@ -183,6 +183,7 @@ describe('PlatformSessionService', (): void => {
       expect.arrayContaining([
         expect.objectContaining({ key: 'reviews' }),
         expect.objectContaining({ key: 'admin' }),
+        expect.objectContaining({ key: 'notification-operations' }),
       ]),
     );
   });
@@ -204,8 +205,17 @@ describe('PlatformSessionService', (): void => {
     },
     {
       role: 'admin',
-      requiredNavigation: ['reviews', 'analytics', 'admin'],
-      requiredPermissions: ['admin:manage-members', 'audit:read'],
+      requiredNavigation: [
+        'reviews',
+        'analytics',
+        'notification-operations',
+        'admin',
+      ],
+      requiredPermissions: [
+        'admin:manage-members',
+        'admin:manage-policies',
+        'audit:read',
+      ],
     },
   ])(
     'returns the expected navigation and permissions for $role',
@@ -227,6 +237,24 @@ describe('PlatformSessionService', (): void => {
       );
     },
   );
+
+  it('exposes the notification operations path only to admins', async (): Promise<void> => {
+    const adminSession: PlatformSessionResponse = await getSession(['admin']);
+    expect(adminSession.navigation).toEqual(expect.arrayContaining([
+      {
+        key: 'notification-operations',
+        label: '通知运营',
+        path: '/admin/notification-deliveries',
+      },
+    ]));
+
+    const managerSession: PlatformSessionResponse = await getSession([
+      'manager',
+    ]);
+    expect(managerSession.navigation).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: 'notification-operations' }),
+    ]));
+  });
 
   it('unions roles without duplicating permissions or navigation', async (): Promise<void> => {
     const session: PlatformSessionResponse = await getSession([

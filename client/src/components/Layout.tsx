@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Activity,
   BookOpen,
+  BellRing,
   BriefcaseBusiness,
   ClipboardList,
   FileText,
@@ -31,6 +32,7 @@ const iconByKey: Record<PlatformNavigationKey, React.ElementType> = {
   workspace: House,
   'daily-report': FileText,
   'stale-opportunity-readiness': Radar,
+  'notification-operations': BellRing,
   customers: UsersRound,
   opportunities: BriefcaseBusiness,
   followups: ClipboardList,

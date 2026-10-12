@@ -27,6 +27,46 @@ const sql: Sql = postgres(databaseUrl, {
 const store: PostgresProactiveNotificationStore =
   new PostgresProactiveNotificationStore(sql);
 
+const createUncertainNotification = async (input: {
+  tenantId: string;
+  memberId: string;
+  recipientOpenId: string;
+  notificationKey: string;
+  now: Date;
+}): Promise<void> => {
+  const claim = await store.claim({
+    tenantId: input.tenantId,
+    recipientMemberId: input.memberId,
+    recipientOpenId: input.recipientOpenId,
+    kind: 'daily_report',
+    notificationKey: input.notificationKey,
+    subjectKey: input.notificationKey,
+    payloadFingerprint: `fingerprint-${input.notificationKey}`,
+    now: input.now,
+    claimDurationMs: 300_000,
+    maxAttempts: 3,
+  });
+  expect(claim.status).toBe('claimed');
+  if (claim.status !== 'claimed') return;
+  const state = {
+    tenantId: input.tenantId,
+    recipientMemberId: input.memberId,
+    kind: 'daily_report' as const,
+    notificationKey: input.notificationKey,
+    claimToken: claim.claimToken,
+  };
+  await expect(store.markDispatchStarted({
+    ...state,
+    startedAt: input.now,
+  })).resolves.toBe(true);
+  await expect(store.markDeliveryUnknown({
+    ...state,
+    failedAt: new Date(input.now.getTime() + 1_000),
+    failureCode: 'PROACTIVE_DELIVERY_UNKNOWN',
+    failureMessage: 'Network outcome not verified',
+  })).resolves.toBe(true);
+};
+
 describe('Postgres proactive notification ledger', (): void => {
   beforeAll(async (): Promise<void> => {
     await sql`DELETE FROM agent_tenants WHERE id IN (
@@ -139,5 +179,312 @@ describe('Postgres proactive notification ledger', (): void => {
       recipientMemberId: MEMBER_B,
       opportunityRecordId: 'opp-shared',
     })).resolves.toBeNull();
+  });
+
+  it('lists uncertain notifications only inside the requested tenant', async (): Promise<void> => {
+    await createUncertainNotification({
+      tenantId: TENANT_A,
+      memberId: MEMBER_A,
+      recipientOpenId: 'ou_a',
+      notificationKey: 'reconciliation-list-a',
+      now: new Date('2026-10-12T02:00:00.000Z'),
+    });
+    await createUncertainNotification({
+      tenantId: TENANT_B,
+      memberId: MEMBER_B,
+      recipientOpenId: 'ou_b',
+      notificationKey: 'reconciliation-list-b',
+      now: new Date('2026-10-12T02:00:00.000Z'),
+    });
+
+    const records = await store.listUncertain({
+      tenantId: TENANT_A,
+      limit: 100,
+    });
+    expect(records).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        tenantId: TENANT_A,
+        recipientDisplayName: '销售 A',
+        notificationKey: 'reconciliation-list-a',
+      }),
+    ]));
+    expect(records).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ notificationKey: 'reconciliation-list-b' }),
+    ]));
+    expect(records[0]).not.toHaveProperty('recipientOpenId');
+  });
+
+  it('keeps uncertain state and audit append atomic under optimistic concurrency', async (): Promise<void> => {
+    await createUncertainNotification({
+      tenantId: TENANT_A,
+      memberId: MEMBER_A,
+      recipientOpenId: 'ou_a',
+      notificationKey: 'reconciliation-keep',
+      now: new Date('2026-10-12T03:00:00.000Z'),
+    });
+    const record = (await store.listUncertain({
+      tenantId: TENANT_A,
+      limit: 100,
+    })).find((candidate) =>
+      candidate.notificationKey === 'reconciliation-keep');
+    expect(record).toBeDefined();
+    if (!record) return;
+
+    const reconciledAt: Date = new Date('2026-10-12T03:05:00.000Z');
+    const input = {
+      tenantId: TENANT_A,
+      operatorMemberId: MEMBER_A,
+      notificationId: record.notificationId,
+      expectedUpdatedAt: new Date(record.updatedAt),
+      decision: 'keep_frozen' as const,
+      note: '证据仍不足，继续冻结等待核查',
+      reconciledAt,
+    };
+    await expect(store.reconcile(input)).resolves.toMatchObject({
+      status: 'reconciled',
+      previousStatus: 'uncertain',
+      currentStatus: 'uncertain',
+      updatedAt: reconciledAt,
+    });
+    await expect(store.reconcile(input)).resolves.toMatchObject({
+      status: 'conflict',
+      currentStatus: 'uncertain',
+      currentUpdatedAt: reconciledAt,
+    });
+
+    const [ledger] = await sql`
+      SELECT status, updated_at
+      FROM proactive_sales_notifications
+      WHERE tenant_id = ${TENANT_A}::uuid
+        AND id = ${record.notificationId}::uuid
+    `;
+    const [audit] = await sql`
+      SELECT count(*)::integer AS count
+      FROM proactive_sales_notification_reconciliations
+      WHERE tenant_id = ${TENANT_A}::uuid
+        AND notification_id = ${record.notificationId}::uuid
+    `;
+    expect(ledger.status).toBe('uncertain');
+    expect(new Date(ledger.updated_at)).toEqual(reconciledAt);
+    expect(audit.count).toBe(1);
+  });
+
+  it('releases exactly one additional attempt without sending', async (): Promise<void> => {
+    await createUncertainNotification({
+      tenantId: TENANT_B,
+      memberId: MEMBER_B,
+      recipientOpenId: 'ou_b',
+      notificationKey: 'reconciliation-retry-once',
+      now: new Date('2026-10-12T04:00:00.000Z'),
+    });
+    const record = (await store.listUncertain({
+      tenantId: TENANT_B,
+      limit: 100,
+    })).find((candidate) =>
+      candidate.notificationKey === 'reconciliation-retry-once');
+    expect(record).toBeDefined();
+    if (!record) return;
+
+    const reconciledAt: Date = new Date('2026-10-12T04:05:00.000Z');
+    await expect(store.reconcile({
+      tenantId: TENANT_B,
+      operatorMemberId: MEMBER_B,
+      notificationId: record.notificationId,
+      expectedUpdatedAt: new Date(record.updatedAt),
+      decision: 'authorize_retry',
+      note: '飞书会话中未找到消息，确认未送达',
+      reconciledAt,
+    })).resolves.toMatchObject({
+      status: 'reconciled',
+      currentStatus: 'failed',
+    });
+
+    const [released] = await sql`
+      SELECT status, attempt_count, attempt_limit
+      FROM proactive_sales_notifications
+      WHERE tenant_id = ${TENANT_B}::uuid
+        AND id = ${record.notificationId}::uuid
+    `;
+    expect(released).toMatchObject({
+      status: 'failed',
+      attempt_count: 1,
+      attempt_limit: 2,
+    });
+
+    const retry = await store.claim({
+      tenantId: TENANT_B,
+      recipientMemberId: MEMBER_B,
+      recipientOpenId: 'ou_b',
+      kind: 'daily_report',
+      notificationKey: 'reconciliation-retry-once',
+      subjectKey: 'reconciliation-retry-once',
+      payloadFingerprint: 'fingerprint-reconciliation-retry-once',
+      now: new Date('2026-10-12T04:06:00.000Z'),
+      claimDurationMs: 300_000,
+      maxAttempts: 3,
+    });
+    expect(retry).toMatchObject({ status: 'claimed', attemptCount: 2 });
+    if (retry.status !== 'claimed') return;
+    const retryState = {
+      tenantId: TENANT_B,
+      recipientMemberId: MEMBER_B,
+      kind: 'daily_report' as const,
+      notificationKey: 'reconciliation-retry-once',
+      claimToken: retry.claimToken,
+    };
+    await store.markDispatchStarted({
+      ...retryState,
+      startedAt: new Date('2026-10-12T04:06:00.000Z'),
+    });
+    await store.markFailed({
+      ...retryState,
+      failedAt: new Date('2026-10-12T04:06:01.000Z'),
+      retryAt: new Date('2026-10-12T04:07:00.000Z'),
+      failureCode: 'PROACTIVE_DELIVERY_FAILED',
+      failureMessage: 'Explicit API rejection',
+    });
+    await expect(store.claim({
+      tenantId: TENANT_B,
+      recipientMemberId: MEMBER_B,
+      recipientOpenId: 'ou_b',
+      kind: 'daily_report',
+      notificationKey: 'reconciliation-retry-once',
+      subjectKey: 'reconciliation-retry-once',
+      payloadFingerprint: 'fingerprint-reconciliation-retry-once',
+      now: new Date('2026-10-12T04:08:00.000Z'),
+      claimDurationMs: 300_000,
+      maxAttempts: 3,
+    })).resolves.toMatchObject({ status: 'attempts_exhausted' });
+  });
+
+  it('records confirm-sent evidence, clears failure state, and blocks delivery', async (): Promise<void> => {
+    const notificationKey: string = 'reconciliation-confirm-sent';
+    await createUncertainNotification({
+      tenantId: TENANT_A,
+      memberId: MEMBER_A,
+      recipientOpenId: 'ou_a',
+      notificationKey,
+      now: new Date('2026-10-12T04:30:00.000Z'),
+    });
+    const record = (await store.listUncertain({
+      tenantId: TENANT_A,
+      limit: 100,
+    })).find((candidate) => candidate.notificationKey === notificationKey);
+    expect(record).toBeDefined();
+    if (!record) return;
+
+    const sentAt: Date = new Date('2026-10-12T04:30:30.000Z');
+    const reconciledAt: Date = new Date('2026-10-12T04:35:00.000Z');
+    await expect(store.reconcile({
+      tenantId: TENANT_A,
+      operatorMemberId: MEMBER_A,
+      notificationId: record.notificationId,
+      expectedUpdatedAt: new Date(record.updatedAt),
+      decision: 'confirm_sent',
+      note: '已在飞书会话中核对到对应消息和发送时间',
+      messageId: 'om_reconciliation_confirmed',
+      sentAt,
+      reconciledAt,
+    })).resolves.toMatchObject({
+      status: 'reconciled',
+      previousStatus: 'uncertain',
+      currentStatus: 'sent',
+      updatedAt: reconciledAt,
+    });
+
+    const [ledger] = await sql`
+      SELECT
+        status,
+        message_id,
+        sent_at,
+        retry_after,
+        failure_code,
+        failure_message
+      FROM proactive_sales_notifications
+      WHERE tenant_id = ${TENANT_A}::uuid
+        AND id = ${record.notificationId}::uuid
+    `;
+    expect(ledger).toMatchObject({
+      status: 'sent',
+      message_id: 'om_reconciliation_confirmed',
+      retry_after: null,
+      failure_code: null,
+      failure_message: null,
+    });
+    expect(new Date(ledger.sent_at)).toEqual(sentAt);
+
+    const [audit] = await sql`
+      SELECT
+        decision,
+        resulting_status,
+        operator_member_id,
+        note,
+        evidence_message_id,
+        evidence_sent_at,
+        original_attempt_count,
+        original_failure_code,
+        original_failure_message
+      FROM proactive_sales_notification_reconciliations
+      WHERE tenant_id = ${TENANT_A}::uuid
+        AND notification_id = ${record.notificationId}::uuid
+    `;
+    expect(audit).toMatchObject({
+      decision: 'confirm_sent',
+      resulting_status: 'sent',
+      operator_member_id: MEMBER_A,
+      note: '已在飞书会话中核对到对应消息和发送时间',
+      evidence_message_id: 'om_reconciliation_confirmed',
+      original_attempt_count: 1,
+      original_failure_code: 'PROACTIVE_DELIVERY_UNKNOWN',
+      original_failure_message: 'Network outcome not verified',
+    });
+    expect(new Date(audit.evidence_sent_at)).toEqual(sentAt);
+
+    await expect(store.claim({
+      tenantId: TENANT_A,
+      recipientMemberId: MEMBER_A,
+      recipientOpenId: 'ou_a',
+      kind: 'daily_report',
+      notificationKey,
+      subjectKey: notificationKey,
+      payloadFingerprint: `fingerprint-${notificationKey}`,
+      now: new Date('2026-10-12T04:36:00.000Z'),
+      claimDurationMs: 300_000,
+      maxAttempts: 3,
+    })).resolves.toEqual({ status: 'already_sent' });
+  });
+
+  it('does not disclose or reconcile another tenant notification', async (): Promise<void> => {
+    const notificationKey: string = 'reconciliation-cross-tenant';
+    await createUncertainNotification({
+      tenantId: TENANT_A,
+      memberId: MEMBER_A,
+      recipientOpenId: 'ou_a',
+      notificationKey,
+      now: new Date('2026-10-12T04:45:00.000Z'),
+    });
+    const record = (await store.listUncertain({
+      tenantId: TENANT_A,
+      limit: 100,
+    })).find((candidate) => candidate.notificationKey === notificationKey);
+    expect(record).toBeDefined();
+    if (!record) return;
+
+    await expect(store.reconcile({
+      tenantId: TENANT_B,
+      operatorMemberId: MEMBER_B,
+      notificationId: record.notificationId,
+      expectedUpdatedAt: new Date(record.updatedAt),
+      decision: 'keep_frozen',
+      note: '跨租户请求不得读取或写入目标记录',
+      reconciledAt: new Date('2026-10-12T05:00:00.000Z'),
+    })).resolves.toEqual({ status: 'not_found' });
+    const [audit] = await sql`
+      SELECT count(*)::integer AS count
+      FROM proactive_sales_notification_reconciliations
+      WHERE tenant_id = ${TENANT_B}::uuid
+        AND notification_id = ${record.notificationId}::uuid
+    `;
+    expect(audit.count).toBe(0);
   });
 });

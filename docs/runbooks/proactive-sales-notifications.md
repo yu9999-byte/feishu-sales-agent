@@ -22,8 +22,8 @@ npm run run:proactive-sales-notifications
 退出码：`0=completed`、`2=plan_only`、`3=disabled`、`4=partial`、`5=blocked`、
 `10..14=配置或调用错误`。输出不包含 Token、open_id 或业务正文。
 
-本地验证已完成：项目 PostgreSQL 只监听 `127.0.0.1:55432`，迁移 020 首次 apply、再次
-skip，主动通知仓储 `3/3`、全套集成 `26 passed / 3 controlled live probes skipped`。
+本地验证已完成：项目 PostgreSQL 只监听 `127.0.0.1:55432`，迁移 020/021 首次 apply、再次
+skip，主动通知仓储 `8/8`、全套集成 `31 passed / 3 controlled live probes skipped`。
 部署环境仍必须重复迁移、plan-only 和测试租户本人投递门禁，不得直接继承本地证据开启发送。
 
 2026-10-12 一次性验收记录：固定租户当地 `18:05` 的 plan-only 唯一命中 1 个本人个人日报；
@@ -32,3 +32,21 @@ skip，主动通知仓储 `3/3`、全套集成 `26 passed / 3 controlled live pr
 0 新发送、1 个 `already_sent` 跳过，飞书回读为“销售日报” interactive 卡片并含 HTTPS 入口。
 本次只发本人，未发主管/群，未启用 cron；两个持久开关仍为 `false`。这份证据只证明当前
 测试租户本人个人日报链路，不自动放行其他通知类型或生产调度。
+
+## unknown 人工对账
+
+1. 只有拥有 `admin:manage-policies` 的当前租户管理员可以打开
+   `/admin/notification-deliveries`；普通销售、主管、高管和未登录请求均不得读取清单。
+2. 先在真实飞书会话核对消息，再选择一项裁决：
+   - “确认已送达”：填写真实消息 ID 和带时区发送时间，之后不再领取该业务键；
+   - “确认未送达并释放一次重试”：只增加一次后续尝试资格，本次不会发送；
+   - “证据不足，继续冻结”：保持 `uncertain`，等待后续证据。
+3. 页面提交中不可关闭，完成后再显示成功、冲突或失败。冲突必须刷新后重新核对，不能覆盖
+   其他管理员的新版本。
+4. 每次成功裁决都会追加不可变审计；禁止直接改
+   `proactive_sales_notifications` 绕过操作人、证据和并发保护。
+5. 对账完成不等于允许生产投递。持久开关和 cron 仍需独立发布决策，不得因清单为空自动开启。
+
+迁移 021 建立通用对账表及稳定通知 UUID/尝试上限；已进入迁移账本，后续结构变化必须新增
+迁移文件，不能修改 021。当前真实组织没有 admin 角色，因此自动化和未登录启动冒烟已通过，
+真实管理员页面仍是 `UI pending`。

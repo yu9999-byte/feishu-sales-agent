@@ -297,6 +297,7 @@ export type PlatformNavigationKey =
   | 'workspace'
   | 'daily-report'
   | 'stale-opportunity-readiness'
+  | 'notification-operations'
   | 'customers'
   | 'opportunities'
   | 'followups'
@@ -1587,6 +1588,55 @@ export interface ProactiveSalesNotificationRunResponse {
   generatedAt: string;
   summary: ProactiveSalesNotificationRunSummary;
   warnings: string[];
+}
+
+export type ProactiveSalesNotificationKind =
+  | 'task_action'
+  | 'opportunity_risk'
+  | 'daily_report'
+  | 'weekly_personal'
+  | 'weekly_team';
+
+export type ProactiveNotificationReconciliationDecision =
+  | 'confirm_sent'
+  | 'authorize_retry'
+  | 'keep_frozen';
+
+export interface ProactiveNotificationReconciliationItem {
+  notificationId: string;
+  recipientMemberId: string;
+  recipientDisplayName: string;
+  kind: ProactiveSalesNotificationKind;
+  notificationKey: string;
+  subjectKey: string;
+  attemptCount: number;
+  dispatchStartedAt: string | null;
+  failureCode: string | null;
+  failureMessage: string | null;
+  updatedAt: string;
+}
+
+export interface ProactiveNotificationReconciliationListResponse {
+  status: 'ready' | 'unavailable';
+  items: ProactiveNotificationReconciliationItem[];
+  warnings: string[];
+}
+
+export interface ProactiveNotificationReconciliationRequest {
+  expectedUpdatedAt: string;
+  decision: ProactiveNotificationReconciliationDecision;
+  note: string;
+  messageId?: string;
+  sentAt?: string;
+}
+
+export interface ProactiveNotificationReconciliationResponse {
+  reconciliationId: string;
+  notificationId: string;
+  decision: ProactiveNotificationReconciliationDecision;
+  previousStatus: 'uncertain';
+  currentStatus: 'sent' | 'failed' | 'uncertain';
+  updatedAt: string;
 }
 
 export type PlatformSectionKey =

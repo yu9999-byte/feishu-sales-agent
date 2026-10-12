@@ -17,6 +17,7 @@ import TeamReviewPage from './pages/TeamReviewPage/TeamReviewPage';
 import TeamOpportunityDecisionPage from './pages/TeamOpportunityDecisionPage/TeamOpportunityDecisionPage';
 import TaskFulfillmentPage from './pages/TaskFulfillmentPage/TaskFulfillmentPage';
 import PlaybookOptimizationPage from './pages/PlaybookOptimizationPage/PlaybookOptimizationPage';
+import ProactiveNotificationReconciliationPage from './pages/ProactiveNotificationReconciliationPage/ProactiveNotificationReconciliationPage';
 
 const RoutesComponent: React.FC = () => (
   <Routes>
@@ -42,6 +43,10 @@ const RoutesComponent: React.FC = () => (
       <Route path="reviews/opportunities" element={<TeamOpportunityDecisionPage />} />
       <Route path="analytics" element={<SectionPage sectionKey="analytics" />} />
       <Route path="playbooks" element={<PlaybookOptimizationPage />} />
+      <Route
+        path="admin/notification-deliveries"
+        element={<ProactiveNotificationReconciliationPage />}
+      />
       <Route path="admin/members" element={<SectionPage sectionKey="admin-members" />} />
       <Route path="admin/audit" element={<SectionPage sectionKey="admin-audit" />} />
     </Route>

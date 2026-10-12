@@ -46,6 +46,7 @@
 | `31-sales-material-retrieval-sdd.md` | 白名单 Docx/Wiki、销售本人 ACL、真实引用和只读推荐边界 | 已实现，真实资料源未配置，UI 待验收 |
 | `32-sales-material-retrieval-tdd.md` | 配置、飞书只读适配、权限、排序、降级和零副作用测试 | Green |
 | `37-proactive-sales-notifications-sdd.md` | 任务提醒、风险变化、个人日报、个人/团队周报的统一调度、卡片、账本和发布门禁 | 自动化与 PostgreSQL Green；真实投递与 cron 关闭 |
+| `38-proactive-notification-reconciliation-sdd.md` | 通用主动通知 unknown 对账、单次重试释放、不可变审计和管理员页面 | Implemented / UI pending |
 
 ## 2. 规格状态
 

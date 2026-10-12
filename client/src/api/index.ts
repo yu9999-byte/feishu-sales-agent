@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { axiosForBackend } from
+  '@lark-apaas/client-toolkit/utils/getAxiosForBackend';
 
 import type {
   AgentExecutionResult,
@@ -12,6 +14,9 @@ import type {
   PlaybookOptimizationCandidateListResponse,
   PlaybookOptimizationReviewRequest,
   PlaybookOptimizationReviewResponse,
+  ProactiveNotificationReconciliationListResponse,
+  ProactiveNotificationReconciliationRequest,
+  ProactiveNotificationReconciliationResponse,
   UpdateFollowupDraftRequest,
   PlatformSectionKey,
   PlatformSectionResponse,
@@ -328,6 +333,42 @@ const reviewPlaybookCandidate = async (
   }
 };
 
+const getProactiveNotificationReconciliations = async (
+  limit: number = 50,
+): Promise<ProactiveNotificationReconciliationListResponse> => {
+  try {
+    const response = await axiosForBackend<
+      ProactiveNotificationReconciliationListResponse
+    >({
+      url: '/api/platform/proactive-sales-notifications/reconciliation',
+      method: 'GET',
+      params: { limit },
+    });
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
+const reconcileProactiveNotification = async (
+  notificationId: string,
+  input: ProactiveNotificationReconciliationRequest,
+): Promise<ProactiveNotificationReconciliationResponse> => {
+  try {
+    const response = await axiosForBackend<
+      ProactiveNotificationReconciliationResponse
+    >({
+      url: '/api/platform/proactive-sales-notifications/reconciliation/' +
+        encodeURIComponent(notificationId),
+      method: 'POST',
+      data: input,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
 const createFollowupDraft = async (
   input: CreateFollowupDraftRequest,
 ): Promise<FollowupDraftResponse> => {
@@ -413,6 +454,7 @@ export {
   getDailySalesReport,
   getOpportunityDecisions,
   getPlaybookCandidates,
+  getProactiveNotificationReconciliations,
   getTaskFulfillment,
   getTeamOpportunityDecisions,
   getTeamReview,
@@ -422,6 +464,7 @@ export {
   getPlatformSession,
   getWorkspace,
   reviewPlaybookCandidate,
+  reconcileProactiveNotification,
   updateFollowupDraft,
 };
 export type { ProductApiError };

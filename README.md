@@ -17,13 +17,15 @@ P0 已通过真实飞书企业闭环验收：用户私聊机器人提交跟进�
 完成结构化提取，用户确认消息卡片后，Agent 写入客户、商机和跟进三张 Demo Base 表，并
 创建分配给发送者的飞书任务。版本 `1.0.1` 已审核发布，应用身份可读取和写入 Demo Base。
 2026-09-24 整改基线为 22 个测试文件、158 项测试和 8 项真实 Postgres 集成测试。
-截至 2026-10-06，当前工程回归基线为 48 个 Agent 测试文件、465 项测试，4 个
-Postgres 集成测试文件、20 项测试，以及 10 项只读调度客户端测试；服务端、客户端和测试
-类型检查、ESLint/Stylelint、Agent 与 Web 构建均通过。商机停滞提醒已增加独立凭证保护、
+截至 2026-10-13，当前工程回归基线为 77 个 Agent 测试文件、643 项测试，PostgreSQL
+集成为 31 项通过、3 项受控真实探针按开关跳过；服务端、客户端和测试类型检查、
+ESLint/Stylelint、Agent 与 Web 构建均通过。商机停滞提醒已增加独立凭证保护、
 脱敏审计的调度前只读观察入口及部署调用工具；真实 Sender 只读证据已确认机器人启用及租户
 消息发送权限，但历史治理、人工开关和真实候选仍阻断投递，外部 cron 也尚未创建或启用。
 2026-10-12 主动销售通知另完成一次测试租户本人个人日报投递与重复去重回读；该受控证据不
 启用生产开关，也不替代任务卡、风险卡、周报、主管/群和正式调度验收，外部 cron 继续关闭。
+通用主动通知 unknown 人工对账已实现管理员 Web 清单、三类裁决、单次重试释放、乐观并发和
+不可变审计；当前真实组织没有 admin 角色，因此状态为 `Implemented / UI pending`。
 Vitest 已固定使用 `threads` pool，
 避免 Windows/Node 25 默认 fork worker 的原生
 CSPRNG 初始化崩溃。
@@ -58,7 +60,7 @@ CSPRNG 初始化崩溃。
 ## P0 本地运行
 
 1. 准备独立 Postgres，在 `.env.local` 配置 `DATABASE_URL` 后运行
-   `npm run migrate:agent`。该命令固定执行 `003`、`005` 至 `017`，记录文件校验和并可
+   `npm run migrate:agent`。该命令固定执行 `003`、`005` 至 `021`，记录文件校验和并可
    重复运行；不会执行 Demo 租户种子。
 2. 创建客户、商机、跟进三张 Base 表，并按
    `migrations/004_agent_p0_demo_tenant.example.sql` 写入租户配置。
@@ -115,6 +117,7 @@ npm run build:web
 | [当前工程说明](docs/current-state.md) | 现有文件、遗留资产和真实完成度 |
 | [问题日志](docs/issue-log.md) | 当前问题、状态、证据和下一动作 |
 | [只读调度观察运行手册](docs/runbooks/stale-opportunity-schedule-observation.md) | 调度凭证、调用工具、退出码、禁用 cron 示例与故障处理 |
+| [主动销售通知运行手册](docs/runbooks/proactive-sales-notifications.md) | 主动通知启用门禁、真实投递证据与 unknown 人工对账流程 |
 | [竞品能力映射](docs/reference-capability-map.md) | APTSell 公开能力与本项目阶段映射 |
 | [跟进卡片决策问答](docs/decisions/2026-09-20-followup-chat-cards.md) | 三种条件卡、一次确认、质检/推送边界和被覆盖旧口径 |
 | [GitHub 自动检查点](docs/github-publish-automation.md) | 阶段发布、每日补漏、安全门与命令说明 |

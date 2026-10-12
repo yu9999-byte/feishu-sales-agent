@@ -24,6 +24,7 @@ import { PlatformSessionService } from
   '@server/modules/platform-shell/platform-session.service';
 import { PlatformShellModule } from
   '@server/modules/platform-shell/platform-shell.module';
+import { WebAuthModule } from '@server/modules/web-auth/web-auth.module';
 import { DailyReportModule } from './daily-report.module';
 import { DailySalesReportService } from './daily-sales-report.service';
 import { OpportunityDecisionModule } from './opportunity-decision.module';
@@ -33,6 +34,10 @@ import {
 } from './proactive-notification-delivery.service';
 import { ProactiveNotificationPlannerService } from
   './proactive-notification-planner.service';
+import { ProactiveNotificationReconciliationController } from
+  './proactive-notification-reconciliation.controller';
+import { ProactiveNotificationReconciliationService } from
+  './proactive-notification-reconciliation.service';
 import { ProactiveSalesNotificationController } from
   './proactive-sales-notification.controller';
 import { ProactiveSalesNotificationService } from
@@ -54,11 +59,23 @@ import { TeamReviewService } from './team-review.service';
     PlatformShellModule,
     TaskFulfillmentModule,
     TeamReviewModule,
+    WebAuthModule,
   ],
-  controllers: [ProactiveSalesNotificationController],
+  controllers: [
+    ProactiveSalesNotificationController,
+    ProactiveNotificationReconciliationController,
+  ],
   providers: [
     agentConfigProvider,
     PostgresProactiveNotificationStore,
+    {
+      provide: ProactiveNotificationReconciliationService,
+      inject: [PostgresProactiveNotificationStore],
+      useFactory: (
+        store: PostgresProactiveNotificationStore,
+      ): ProactiveNotificationReconciliationService =>
+        new ProactiveNotificationReconciliationService(store),
+    },
     {
       provide: FeishuProactiveNotificationSender,
       inject: [CONTROL_STORE, FeishuClientFactory],
