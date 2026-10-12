@@ -53,6 +53,15 @@ import {
   findMinutesReference,
   MinutesReferenceError,
 } from '@server/modules/sales-behavior/minutes-reference';
+import {
+  DocumentIngestionError,
+  DocumentIngestionService,
+  type DocumentIngestionResult,
+} from '@server/modules/sales-behavior/document-ingestion.service';
+import {
+  DocumentReferenceError,
+  findDocumentReference,
+} from '@server/modules/sales-behavior/document-reference';
 import type {
   AgentSession,
   ConversationContext,
@@ -144,6 +153,8 @@ export class AgentWorkflowService {
     private readonly minutesIngestion?: MinutesIngestionService,
     @Optional()
     private readonly webAuth?: FeishuWebAuthService,
+    @Optional()
+    private readonly documentIngestion?: DocumentIngestionService,
   ) {}
 
   async handleMessage(message: IncomingMessage): Promise<void> {
@@ -603,6 +614,22 @@ export class AgentWorkflowService {
           );
           return;
         }
+        if (this.hasDocumentReference(message.text)) {
+          await this.finishConversationWaiting(
+            integration,
+            message,
+            waitingMessageId,
+            '正在读取飞书文档并整理跟进，请稍候。',
+          );
+          await this.processFollowupTextWithProgress(
+            integration,
+            message,
+            message.text,
+            null,
+            waitingMessageId,
+          );
+          return;
+        }
         const prefillSource: string | null =
           this.followupInputPrefillSource(message.text);
         await this.finishConversationWaiting(
@@ -814,7 +841,16 @@ export class AgentWorkflowService {
       : currentText;
     let normalizedCurrentText: string = currentText;
     let source: FollowupSourceSnapshot = { type: 'text' };
-    if (this.hasMinutesReference(combinedText)) {
+    const containsMinutes: boolean = this.hasMinutesReference(combinedText);
+    const containsDocument: boolean = this.hasDocumentReference(combinedText);
+    if (containsMinutes && containsDocument) {
+      throw new DocumentIngestionError(
+        'DOCUMENT_MULTIPLE_REFERENCES',
+        false,
+        '一次只能提交一份跟进来源',
+      );
+    }
+    if (containsMinutes) {
       if (this.minutesIngestion === undefined) {
         throw new MinutesIngestionError(
           'MINUTES_DEPENDENCY_UNAVAILABLE',
@@ -856,6 +892,54 @@ export class AgentWorkflowService {
           sourceRefHash: minutes.sourceRefHash,
           segmentCount: minutes.segmentCount,
           truncated: minutes.truncated,
+        },
+      });
+    } else if (containsDocument) {
+      if (this.documentIngestion === undefined) {
+        throw new DocumentIngestionError(
+          'DOCUMENT_DEPENDENCY_UNAVAILABLE',
+          true,
+          '飞书文档读取服务尚未就绪',
+        );
+      }
+      await this.store.appendAudit({
+        tenantId: integration.tenantId,
+        traceId: message.messageId,
+        eventType: 'document.ingestion.started.v1',
+        actorOpenId: message.senderOpenId,
+        outcome: 'accepted',
+        details: { sourceType: 'document' },
+      });
+      const document: DocumentIngestionResult =
+        await this.documentIngestion.ingest({
+          integration,
+          actorOpenId: message.senderOpenId,
+          sourceText: combinedText,
+          now: message.receivedAt,
+        });
+      normalizedCurrentText = document.normalizedText;
+      combinedText = document.normalizedText;
+      source = {
+        type: 'document',
+        refHash: document.sourceRefHash,
+        title: document.title,
+        segmentCount: document.segmentCount,
+        truncated: document.truncated,
+        referenceType: document.referenceType,
+        revisionId: document.revisionId,
+      };
+      await this.store.appendAudit({
+        tenantId: integration.tenantId,
+        traceId: message.messageId,
+        eventType: 'document.ingestion.completed.v1',
+        actorOpenId: message.senderOpenId,
+        outcome: 'succeeded',
+        details: {
+          sourceRefHash: document.sourceRefHash,
+          referenceType: document.referenceType,
+          revisionId: document.revisionId,
+          segmentCount: document.segmentCount,
+          truncated: document.truncated,
         },
       });
     }
@@ -2394,10 +2478,25 @@ export class AgentWorkflowService {
         },
       });
     }
+    if (error instanceof DocumentIngestionError) {
+      await this.store.appendAudit({
+        tenantId: integration.tenantId,
+        traceId: message.messageId,
+        eventType: 'document.ingestion.failed.v1',
+        actorOpenId: message.senderOpenId,
+        outcome: 'failed',
+        details: {
+          errorCode: error.code,
+          retryable: error.retryable,
+        },
+      });
+    }
 
     const failureText: string = error instanceof MinutesIngestionError
       ? this.minutesFailureText(integration, error)
-      : MESSAGE_FAILURE_TEXT;
+      : error instanceof DocumentIngestionError
+        ? this.documentFailureText(integration, error)
+        : MESSAGE_FAILURE_TEXT;
 
     if (waitingMessageId) {
       try {
@@ -2485,6 +2584,21 @@ export class AgentWorkflowService {
     }
   }
 
+  private hasDocumentReference(text: string): boolean {
+    try {
+      return findDocumentReference(text) !== null;
+    } catch (error: unknown) {
+      if (error instanceof DocumentReferenceError) {
+        throw new DocumentIngestionError(
+          error.code,
+          false,
+          error.message,
+        );
+      }
+      throw error;
+    }
+  }
+
   private minutesFailureText(
     integration: TenantIntegration,
     error: MinutesIngestionError,
@@ -2512,6 +2626,43 @@ export class AgentWorkflowService {
       return '妙记链接无效，请重新复制完整的飞书妙记链接。业务数据尚未写入。';
     }
     return '妙记读取暂时没有完成，请稍后重新发送该链接。业务数据尚未写入。';
+  }
+
+  private documentFailureText(
+    integration: TenantIntegration,
+    error: DocumentIngestionError,
+  ): string {
+    if (error.code === 'DOCUMENT_AUTHORIZATION_REQUIRED') {
+      const loginUrl: string | null = this.webAuth === undefined
+        ? null
+        : `${this.webAuth.publicOrigin}/api/auth/feishu/start?` +
+          new URLSearchParams({
+            tenantKey: integration.feishuTenantKey,
+            returnTo: '/',
+          }).toString();
+      return loginUrl === null
+        ? '需要先完成飞书用户授权，授权后请重新发送这条文档链接。'
+        : '需要先完成飞书用户授权。' +
+          `[打开授权页](${loginUrl})，授权后请重新发送这条文档链接。`;
+    }
+    if (error.code === 'DOCUMENT_ACCESS_DENIED') {
+      return '无法读取这份飞书文档，请确认当前账号已获查看权限。业务数据尚未写入。';
+    }
+    if (error.code === 'DOCUMENT_UNSUPPORTED_TYPE') {
+      return '这条 Wiki 链接不是飞书文档。首版请发送 Docx 链接或直接粘贴文字，' +
+        '业务数据尚未写入。';
+    }
+    if (error.code === 'DOCUMENT_CONTENT_EMPTY') {
+      return '这份飞书文档没有可用正文。请补充正文或换一份文档，业务数据尚未写入。';
+    }
+    if (error.code === 'DOCUMENT_MULTIPLE_REFERENCES') {
+      return '一次请只发送一个跟进来源（妙记或飞书文档），' +
+        '业务数据尚未写入。';
+    }
+    if (error.code === 'DOCUMENT_INVALID_REFERENCE') {
+      return '飞书文档链接无效，请重新复制完整的 Docx 或 Wiki 链接。业务数据尚未写入。';
+    }
+    return '飞书文档读取暂时没有完成，请稍后重新发送该链接。业务数据尚未写入。';
   }
 
   private isRecordOrAnalyzeClarification(reply: string): boolean {

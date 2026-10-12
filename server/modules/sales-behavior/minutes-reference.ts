@@ -32,7 +32,7 @@ const parseCandidate = (value: string): MinutesReference | null => {
   const pathnameLooksLikeMinutes: boolean =
     parsed.pathname.toLowerCase().includes('/minutes/');
   const trustedHost: boolean = isTrustedHost(parsed.hostname);
-  if (!pathnameLooksLikeMinutes && !trustedHost) return null;
+  if (!pathnameLooksLikeMinutes) return null;
   if (
     parsed.protocol !== 'https:' ||
     !trustedHost ||

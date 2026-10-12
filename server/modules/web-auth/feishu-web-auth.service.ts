@@ -40,7 +40,11 @@ type WebAuthErrorCode =
 
 const LOGIN_STATE_TTL_MS: number = 5 * 60 * 1000;
 const SESSION_TTL_MS: number = 7 * 24 * 60 * 60 * 1000;
-const REQUIRED_USER_SCOPES: string = 'minutes:minutes:readonly';
+const REQUIRED_USER_SCOPES: string = [
+  'minutes:minutes:readonly',
+  'docx:document:readonly',
+  'wiki:node:read',
+].join(' ');
 
 const hashToken = (value: string): string =>
   createHash('sha256').update(value, 'utf8').digest('hex');

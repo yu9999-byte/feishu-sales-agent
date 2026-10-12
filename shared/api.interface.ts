@@ -110,11 +110,13 @@ export interface PendingActionPayload {
 }
 
 export interface FollowupSourceSnapshot {
-  type: 'text' | 'card_form' | 'minutes';
+  type: 'text' | 'card_form' | 'minutes' | 'document';
   refHash?: string;
   title?: string;
   segmentCount?: number;
   truncated?: boolean;
+  referenceType?: 'docx' | 'wiki';
+  revisionId?: number;
 }
 
 export type FollowupProgressState =

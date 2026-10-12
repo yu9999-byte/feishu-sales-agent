@@ -6,6 +6,27 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-13 文档录入误拒无标题正文、混合来源提示错误（已解决）
+
+- 复现一：Docx metadata 的标题为空或仅空白，但 `revision_id` 与 `raw_content` 完整时，网关在
+  读取正文前返回 `DOCUMENT_DEPENDENCY_UNAVAILABLE`；上层已有“飞书文档”标题回退却永远
+  无法触发。
+- 根因一：网关把展示标题与读取所需 revision 同时作为硬可用性条件；标题不是正文事实源，也
+  不应成为读取门槛。
+- 处理一：网关只要求 revision 存在，空标题继续读取正文；录入服务统一回退显示“飞书文档”。
+  测试先复现拒绝，再验证无标题且有正文可以生成来源快照。
+- 复现二：同一跟进消息同时包含妙记和文档时，工作流已在任一网关调用前拒绝，但最终提示为
+  “一次只发送一份飞书文档”，没有说明两个不同来源冲突。
+- 处理二：保持零读取和零业务写入，用户提示改为“一次只发送一个跟进来源（妙记或飞书文档）”。
+- 补充回归：同一文档引用在两个租户/成员下分别取各自用户 token，并生成不同来源哈希；不得
+  跨租户复用授权或来源身份。
+- 证据：新增边界测试取得 2 条预期 Red 后，相关定向 `107/107`、全量 Agent
+  `82 files / 701 tests` 通过；PostgreSQL `32 passed / 3 controlled live probes skipped`，三套
+  TypeScript、Lint/Stylelint、Agent/Web 构建、差异检查和隔离启动门禁通过。
+- 状态：`Resolved / automated green / real source and UI pending`。
+- 下一动作：确认应用后台 `wiki:node:read`、当前销售重新 OAuth，并用本人可读 Docx 与
+  Wiki->Docx 完成真实私聊验收；此前不把自动化替身写成真实文档证据。
+
 ## 2026-10-13 妙记失败留下等待态、单段超长突破正文上限（已解决）
 
 - 复现一：机器人先发送“正在读取妙记”，读取授权失败后又新增一条失败消息；原等待消息仍

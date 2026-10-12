@@ -146,6 +146,7 @@ class MinutesIngestionService {
         input.integration,
         session.member.id,
         input.now,
+        ['minutes:minutes:readonly'],
       );
     } catch (error: unknown) {
       if (error instanceof FeishuUserTokenError) {

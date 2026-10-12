@@ -8,6 +8,8 @@ import { WebAuthModule } from '@server/modules/web-auth/web-auth.module';
 import { FeishuApiModule } from '@server/modules/feishu/feishu-api.module';
 import { FeishuMinutesGateway } from
   '@server/modules/feishu/feishu-minutes.gateway';
+import { FeishuDocumentGateway } from
+  '@server/modules/feishu/feishu-document.gateway';
 import { FollowupDraftController } from './followup-draft.controller';
 import {
   FOLLOWUP_DRAFT_REPOSITORY,
@@ -22,6 +24,10 @@ import {
   MINUTES_TRANSCRIPT_GATEWAY,
   MinutesIngestionService,
 } from './minutes-ingestion.service';
+import {
+  DOCUMENT_CONTENT_GATEWAY,
+  DocumentIngestionService,
+} from './document-ingestion.service';
 
 @Module({
   imports: [
@@ -42,6 +48,8 @@ import {
     FollowupConfirmationService,
     FeishuMinutesGateway,
     MinutesIngestionService,
+    FeishuDocumentGateway,
+    DocumentIngestionService,
     {
       provide: FOLLOWUP_DRAFT_REPOSITORY,
       useExisting: PostgresFollowupDraftRepository,
@@ -50,8 +58,16 @@ import {
       provide: MINUTES_TRANSCRIPT_GATEWAY,
       useExisting: FeishuMinutesGateway,
     },
+    {
+      provide: DOCUMENT_CONTENT_GATEWAY,
+      useExisting: FeishuDocumentGateway,
+    },
   ],
-  exports: [FollowupChatDraftService, MinutesIngestionService],
+  exports: [
+    FollowupChatDraftService,
+    MinutesIngestionService,
+    DocumentIngestionService,
+  ],
 })
 class SalesBehaviorModule {}
 

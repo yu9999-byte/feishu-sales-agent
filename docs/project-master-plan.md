@@ -51,7 +51,8 @@ Playbook 优化。当前销售
 验证 3 份只读 Docx；销售知识问答 / RAG Agent v1 也已接入唯一机器人入口，能够基于这些资料
 回答产品能力、拜访准备和权限边界问题。Playbook 优化 v1 已能从问答反馈生成隐私受控候选，
 并由知识审核角色决定进入待编写或忽略；正式草稿、版本和发布仍按后续阶段建设。
-语音、会议纪要和文档解析作为后续输入型 Agent 扩展，不复制业务写入底座。
+妙记/会议逐字稿和 Docx/Wiki 文档解析已作为输入型 Agent 扩展接入现有业务写入底座，真实来源
+与 UI 仍待验收；语音输入继续作为后续切片，不复制业务写入底座。
 
 ## 3. 完成度口径
 
@@ -69,7 +70,7 @@ Playbook 优化。当前销售
 
 ## 4. 当前基线
 
-截至 2026-10-07，代码仓库和文档证据形成以下判断：
+截至 2026-10-13，代码仓库和文档证据形成以下判断：
 
 本日任务履约增量只接受“成功 Agent 动作结果中的完整替代声明”：
 `relatedTaskGuid + relation: replaces` 必须成对出现，并通过当前租户、当前销售、非自替代、
@@ -86,6 +87,7 @@ Playbook 优化。当前销售
 | LangGraph 对话编排 | `Automated Green / UI pending` | 当前项目回归基线为 34 个 Agent 测试文件、303 项测试及 4 个 Postgres 集成测试文件、13 项测试；类型检查、Lint、构建通过，最新 UI 内容仍待对账 |
 | 跟进草稿、质检、确认 | `Partial` | 结构化抽取、卡内编辑、版本和确认门已有；最新确认按钮与终态需真实 UI 对账 |
 | 飞书妙记逐字稿输入 B4 | `Implemented / automated green / real source and UI pending` | 当前销售 OAuth 密文/刷新、妙记 URL 安全解析、Transcript 说话人/时间证据、120k 上限、LangGraph 意图路由、同聊天单确认卡、失败原地终态、重复消息幂等和确认前零写入已实现。Agent `667/667`、PostgreSQL `32 passed / 3 controlled probes skipped`、迁移 022、类型、Lint、双构建与隔离启动通过；仍需 scope、重新 OAuth 和本人可读真实妙记完成 UI 验收 |
+| 飞书文档输入 B5 | `Implemented / automated green / real source and UI pending` | 当前销售 OAuth、Docx/Wiki 安全解析、Wiki 仅解析到 Docx、`raw_content` 事实源、120k 可见截断、同聊天单确认卡、失败原地终态、混合来源拒绝、跨租户/成员隔离、重复消息幂等和确认前零写入已实现。Agent `82 files / 701 tests`、PostgreSQL `32 passed / 3 controlled probes skipped` 和完整静态/构建/隔离启动门禁通过；仍需确认 `wiki:node:read`、重新 OAuth 和本人可读真实 Docx/Wiki 完成 UI 验收 |
 | 执行中、成功/失败、结果修订 | `Automated Green / UI pending` | 同卡状态机、超时恢复、结果修订已测；真实飞书需观察唯一终态和原记录更新 |
 | 短期上下文 | `Automated Green / UI pending` | LangGraph Checkpointer 已成为生产主路径；需干净双轮和自然路由复测 |
 | 长期语义记忆 | `Partial` | Mem0 适配、ACL 和批准门存在；真实向量后端、中文召回、删除、容量评测未完成，生产写入关闭 |
@@ -188,8 +190,8 @@ Agent 判断、建议和待确认动作，并随草案版本保存。既有商�
 `COP-012..016` 独立实现。`COP-017..022` 已完成单客户拜访准备 v1，但它是可追溯的会前攻略，
 不等同于完整 CRM 客户 360。`COP-023..029` 已继续把攻略转换为可预览的沟通目标、角度、问题、
 材料待补充清单和消息/邮件草稿；`KNO-001..009` 已实现管理员白名单内的真实 Docx/Wiki 只读
-检索、销售本人访问门禁和可核验引用。当前真实租户尚未配置白名单，所以真实资料接入、UI 验收、
-跨渠道画像、自动触达和会后写回仍待后续分别完成。
+检索、销售本人访问门禁和可核验引用。当前真实租户已配置并只读验证 3 份 Docx 白名单资料；
+资料推荐和知识问答的真实 UI、跨渠道画像、自动触达和会后写回仍待后续分别完成。
 
 ### 后续能力：主动触发器（不是并列 Agent）
 
@@ -267,6 +269,20 @@ Playbook 的共同基础，优先级高于语音、报告、RAG 和管理看板�
 - [x] 单元/集成、三套 TypeScript、Lint/Stylelint、双构建、迁移 022 和隔离启动通过。
 - [ ] 应用开通 `minutes:minutes:readonly` 后由当前销售重新 OAuth，并用一条本人可读妙记在真实
   私聊核对等待态、确认卡、说话人/时间证据和确认前零写入。
+
+### 阶段 B5：飞书 Docx/Wiki 文档输入（自动化完成，真实来源/UI 待验收）
+
+- [x] 用飞书/Lark URL 仅识别来源模态，业务意图继续由 LangChain/LangGraph 主分类。
+- [x] 使用当前销售 `user_access_token` 读取 Docx metadata + `raw_content`；Wiki 用同一 token
+  解析节点且只接受 Docx，不用 bot token 代读。
+- [x] 通用 token 获取按场景校验 required scopes；Docx、Wiki 和妙记权限互不冒充。
+- [x] 保留段落顺序、标题、revision 和截断证据；不自动读取图片、附件、Sheet、Base 或子文档。
+- [x] 复用现有草案、单卡确认、Base/Task 执行器、幂等和审计；确认前零业务副作用。
+- [x] 授权、权限、类型、空正文和上游失败原地结束等待消息；混合来源与多文档在读取前拒绝。
+- [x] 跨租户/成员隔离、无标题回退、单元/集成、三套 TypeScript、Lint/Stylelint、双构建、
+  差异检查和隔离启动通过。
+- [ ] 在应用后台确认 `wiki:node:read`，由当前销售重新 OAuth，并用本人可读 Docx 和
+  Wiki->Docx 在真实私聊核对等待态、确认卡、来源证据、失败终态和确认前零写入。
 
 ### 阶段 S4：P1 内部主动触发器
 

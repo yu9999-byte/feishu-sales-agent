@@ -153,6 +153,7 @@ describe('FeishuUserTokenService', (): void => {
       integration,
       MEMBER_ID,
       new Date('2026-10-13T01:30:00.000Z'),
+      ['minutes:minutes:readonly'],
     )).resolves.toBe('uat-original');
   });
 
@@ -175,6 +176,7 @@ describe('FeishuUserTokenService', (): void => {
       integration,
       MEMBER_ID,
       new Date('2026-10-13T01:00:10.000Z'),
+      ['minutes:minutes:readonly'],
     )).resolves.toBe('uat-refreshed');
     expect(oauth.refreshCalls).toEqual(['urt-original']);
     expect(store.records.get(`${TENANT_ID}:${MEMBER_ID}`)?.version).toBe(2);
@@ -198,6 +200,7 @@ describe('FeishuUserTokenService', (): void => {
       integration,
       '00000000-0000-4000-8000-00000000000c',
       NOW,
+      ['minutes:minutes:readonly'],
     )).rejects.toBeInstanceOf(FeishuUserTokenError);
     const otherTenant: TenantIntegration = {
       ...integration,
@@ -207,6 +210,7 @@ describe('FeishuUserTokenService', (): void => {
       otherTenant,
       MEMBER_ID,
       NOW,
+      ['minutes:minutes:readonly'],
     )).rejects.toMatchObject({ code: 'AUTHORIZATION_REQUIRED' });
   });
 
@@ -228,6 +232,77 @@ describe('FeishuUserTokenService', (): void => {
       integration,
       MEMBER_ID,
       NOW,
+      ['minutes:minutes:readonly'],
     )).rejects.toMatchObject({ code: 'AUTHORIZATION_REQUIRED' });
+  });
+
+  it('validates only the scopes required by the current source', async (): Promise<void> => {
+    const store: MemoryCredentialStore = new MemoryCredentialStore();
+    const service: FeishuUserTokenService = new FeishuUserTokenService(
+      store,
+      new FakeOAuthGateway(),
+      new FeishuOAuthTokenCipher(),
+    );
+    await service.saveAuthorization(
+      integration,
+      MEMBER_ID,
+      { ...grant, scope: 'docx:document:readonly wiki:node:read' },
+      NOW,
+    );
+
+    await expect(service.getValidAccessToken(
+      integration,
+      MEMBER_ID,
+      NOW,
+      ['docx:document:readonly'],
+    )).resolves.toBe('uat-original');
+    await expect(service.getValidAccessToken(
+      integration,
+      MEMBER_ID,
+      NOW,
+      ['wiki:node:read', 'docx:document:readonly'],
+    )).resolves.toBe('uat-original');
+    await expect(service.getValidAccessToken(
+      integration,
+      MEMBER_ID,
+      NOW,
+      ['minutes:minutes:readonly'],
+    )).rejects.toMatchObject({ code: 'AUTHORIZATION_REQUIRED' });
+  });
+
+  it('preserves known scopes when refresh omits the scope field', async (): Promise<void> => {
+    const store: MemoryCredentialStore = new MemoryCredentialStore();
+    const oauth: FakeOAuthGateway = new FakeOAuthGateway();
+    oauth.refreshed = {
+      accessToken: 'uat-refreshed',
+      refreshToken: 'urt-refreshed',
+      expiresIn: 7200,
+      refreshTokenExpiresIn: 2_592_000,
+    };
+    const service: FeishuUserTokenService = new FeishuUserTokenService(
+      store,
+      oauth,
+      new FeishuOAuthTokenCipher(),
+    );
+    await service.saveAuthorization(
+      integration,
+      MEMBER_ID,
+      {
+        ...grant,
+        expiresIn: 30,
+        scope: 'docx:document:readonly wiki:node:read',
+      },
+      NOW,
+    );
+
+    await expect(service.getValidAccessToken(
+      integration,
+      MEMBER_ID,
+      new Date('2026-10-13T01:00:10.000Z'),
+      ['wiki:node:read', 'docx:document:readonly'],
+    )).resolves.toBe('uat-refreshed');
+    expect(store.records.get(`${TENANT_ID}:${MEMBER_ID}`)?.scope).toBe(
+      'docx:document:readonly wiki:node:read',
+    );
   });
 });

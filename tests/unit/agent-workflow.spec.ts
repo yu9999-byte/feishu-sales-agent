@@ -27,6 +27,11 @@ import {
   type MinutesIngestionService,
 } from '@server/modules/sales-behavior/minutes-ingestion.service';
 import {
+  DocumentIngestionError,
+  type DocumentIngestionResult,
+  type DocumentIngestionService,
+} from '@server/modules/sales-behavior/document-ingestion.service';
+import {
   FollowupProjectRiskService,
 } from '@server/modules/insight/followup-project-risk.service';
 import {
@@ -593,6 +598,7 @@ const createHarness = (
   opportunityDecisions: FakeOpportunityDecisionReader =
     new FakeOpportunityDecisionReader(),
   minutesIngestion?: MinutesIngestionService,
+  documentIngestion?: DocumentIngestionService,
 ): TestHarness => {
   const integrationA: TenantIntegration = createIntegration(
     '00000000-0000-0000-0000-00000000000a',
@@ -717,6 +723,8 @@ const createHarness = (
     opportunityDecisions,
     undefined,
     minutesIngestion,
+    undefined,
+    documentIngestion,
   );
   return {
     integrationA,
@@ -1088,6 +1096,215 @@ describe('AgentWorkflowService', (): void => {
     expect(audits.some((event): boolean =>
       event.eventType === 'minutes.ingestion.failed.v1')).toBe(true);
   });
+
+  it('turns a Docx document into one confirmation card in the source chat', async (): Promise<void> => {
+    const normalizedText: string = [
+      '客户确认试点范围。',
+      '',
+      '下周二安排线上技术交流。',
+    ].join('\n');
+    const result: DocumentIngestionResult = {
+      sourceType: 'document',
+      referenceType: 'docx',
+      sourceRefHash: 'b'.repeat(64),
+      title: '北辰项目沟通纪要',
+      revisionId: 7,
+      normalizedText,
+      segments: [
+        { index: 0, text: '客户确认试点范围。' },
+        { index: 1, text: '下周二安排线上技术交流。' },
+      ],
+      segmentCount: 2,
+      truncated: false,
+    };
+    const ingest = vi.fn(async (): Promise<DocumentIngestionResult> =>
+      structuredClone(result));
+    const document = { ingest } as unknown as DocumentIngestionService;
+    const harness: TestHarness = createHarness(
+      completeDraft,
+      undefined,
+      new FakeOpportunityDecisionReader(),
+      undefined,
+      document,
+    );
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'followup_capture',
+      confidence: 0.99,
+      reply: '我会从文档整理一份待确认跟进。',
+    };
+    const message: IncomingMessage = {
+      ...createMessage('tenant-a', 'om-document-source'),
+      text:
+        'https://ldkj.feishu.cn/docx/NDlodAhO5ouaYqxQskPcJCpjnoh?from=chat',
+    };
+
+    await harness.workflow.handleMessage(message);
+    await harness.workflow.handleMessage(message);
+
+    expect(ingest).toHaveBeenCalledTimes(1);
+    expect(harness.messenger.textUpdates.at(-1)).toMatchObject({
+      messageId: 'om_text_1',
+      text: expect.stringContaining('已生成待确认草案'),
+    });
+    expect(harness.extractor.lastInput).toMatchObject({
+      currentText: normalizedText,
+      combinedText: normalizedText,
+    });
+    expect(harness.messenger.actions).toHaveLength(1);
+    expect(harness.messenger.actions[0]).toMatchObject({
+      chatId: 'oc_tenant-a',
+      payload: {
+        sourceMessageId: 'om-document-source',
+        rawText: normalizedText,
+        source: {
+          type: 'document',
+          refHash: 'b'.repeat(64),
+          referenceType: 'docx',
+          revisionId: 7,
+          segmentCount: 2,
+          truncated: false,
+        },
+      },
+    });
+    expect(harness.records.customerCalls).toBe(0);
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+    const audits = harness.store.getAudits(harness.integrationA.tenantId);
+    expect(audits.some((event): boolean =>
+      event.eventType === 'document.ingestion.completed.v1')).toBe(true);
+    expect(JSON.stringify(audits)).not.toContain(
+      'NDlodAhO5ouaYqxQskPcJCpjnoh',
+    );
+  });
+
+  it('updates the waiting message when document authorization is missing', async (): Promise<void> => {
+    const document = {
+      ingest: vi.fn(async (): Promise<never> => {
+        throw new DocumentIngestionError(
+          'DOCUMENT_AUTHORIZATION_REQUIRED',
+          false,
+          'authorization required',
+        );
+      }),
+    } as unknown as DocumentIngestionService;
+    const harness: TestHarness = createHarness(
+      completeDraft,
+      undefined,
+      new FakeOpportunityDecisionReader(),
+      undefined,
+      document,
+    );
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'followup_capture',
+      confidence: 0.99,
+      reply: '我会从文档整理跟进。',
+    };
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-document-auth'),
+      text: 'https://ldkj.feishu.cn/wiki/WikcnToken12345678',
+    });
+
+    expect(harness.messenger.actions).toHaveLength(0);
+    expect(harness.messenger.textUpdates.at(-1)).toMatchObject({
+      messageId: 'om_text_1',
+      text: expect.stringContaining('飞书用户授权'),
+    });
+    expect(harness.records.customerCalls).toBe(0);
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+    const audits = harness.store.getAudits(harness.integrationA.tenantId);
+    expect(audits.some((event): boolean =>
+      event.eventType === 'document.ingestion.failed.v1')).toBe(true);
+  });
+
+  it('rejects mixed Minutes and document sources before reading either', async (): Promise<void> => {
+    const minutesIngest = vi.fn(async (): Promise<never> => {
+      throw new Error('Minutes ingestion must not run');
+    });
+    const documentIngest = vi.fn(async (): Promise<never> => {
+      throw new Error('Document ingestion must not run');
+    });
+    const harness: TestHarness = createHarness(
+      completeDraft,
+      undefined,
+      new FakeOpportunityDecisionReader(),
+      { ingest: minutesIngest } as unknown as MinutesIngestionService,
+      { ingest: documentIngest } as unknown as DocumentIngestionService,
+    );
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'followup_capture',
+      confidence: 0.99,
+      reply: '我会整理跟进。',
+    };
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-mixed-source'),
+      text:
+        '写跟进 https://ldkj.feishu.cn/minutes/obcnq3b9jl72l83w4f14xxxx ' +
+        'https://ldkj.feishu.cn/docx/NDlodAhO5ouaYqxQskPcJCpjnoh',
+    });
+
+    expect(minutesIngest).not.toHaveBeenCalled();
+    expect(documentIngest).not.toHaveBeenCalled();
+    expect(harness.messenger.textUpdates.at(-1)?.text).toContain(
+      '一次请只发送一个跟进来源',
+    );
+    expect(harness.messenger.actions).toHaveLength(0);
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+  });
+
+  it.each([
+    ['DOCUMENT_ACCESS_DENIED', '无法读取这份飞书文档'],
+    ['DOCUMENT_UNSUPPORTED_TYPE', '不是飞书文档'],
+    ['DOCUMENT_CONTENT_EMPTY', '没有可用正文'],
+    ['DOCUMENT_DEPENDENCY_UNAVAILABLE', '读取暂时没有完成'],
+  ] as const)(
+    'keeps document failure %s in the original waiting message',
+    async (code, expectedText): Promise<void> => {
+      const document = {
+        ingest: vi.fn(async (): Promise<never> => {
+          throw new DocumentIngestionError(
+            code,
+            code === 'DOCUMENT_DEPENDENCY_UNAVAILABLE',
+            'injected document failure',
+          );
+        }),
+      } as unknown as DocumentIngestionService;
+      const harness: TestHarness = createHarness(
+        completeDraft,
+        undefined,
+        new FakeOpportunityDecisionReader(),
+        undefined,
+        document,
+      );
+      harness.conversation.nextDecision = {
+        schemaVersion: 'conversation-intent-v1',
+        intent: 'followup_capture',
+        confidence: 0.99,
+        reply: '我会从文档整理跟进。',
+      };
+
+      await harness.workflow.handleMessage({
+        ...createMessage('tenant-a', `om-document-${code}`),
+        text:
+          'https://ldkj.feishu.cn/docx/NDlodAhO5ouaYqxQskPcJCpjnoh',
+      });
+
+      expect(harness.messenger.actions).toHaveLength(0);
+      expect(harness.messenger.textUpdates.at(-1)?.text).toContain(
+        expectedText,
+      );
+      expect(harness.records.customerCalls).toBe(0);
+      expect(harness.records.opportunityCalls).toBe(0);
+      expect(harness.records.followupCalls).toBe(0);
+      expect(harness.tasks.calls).toBe(0);
+    },
+  );
 
   it('does not claim or process a message from an unknown member', async (): Promise<void> => {
     const harness: TestHarness = createHarness();

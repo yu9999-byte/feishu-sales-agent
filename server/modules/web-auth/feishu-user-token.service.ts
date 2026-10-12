@@ -18,6 +18,7 @@ interface FeishuUserTokenProvider {
     integration: TenantIntegration,
     memberId: string,
     now: Date,
+    requiredScopes: readonly string[],
   ): Promise<string | null>;
 }
 
@@ -36,10 +37,18 @@ class FeishuUserTokenError extends Error {
 }
 
 const REFRESH_SKEW_MS: number = 60_000;
-const MINUTES_READ_SCOPES: string[] = [
-  'minutes:minutes',
-  'minutes:minutes:readonly',
-];
+const SCOPE_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  'minutes:minutes:readonly': [
+    'minutes:minutes:readonly',
+    'minutes:minutes',
+  ],
+  'wiki:node:read': [
+    'wiki:node:read',
+    'wiki:wiki:readonly',
+    'wiki:wiki',
+    'wiki:node:retrieve',
+  ],
+};
 
 @Injectable()
 class FeishuUserTokenService implements FeishuUserTokenProvider {
@@ -64,6 +73,7 @@ class FeishuUserTokenService implements FeishuUserTokenProvider {
     integration: TenantIntegration,
     memberId: string,
     now: Date,
+    requiredScopes: readonly string[],
   ): Promise<string | null> {
     const record: FeishuUserCredentialRecord | null =
       await this.store.getCredential(integration.tenantId, memberId);
@@ -73,15 +83,7 @@ class FeishuUserTokenService implements FeishuUserTokenProvider {
         '飞书用户授权尚未完成',
       );
     }
-    if (
-      record.scope !== null &&
-      !this.hasMinutesReadScope(record.scope)
-    ) {
-      throw new FeishuUserTokenError(
-        'AUTHORIZATION_REQUIRED',
-        '飞书用户授权缺少妙记读取权限',
-      );
-    }
+    this.assertRequiredScopes(record.scope, requiredScopes);
     if (record.accessTokenExpiresAt.getTime() >
       now.getTime() + REFRESH_SKEW_MS) {
       return this.cipher.decrypt(
@@ -120,7 +122,16 @@ class FeishuUserTokenService implements FeishuUserTokenProvider {
         '飞书用户授权刷新暂时不可用',
       );
     }
-    await this.saveTokens(integration, memberId, refreshed, now);
+    const refreshedScope: string | null =
+      refreshed.scope?.trim() || record.scope;
+    this.assertRequiredScopes(refreshedScope, requiredScopes);
+    await this.saveTokens(
+      integration,
+      memberId,
+      refreshed,
+      now,
+      record.scope,
+    );
     return refreshed.accessToken;
   }
 
@@ -129,6 +140,7 @@ class FeishuUserTokenService implements FeishuUserTokenProvider {
     memberId: string,
     tokens: FeishuOAuthTokenResponse,
     now: Date,
+    fallbackScope: string | null = null,
   ): Promise<void> {
     if (
       tokens.accessToken.length === 0 ||
@@ -168,19 +180,41 @@ class FeishuUserTokenService implements FeishuUserTokenProvider {
         now.getTime() + tokens.expiresIn * 1000,
       ),
       refreshTokenExpiresAt,
-      scope: tokens.scope?.trim() || null,
+      scope: tokens.scope?.trim() || fallbackScope,
       updatedAt: now,
     });
   }
 
-  private hasMinutesReadScope(scope: string): boolean {
+  private assertRequiredScopes(
+    scope: string | null,
+    requiredScopes: readonly string[],
+  ): void {
+    if (requiredScopes.length === 0) return;
+    if (scope === null || !this.hasRequiredScopes(scope, requiredScopes)) {
+      throw new FeishuUserTokenError(
+        'AUTHORIZATION_REQUIRED',
+        '飞书用户授权缺少当前来源所需权限',
+      );
+    }
+  }
+
+  private hasRequiredScopes(
+    scope: string,
+    requiredScopes: readonly string[],
+  ): boolean {
     const values: Set<string> = new Set(
       scope.split(/[\s,]+/u).filter(
         (value: string): boolean => value.length > 0,
       ),
     );
-    return MINUTES_READ_SCOPES.some(
-      (value: string): boolean => values.has(value),
+    return requiredScopes.every(
+      (required: string): boolean => {
+        const accepted: readonly string[] =
+          SCOPE_ALIASES[required] ?? [required];
+        return accepted.some(
+          (value: string): boolean => values.has(value),
+        );
+      },
     );
   }
 }

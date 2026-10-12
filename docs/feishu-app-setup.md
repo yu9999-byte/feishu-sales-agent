@@ -116,6 +116,8 @@ OpenAPI 返回 `99991672` 后，按其最小缺权提示补充了 `base:record:r
 | 项目 | 状态 |
 | --- | --- |
 | `docx:document:readonly` | 已开通，仅用于读取白名单 Docx 正文和元数据 |
+| `wiki:node:read` | B5 代码契约已采用；真实应用后台是否开通尚未核验 |
+| 当前销售文档 OAuth | 需要在 B5 真实验收前重新授权并核对返回 scope |
 | `docs:permission.setting:read` | 已开通，仅用于核验文档链接权限 |
 | `docs:permission.member:retrieve` | 已开通，仅用于读取协作者并核验销售本人 ACL |
 | 产品能力说明 | 已加入白名单；应用 `view`；真实读取 `revision:3` |
@@ -223,7 +225,8 @@ Base shortcut 的 `record-upsert` 不会按业务字段自动 upsert。Agent 必
 | 事件或回调已配置 | 已更新到当前临时 HTTPS 地址，两条公网 URL challenge 均已通过 |
 | Demo Base 已创建 | 已完成；目标应用身份可读写，三条验收记录已回读 |
 | 飞书任务创建权限 | 已创建并回读真实任务 |
-| 销售资料检索权限 | 代码与自动化契约已接入；真实白名单和对应 Docx/Wiki/Drive 只读权限待配置 |
+| 销售资料检索权限 | 3 份 Docx 白名单、应用只读和当前销售 ACL 已完成真实只读验证 |
+| 文档录入用户授权 | Docx/Wiki 代码与自动化已 Green；`wiki:node:read` 后台状态、当前销售重新 OAuth 和真实私聊验收待完成 |
 | 公开 HTTPS 回调 | 当前临时 Tunnelmole 已从公网通过两类 challenge；不是稳定生产地址 |
 
 2026-09-18 本地配置核对只检查了是否有值，未回显密钥：`FEISHU_APP_SECRET` 已设置，

@@ -1,6 +1,6 @@
 # 需求追踪矩阵
 
-状态：`Approved / Goal v3 aligned / automated Green / UI pending 2026-10-12`
+状态：`Approved / Goal v3 aligned / B5 automated Green / UI pending 2026-10-13`
 
 2026-10-07 `KNO-001..009` 销售资料检索与推荐 Agent v1 已实现：沟通准备页只从当前租户
 `base_mapping.knowledge.sources` 白名单读取单篇 Docx 或单个 Wiki 文档节点，并在排序前同时
@@ -214,7 +214,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | `FUP-004..006` 保存前可用性、卡内编辑和检查修改 | B2 | Implementing / regression fix | 阻断/建议分离、无数字等级、中文化去重，以及“检查修改只更新、确认保存携编辑值一次执行” Red/Green 均已进入 137 项回归 | 无评分主视觉和取消终态已验收；本次确认按钮修复待真实复测 |
 | `ING-003` 语音输入 | B3 | Draft | 待飞书语音契约测试 | 待真实语音验收 |
 | `ING-004` 妙记/会议输入 | B4 | Implemented / automated green / real source and UI pending | 当前销售 OAuth 密文存储/刷新、`minutes:minutes:readonly` scope、妙记 URL 安全解析、Transcript 说话人/时间证据、120k 上限、LangGraph 意图路由、同聊天单草案、失败原地终态、重复消息幂等和确认前零 Base/Task 已实现；定向 `94/94`、Agent `667/667`、PostgreSQL `32 passed / 3 controlled probes skipped`、三套 TypeScript、Lint/Stylelint、双构建、迁移 022 双次幂等和隔离启动通过 | 待应用开通 scope、当前销售重新 OAuth，并提供一条本人可读的真实妙记完成飞书 UI 验收 |
-| `ING-005..007` 文档输入和失败恢复 | B5 | Draft | 待 Docs 权限/异常测试 | 待真实文档验收 |
+| `ING-005..007` 文档输入和失败恢复 | B5 | Implemented / automated green / real source and UI pending | Docx/Wiki 安全解析、当前销售 user OAuth、按场景 scope、Wiki 仅解析到 Docx、`raw_content` 事实源、120k 可见截断、同聊天等待/失败终态、重复消息幂等、跨租户/成员隔离、混合来源拒绝、无标题回退和确认前零写入均已实现；首轮 Red 与最终门禁见 `40-document-ingestion-sdd.md` | 应用确认 `wiki:node:read`、当前销售重新 OAuth 后，以本人可读 Docx 和 Wiki->Docx 在真实私聊验收；本轮未读取真实文档或发送消息 |
 | `FUP-007..009` 写入、结果/项目质检卡、策略推送和幂等 | B6 | Implementing / regression fix | 三项 Base 后建任务、原卡唯一成功终态、原卡 patch 失败时补发、幂等、`followupRecordUrl` 持久化、成功卡记录链接，以及 `card.source_finalized`/补发 `card.result_sent` 审计均进入 137 项回归 | 历史双成功卡仅保留为 D-022 前的缺陷证据；本次唯一“跟进登记成功＋查看跟进记录”待真实复测 |
 | `FUP-010..011` 即时执行反馈、失败恢复和成功结果修订 | B6 | Isolated callback E2E Verified / real UI pending | 飞书 SDK 回调入口贯通真实 Bridge/Workflow/Executor/MemoryStore；测试替身验证同卡执行中、唯一成功/失败终态、重试及修订原跟进/任务；真实机器人 API E2E 仍只到待确认卡，无真实业务确认 | 本轮不要求手工 UI；真实飞书点击、业务写入和 Base/Task 回读仍待独立验收 |
 | `TSK-001..006` 任务预览、一次确认、状态建议/回收和提醒 | B6 / P1-FULFILL | Partial overall / fulfillment v1 automated green / Web implemented / UI pending | 精确版本候选选择、空选择不建任务；`GET /api/platform/task-fulfillment` 和 `/tasks` 按本人范围及租户时区识别未完成任务风险，并按最终选中候选及精确 `taskGuid` 核对最近 180 天 Agent 成功执行的跟进承诺；另按负责人分页读取已完成任务，最多 10 页且仅计入有效 `completed_at`，覆盖范围标记为 `search_scope`/`partial`/`unavailable`；列表未命中时读取精确任务详情，控制库保存最新状态和有效完成时间快照与 `observed`/`changed`/`completed`/`reopened` 事件，输出已完成/部分完成/仍未完成/待核实及变更/重新开放证据；较新的普通事件不覆盖旧终态，`completed_at="0"` 与冲突状态不得误报完成；事件仅是 Agent 观察证据，不是全量历史，且不按标题/时间/列表缺失跨任务关联；跨任务替代仅接受成功 Agent 动作结果中成对的 `relatedTaskGuid + relation: replaces`，原任务可见时不覆盖，缺字段/冲突/读取失败/跨租户/跨销售均待核实；无任务、不可见、详情失败和分页不完整分开呈现，500 条历史上限警告；不发送提醒、不修改任务、不升级主管。Agent `299/299`、完整门禁通过；本地 Postgres 集成 `12/12` 通过 | 真实登录态内容、链接和视觉待验收；全量完成历史、无任务承接的兑现判断、状态更新、提醒与升级仍待闭环 |

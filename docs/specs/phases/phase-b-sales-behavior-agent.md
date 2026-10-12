@@ -1,6 +1,6 @@
 # Phase B Sales Behavior Agent
 
-状态：`Approved / implementing / B4 automated green 2026-10-13`。原聊天卡片体验与任务一次确认以
+状态：`Approved / implementing / B4-B5 automated green 2026-10-13`。原聊天卡片体验与任务一次确认以
 [决策问答](../../decisions/2026-09-20-followup-chat-cards.md) 为准；旧 Web 验收证据不等于
 新版聊天 UI 已验收。
 对话入口与保存前质量呈现以
@@ -24,7 +24,7 @@ Phase B 把现有 P0“机器人文本 -> 结构化提取 -> 确认 -> Base/任�
 | B2 质检闭环 | 完整度、质量分、证据、风险、建议、编辑后再质检 |
 | B3 语音 | 语音消息下载、转写、来源引用、失败恢复 |
 | B4 妙记/会议 | 已实现用户授权妙记 Transcript 导入、说话人/时间证据；真实来源/UI 待验收 |
-| B5 文档 | 已授权飞书文档导入、分段证据、超长内容处理 |
+| B5 文档 | 已实现当前销售 OAuth 的 Docx/Wiki 导入、分段证据和超长处理；真实来源/UI 待验收 |
 | B6 执行与推送 | 任务状态同步、提醒、本人/主管策略推送、幂等恢复 |
 | B7 个人日报 | 使用已确认事实生成个人日报并保留快照 |
 
@@ -337,8 +337,8 @@ review.personal.generated.v1
 独立结果卡是 D-022 前的历史缺陷证据。现行实现只保留原卡唯一成功终态，仍需真实 UI
 复测。条件项目质检卡已完成
 代码、Card 2.0 生成和自动化，但仍需
-带明确风险证据的真实样本验收；跨角色通知、语音和文档等未完成切片继续按追踪矩阵推进。
-妙记输入已完成自动化实现，但真实来源与飞书 UI 尚未验收。
+带明确风险证据的真实样本验收；跨角色通知和语音等未完成切片继续按追踪矩阵推进。
+妙记与文档输入均已完成自动化实现，但真实来源与飞书 UI 尚未验收。
 
 Red 记录：`followup-confirmation.spec.ts` 初次运行报找不到确认服务，随后 Green；
 `followup-draft-workflow.spec.ts` 的同键不同原文测试先返回旧草案而失败，随后 Green。
@@ -376,8 +376,9 @@ v4 与 `succeeded`，且不可继续编辑。
 “在客户现场与张总、售前王工进行技术交流”，负责人李胜彬，截止 2026-09-22 14:00，状态
 未完成。审计仅一次确认和一次成功；预算/决策链未知没有触发第三卡，符合条件发卡规则。
 本阶段整体仍为 `Implementing`。2026-09-20 新增 B0 意图路由与卡片可用性呈现已完成独立
-Red/Green 和全量回归，真实飞书 UI 仍待验收；语音、文档、风险第三卡真实样本等未完成切片
-继续按追踪矩阵推进。妙记/会议输入已自动化 Green、真实来源/UI 待验收，而不是仍未实现。
+Red/Green 和全量回归，真实飞书 UI 仍待验收；语音、风险第三卡真实样本等未完成切片
+继续按追踪矩阵推进。妙记/会议与 Docx/Wiki 文档输入均已自动化 Green、真实来源/UI 待验收，
+而不是仍未实现。
 
 ## 13. B4 妙记输入实施证据（更新至 2026-10-13）
 
@@ -396,3 +397,22 @@ Red/Green 和全量回归，真实飞书 UI 仍待验收；语音、文档、风
   当前销售重新授权并提供本人可读妙记；详见
   [B4 SDD](../39-meeting-minutes-ingestion-sdd.md) 与
   [决策问答](../../decisions/2026-10-13-meeting-minutes-ingestion.md)。
+
+## 14. B5 文档输入实施证据（更新至 2026-10-13）
+
+- URL 只识别飞书/Lark Docx/Wiki 来源，主业务意图继续由 LangChain/LangGraph 分类；纯文档
+  链接已加入 `followup_capture` 示例，普通问答或只分析意图不进入写入链。
+- 读取固定使用当前销售的 `user_access_token`。Docx 要求 `docx:document:readonly`；Wiki
+  还要求 `wiki:node:read`。token 按租户/成员加密隔离，bot token 不作为降级路径。
+- 事实源只使用 Docx `raw_content`；Wiki 只解析到 Docx。标题/revision 仅作元数据，图片、
+  附件、Sheet、Base、画板、思维笔记和子文档不自动下钻。超长正文保留首尾且不突破 120,000。
+- 复用现有“草案 -> 一张确认卡 -> 确认后 Base/Task”链路；同消息重复投递只读取一次。授权、
+  权限、类型、空正文和上游失败把原等待消息更新为可操作终态，确认前零业务写入。
+- 回归覆盖跨租户/成员 OAuth 与来源哈希隔离、妙记/文档混发零读取、无标题正文回退和多文档
+  拒绝。全量 Agent `82 files / 701 tests`，PostgreSQL
+  `32 passed / 3 controlled probes skipped`，三套 TypeScript、Lint/Stylelint、Agent/Web 构建、
+  差异检查和隔离启动通过。
+- 当前状态只能是 `Implemented / automated green / real source and UI pending`。真实验收需要确认
+  `wiki:node:read`、当前销售重新授权，并提供本人可读 Docx 与 Wiki->Docx；详见
+  [B5 SDD](../40-document-ingestion-sdd.md) 与
+  [决策问答](../../decisions/2026-10-13-document-ingestion.md)。

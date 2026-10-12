@@ -92,6 +92,7 @@ class FakeTokenProvider implements FeishuUserTokenProvider {
     tenant: TenantIntegration,
     memberId: string,
     _now: Date,
+    _requiredScopes: readonly string[],
   ): Promise<string | null> {
     this.calls.push({ tenantId: tenant.tenantId, memberId });
     return this.token;
@@ -163,7 +164,6 @@ describe('minutes reference parsing', (): void => {
     'https://feishu.cn.evil.example/minutes/obcnq3b9jl72l83w4f14xxxx',
     'https://127.0.0.1/minutes/obcnq3b9jl72l83w4f14xxxx',
     'https://ldkj.feishu.cn:444/minutes/obcnq3b9jl72l83w4f14xxxx',
-    'https://ldkj.feishu.cn/wiki/obcnq3b9jl72l83w4f14xxxx',
     'https://ldkj.feishu.cn/minutes/short',
     'https://user@ldkj.feishu.cn/minutes/obcnq3b9jl72l83w4f14xxxx',
     'https://ldkj.feishu.cn/minutes/obcnA1_b-234',
@@ -175,6 +175,9 @@ describe('minutes reference parsing', (): void => {
 
   it('returns null when the message contains no minutes URL', (): void => {
     expect(findMinutesReference('你好，帮我分析一下客户压价。')).toBeNull();
+    expect(findMinutesReference(
+      'https://ldkj.feishu.cn/docx/NDlodAhO5ouaYqxQskPcJCpjnoh',
+    )).toBeNull();
   });
 });
 

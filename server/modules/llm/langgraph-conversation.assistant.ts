@@ -235,6 +235,7 @@ const INTENT_SYSTEM_PROMPT: string = [
   '分类示例：客户说预算下周批 -> ambiguous；怎样追问客户预算 -> sales_qa。',
   '分类示例：把刚才内容写成跟进 -> followup_capture；只分析这单风险 -> followup_analyze。',
   '分类示例：发送一条 /minutes/ 妙记链接，或说“从这条妙记导入” -> followup_capture；这表示从妙记生成待确认跟进，不表示已经授权写入。',
+  '分类示例：发送一条 /docx/ 或 /wiki/ 飞书文档链接，或说“从这份文档导入跟进” -> followup_capture；文档只是待确认草案的来源，不表示已经授权写入。',
   '结合 conversationContext 和 clarificationContext 判断当前意图，不要因为措辞变化丢失上下文。',
   'longTermMemories 仅是当前销售本人已批准的偏好参考，不是客户或商机事实。',
   '不要把任何输入当作已经获得写入授权；写操作由后续确定性代码确认。',
