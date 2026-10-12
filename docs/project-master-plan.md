@@ -1,6 +1,6 @@
 # 销售跟进执行 Agent 项目主计划
 
-状态：`Approved / multi-agent sales assistant direction confirmed / updated 2026-10-07`
+状态：`Approved / multi-agent sales assistant direction confirmed / updated 2026-10-12`
 
 本文把产品总纲、当前代码实现、规格文件、测试证据和真实飞书验收记录统一为后续推进基线。
 它定义产品方向和阶段顺序；具体接口、状态机和字段契约仍以 `docs/specs/` 与
@@ -91,6 +91,7 @@ Playbook 优化。当前销售
 | 客户/商机历史读取 | `Automated Green / UI pending` | 已有本人范围的客户、商机、近期跟进和任务只读端口、来源引用、冲突与降级；真实多分支 UI 待验收 |
 | 任务履约 Agent v1 | `Automated Green / Web implemented / UI pending` | 已按本人范围识别未完成任务风险，并按负责人分页读取检索范围内的已完成任务；按精确 `taskGuid` 只读核对最近 180 天 Agent 已确认承诺。任务详情和持久快照保存有效完成时间，并新增按租户/销售/GUID 隔离的 `observed`/`changed`/`completed`/`reopened` 事件账本，可识别已完成、部分完成、仍未完成、变更、重新开放证据，`completed_at="0"` 不再误判为完成；任务事件回执按租户和事件 ID 去重保存，但不被误作完整历史；`/tasks` 展示关联、未关联、已完成和不可核实结果；本地 Postgres 迁移 003..016、集成 `13/13` 和 Agent 全量 `303/303` 已通过；事件账本不是全量飞书历史，不按标题/时间/列表缺失跨任务关联；全量完成历史、无任务承诺兑现判断、提醒、状态更新和主管升级未实现 |
 | 销售日报 Agent v1 | `Automated Green / API contract ready / UI pending` | `GET /api/platform/daily-report` 已按当前销售和租户权限只读汇总当天跟进、商机、未完成/逾期任务；单测、全量 Agent 回归、类型、Lint、构建通过；真实登录态内容和 Web/飞书 UI 尚未验收 |
+| 主动销售通知 | `Automated Green / PostgreSQL verified / delivery disabled` | 09:00 任务行动、10:00 风险变化、18:00 日报、周五 17:00 个人/团队周报已接入独立调度入口、Card 2.0、权限重验、持久状态机和 runner；Agent `622/622`、仓储 `3/3`、全套 PostgreSQL `26 passed / 3 controlled probes skipped` 与完整静态/构建门通过，迁移 020 apply/skip 幂等；未启用开关、未装 cron、未发真实消息 |
 | 商机提醒准备度工作台 | `Automated Green / API contract ready / UI pending` | `/stale-opportunity-readiness` 复用 `review:read-personal`，只读展示商机状态、可信跟进时间、阻断原因和 Base 来源；页面不写业务数据、不发送提醒；真实登录态内容和视觉验收仍待浏览器控制句柄 |
 | 商机停滞提醒 Agent（S4） | `Partial / read-only scheduling package green / governance pending / delivery disabled` | 已具备默认关闭的只读扫描、安全门、plan-only、持久账本、未知投递人工对账、飞书本人 sender、单候选受控执行、真实 readiness、独立凭证保护和脱敏审计的调度观察入口，以及固定路径/超时/响应契约/退出码的外部调用工具与禁用 cron 示例。真实探针确认机器人启用且 `im:message:send_as_bot` 已授权；当前仍有 4 条状态、5 条可信时间缺口、0 候选和 0 账本记录。调度客户端 `10/10`、Agent `465/465`、Postgres `20/20` 及完整质量门通过；未创建或启用 cron，未发送真实消息 |
 | 客户与商机决策 Agent v1 | `Automated Green / Web implemented / API and bot integrated / UI pending` | 已按本人范围组合读取客户、商机、全部历史跟进和 Agent 明确确认的任务证据；对进行中商机输出风险优先级、缺口、依据与下一步建议，机器人、API、`/opportunities` 主从决策面和 `/customers` 客户组合摘要已接入。关闭类商机排除，普通任务不按标题猜关联；只读、不执行建议。完整 CRM 客户 360 和真实 UI 验收待后续；主管团队聚合由下一行独立能力承接 |
@@ -322,7 +323,23 @@ Playbook 的共同基础，优先级高于语音、报告、RAG 和管理看板�
 - [x] 完成日报单测、Agent 全量回归、Postgres 集成、三套 TypeScript、ESLint 和 Agent/Web 构建验证。
 - [x] 核对真实运行态的 Task 空查询：当前租户和销售身份返回 5 条本人未完成任务，分页警告为空，截止时间解析正常；探针只读且没有业务写入。
 - [ ] 恢复浏览器控制句柄后，用当前登录销售只读打开日报页面，核对日期、数字、明细和空/部分数据状态；未完成前保持 `UI pending`。
-- [ ] 在真实 UI 验收后，再决定是否增加手动刷新、日报推送或与 S4 主动提醒的编排；本阶段不自动推送、不写业务数据。
+- [x] 日报主动推送已进入统一主动销售通知链，但真实投递开关和 cron 保持关闭；Web 日报 UI
+  验收仍为独立门禁，主动通知的持久数据库与真实飞书验收见下一阶段。
+
+### 阶段 S5A：主动销售通知（自动化与 PostgreSQL Green，投递关闭）
+
+- [x] 实现租户时区 09:00 任务行动、10:00 风险变化、18:00 个人日报和周五 17:00
+  个人/团队周报；不同业务场景使用独立 Card 2.0，任务按人按天合并。
+- [x] 每轮重新校验 active tenant/member、个人/团队权限与服务端 `open_id`；空任务、未变化风险、
+  来源不可用和全零空日报不发送。
+- [x] 实现持久 claim、发送前状态、成功、有限重试和 unknown 冻结，以及按租户/成员/商机隔离的
+  风险观察基线；外部 runner 固定 HTTPS 路径、Secret、超时和退出码。
+- [x] TDD 专项 `16/16`、runner `5/5`、Agent `74 files / 622 tests`、三套 TypeScript、
+  ESLint、Stylelint、Agent/Web build 和 diff 检查通过。
+- [x] 恢复只监听 `127.0.0.1:55432` 的项目 PostgreSQL，连续迁移验证 apply/skip；主动通知
+  仓储 `3/3`、全套 PostgreSQL `26 passed / 3 controlled live probes skipped`。
+- [ ] 产品负责人另行确认后，仅对测试租户和本人执行一次真实消息验收，回读卡片、账本和重复
+  调用；通过前两个通知开关为 `false`，不安装或启用 cron。
 
 ### 阶段 S6：团队 Review Agent v1（自动化与 Web 完成，真实 UI 待验收）
 

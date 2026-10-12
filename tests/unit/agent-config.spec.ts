@@ -75,3 +75,38 @@ describe('loadAgentConfig controlled reminder execution', (): void => {
     });
   });
 });
+
+describe('loadAgentConfig proactive sales notifications', (): void => {
+  afterEach((): void => {
+    vi.unstubAllEnvs();
+  });
+
+  it('keeps planning and real delivery disabled by default', (): void => {
+    requiredEnvironment();
+
+    expect(loadAgentConfig().proactiveSalesNotifications).toEqual({
+      enabled: false,
+      deliveryEnabled: false,
+      triggerToken: undefined,
+      webPublicUrl: undefined,
+    });
+  });
+
+  it('loads its dedicated token and normalizes the public web URL', (): void => {
+    requiredEnvironment();
+    vi.stubEnv('PROACTIVE_SALES_NOTIFICATIONS_ENABLED', 'true');
+    vi.stubEnv('PROACTIVE_SALES_NOTIFICATIONS_DELIVERY_ENABLED', 'true');
+    vi.stubEnv(
+      'PROACTIVE_SALES_NOTIFICATION_TRIGGER_TOKEN',
+      'proactive-trigger-token',
+    );
+    vi.stubEnv('WEB_PUBLIC_URL', 'https://agent.example.com///');
+
+    expect(loadAgentConfig().proactiveSalesNotifications).toEqual({
+      enabled: true,
+      deliveryEnabled: true,
+      triggerToken: 'proactive-trigger-token',
+      webPublicUrl: 'https://agent.example.com',
+    });
+  });
+});

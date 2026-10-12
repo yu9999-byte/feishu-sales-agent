@@ -1,10 +1,27 @@
 # 问题日志
 
-状态：`Active / 2026-10-08`
+状态：`Active / 2026-10-12`
 
 本文件只记录可复现的问题、当前状态、证据和下一动作。产品路线见
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
+
+## 2026-10-12 主动销售通知持久账本缺少本地 PostgreSQL 验收（已解决）
+
+- 现象：`npm run migrate:agent` 和主动通知仓储集成测试均连接
+  `127.0.0.1:55432` 失败，错误为 `ECONNREFUSED`。
+- 影响：迁移 020 未真实应用；同键并发只允许一个 claim、sent 后重复运行不再领取、风险基线
+  按租户/成员隔离这 3 条数据库集成验收尚无本轮 Green 证据。单元链路、类型、Lint 和构建不受
+  影响，但不能据此宣称跨进程持久去重已完成真实数据库验收。
+- 已完成：主动通知 TDD 专项 `16/16`、runner `5/5`、Agent `74 files / 622 tests`，三套
+  TypeScript、ESLint、Stylelint、Agent/Web build 与 diff 检查通过；真实投递与 cron 保持关闭。
+- 处理：定位并启动现有 loopback PostgreSQL 二进制/数据目录；发现当前项目本地角色与数据库
+  不存在且连接串无密码后，生成未输出、未入 Git 的本机随机密码，初始化独立 `sales_agent`
+  角色/数据库并同步被忽略的 `.env.local`。未把认证降级为 trust。
+- 结果：迁移 003..020 首次全部 apply、再次全部 skip；主动通知仓储 `3/3`、全套 PostgreSQL
+  `26 passed / 3 controlled live probes skipped`。
+- 状态：`Resolved / local PostgreSQL green / delivery disabled`。
+- 下一动作：真实飞书测试租户本人投递、消息/账本回读与 cron 安装仍需用户另行确认。
 
 ## 2026-10-08 跟进确认卡仍允许只保存跟进
 

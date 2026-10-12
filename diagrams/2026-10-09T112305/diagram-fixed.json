@@ -1,0 +1,4569 @@
+{
+  "nodes": [
+    {
+      "id": "o001:38",
+      "type": "composite_shape",
+      "x": 878.5,
+      "y": 1043.5519999999997,
+      "width": 246,
+      "height": 52.272,
+      "text": {
+        "text": "自动汇总个人报告与团队业务数据",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "自动汇总个人报告与团队业务数据"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:39",
+      "type": "composite_shape",
+      "x": 909.0650024414062,
+      "y": 1173.1999999999996,
+      "width": 184.8699951171875,
+      "height": 52.272,
+      "text": {
+        "text": "团队日报周报与 Review",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "团队日报周报与 Review"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:40",
+      "type": "composite_shape",
+      "x": 981,
+      "y": 1285.4719999999995,
+      "width": 162,
+      "height": 52.272,
+      "text": {
+        "text": "主管直接查看并下钻",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "主管直接查看并下钻"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:41",
+      "type": "composite_shape",
+      "x": 1016,
+      "y": 1445.1199999999994,
+      "width": 92,
+      "height": 52.272,
+      "text": {
+        "text": "管理动作",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "管理动作"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:42",
+      "type": "composite_shape",
+      "x": 1002,
+      "y": 1574.7679999999993,
+      "width": 120,
+      "height": 52.272,
+      "text": {
+        "text": "跟踪执行结果",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "跟踪执行结果"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:43",
+      "type": "composite_shape",
+      "x": 1072.5,
+      "y": 1687.0399999999993,
+      "width": 162,
+      "height": 52.272,
+      "text": {
+        "text": "商机复盘与打法建议",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "商机复盘与打法建议"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:33",
+      "type": "composite_shape",
+      "x": 69,
+      "y": 1173.1999999999996,
+      "width": 120,
+      "height": 52.272,
+      "text": {
+        "text": "今日工作建议",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "今日工作建议"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:34",
+      "type": "composite_shape",
+      "x": 436,
+      "y": 1285.4719999999995,
+      "width": 120,
+      "height": 52.272,
+      "text": {
+        "text": "执行销售工作",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "执行销售工作"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:35",
+      "type": "composite_shape",
+      "x": 316,
+      "y": 901.2799999999997,
+      "width": 176,
+      "height": 52.272,
+      "text": {
+        "text": "个人日报周报自动生成",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "个人日报周报自动生成"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:36",
+      "type": "composite_shape",
+      "x": 160,
+      "y": 1043.5519999999997,
+      "width": 204,
+      "height": 52.272,
+      "text": {
+        "text": "本人和有权限主管直接查看",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "本人和有权限主管直接查看"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:37",
+      "type": "composite_shape",
+      "x": 249,
+      "y": 1173.1999999999996,
+      "width": 162,
+      "height": 52.272,
+      "text": {
+        "text": "无需销售确认或提交",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "无需销售确认或提交"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:26",
+      "type": "composite_shape",
+      "x": 787.5,
+      "y": 38,
+      "width": 162,
+      "height": 52.272,
+      "text": {
+        "text": "知识查询与沟通准备",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "知识查询与沟通准备"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:27",
+      "type": "composite_shape",
+      "x": 458.5,
+      "y": 150.272,
+      "width": 92,
+      "height": 52.272,
+      "text": {
+        "text": "销售活动",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "销售活动"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:28",
+      "type": "composite_shape",
+      "x": 351,
+      "y": 262.544,
+      "width": 92,
+      "height": 52.272,
+      "text": {
+        "text": "跟进记录",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "跟进记录"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:29",
+      "type": "composite_shape",
+      "x": 344.5,
+      "y": 374.816,
+      "width": 134,
+      "height": 52.272,
+      "text": {
+        "text": "商机创建或更新",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "商机创建或更新"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:30",
+      "type": "composite_shape",
+      "x": 452.5,
+      "y": 487.0879999999999,
+      "width": 106,
+      "height": 52.272,
+      "text": {
+        "text": "下一步任务",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "下一步任务"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:31",
+      "type": "composite_shape",
+      "x": 545.5,
+      "y": 599.3599999999999,
+      "width": 134,
+      "height": 52.272,
+      "text": {
+        "text": "履约与风险提醒",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "履约与风险提醒"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:32",
+      "type": "composite_shape",
+      "x": 260,
+      "y": 711.6319999999998,
+      "width": 288,
+      "height": 52.272,
+      "text": {
+        "text": "销售活动、跟进、商机、任务与风险数据",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "销售活动、跟进、商机、任务与风险数据"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:44",
+      "type": "composite_shape",
+      "x": 955,
+      "y": 1846.6879999999992,
+      "width": 120,
+      "height": 52.272,
+      "text": {
+        "text": "查看事实依据",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "查看事实依据"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:45",
+      "type": "composite_shape",
+      "x": 928,
+      "y": 1958.9599999999991,
+      "width": 174,
+      "height": 110.27199999999999,
+      "text": {
+        "text": "判断问题来源",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "判断问题来源"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#ffa53d",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#feead2",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "diamond"
+      }
+    },
+    {
+      "id": "o001:46",
+      "type": "composite_shape",
+      "x": 906.1199998855591,
+      "y": 2146.6079999999993,
+      "width": 176,
+      "height": 52.272,
+      "text": {
+        "text": "修正跟进、商机或任务",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "修正跟进、商机或任务"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:47",
+      "type": "composite_shape",
+      "x": 920,
+      "y": 2258.879999999999,
+      "width": 190,
+      "height": 52.272,
+      "text": {
+        "text": "重新生成对应报告或复盘",
+        "font_weight": "regular",
+        "font_size": 14,
+        "horizontal_align": "center",
+        "vertical_align": "mid",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "重新生成对应报告或复盘"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "theme_fill_color_code": -1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "c001:1",
+      "type": "connector",
+      "x": 504.5,
+      "y": 76.628,
+      "width": 283,
+      "height": 74.64399999999999,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:26",
+            "snap_to": "auto",
+            "position": {
+              "x": 0,
+              "y": 0.7389807162534435
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:27",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130700948882768
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 235.83299999999997,
+            "y": 7.274000000000001
+          },
+          {
+            "x": 47.16700000000003,
+            "y": 41.537000000000006
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:26",
+          "snap_to": "auto",
+          "position": {
+            "x": 0,
+            "y": 0.7389807162534435
+          }
+        },
+        "end_object": {
+          "id": "o001:27",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130700948882768
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:2",
+      "type": "connector",
+      "x": 397,
+      "y": 200.429,
+      "width": 61.5,
+      "height": 63.11499999999998,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:27",
+            "snap_to": "auto",
+            "position": {
+              "x": 0,
+              "y": 0.9595385674931132
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:28",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130700948882768
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 51.25,
+            "y": 5.352000000000004
+          },
+          {
+            "x": 10.25,
+            "y": 31.929000000000002
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:27",
+          "snap_to": "auto",
+          "position": {
+            "x": 0,
+            "y": 0.9595385674931132
+          }
+        },
+        "end_object": {
+          "id": "o001:28",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130700948882768
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:3",
+      "type": "connector",
+      "x": 403.751,
+      "y": 314.816,
+      "width": 7.749000000000024,
+      "height": 61,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:28",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.5733804347826085,
+              "y": 0.9999999999999999
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:29",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130700948882768
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 1.2909999999999968,
+            "y": 5
+          },
+          {
+            "x": 6.4570000000000505,
+            "y": 30.16700000000003
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:28",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.5733804347826085,
+            "y": 0.9999999999999999
+          }
+        },
+        "end_object": {
+          "id": "o001:29",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130700948882768
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:4",
+      "type": "connector",
+      "x": 455.265,
+      "y": 427.088,
+      "width": 50.235000000000014,
+      "height": 61,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:29",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.8266044776119402,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:30",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130700948884943
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 8.372000000000014,
+            "y": 5
+          },
+          {
+            "x": 41.86200000000002,
+            "y": 30.166999999999973
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:29",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.8266044776119402,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:30",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130700948884943
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:5",
+      "type": "connector",
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:30",
+            "snap_to": "bottom",
+            "position": {
+              "x": 0.7349905660377358,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:31",
+            "snap_to": "top",
+            "position": {
+              "x": 0.31926119402985037,
+              "y": 0.013850627486992012
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "straight",
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:30",
+          "snap_to": "bottom",
+          "position": {
+            "x": 0.7349905660377358,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:31",
+          "snap_to": "top",
+          "position": {
+            "x": 0.31926119402985037,
+            "y": 0.013850627486992012
+          }
+        }
+      },
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    {
+      "id": "c001:6",
+      "type": "connector",
+      "x": 549.562,
+      "y": 193.105,
+      "width": 106.43799999999999,
+      "height": 406.255,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:31",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.6511417910447764,
+              "y": 2.174908894276401e-15
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:27",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.9898043478260871,
+              "y": 0.8194253137434956
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 87.06499999999994,
+            "y": 401.255
+          },
+          {
+            "x": 102.56299999999999,
+            "y": 371.899
+          },
+          {
+            "x": 106.43799999999999,
+            "y": 320.119
+          },
+          {
+            "x": 106.43799999999999,
+            "y": 263.98300000000006
+          },
+          {
+            "x": 106.43799999999999,
+            "y": 207.847
+          },
+          {
+            "x": 106.43799999999999,
+            "y": 151.71099999999998
+          },
+          {
+            "x": 106.43799999999999,
+            "y": 95.57500000000002
+          },
+          {
+            "x": 88.69799999999998,
+            "y": 42.22200000000001
+          },
+          {
+            "x": 17.74000000000001,
+            "y": 6.5730000000000075
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:31",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.6511417910447764,
+            "y": 2.174908894276401e-15
+          }
+        },
+        "end_object": {
+          "id": "o001:27",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.9898043478260871,
+            "y": 0.8194253137434956
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:7",
+      "type": "connector",
+      "x": 202,
+      "y": 184.944,
+      "width": 256.5,
+      "height": 526.956,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "dot"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:27",
+            "snap_to": "auto",
+            "position": {
+              "x": 0,
+              "y": 0.6632996632996633
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:32",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.17679166666666665,
+              "y": 0.005127027854303313
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 213.75,
+            "y": 7.9339999999999975
+          },
+          {
+            "x": 42.75,
+            "y": 49.023000000000025
+          },
+          {
+            "x": 0,
+            "y": 103.73600000000002
+          },
+          {
+            "x": 0,
+            "y": 159.87199999999999
+          },
+          {
+            "x": 0,
+            "y": 216.008
+          },
+          {
+            "x": 0,
+            "y": 272.144
+          },
+          {
+            "x": 0,
+            "y": 328.2800000000001
+          },
+          {
+            "x": 0,
+            "y": 384.41600000000005
+          },
+          {
+            "x": 0,
+            "y": 440.552
+          },
+          {
+            "x": 18.15299999999999,
+            "y": 492.37700000000007
+          },
+          {
+            "x": 90.76299999999998,
+            "y": 521.9110000000001
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:27",
+          "snap_to": "auto",
+          "position": {
+            "x": 0,
+            "y": 0.6632996632996633
+          }
+        },
+        "end_object": {
+          "id": "o001:32",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.17679166666666665,
+            "y": 0.005127027854303313
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:8",
+      "type": "connector",
+      "x": 239.5,
+      "y": 305.075,
+      "width": 111.5,
+      "height": 406.88000000000005,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "dot"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:28",
+            "snap_to": "auto",
+            "position": {
+              "x": 0,
+              "y": 0.8136478420569331
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:32",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.23735416666666667,
+              "y": 0.0061792164064930835
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 92.91699999999997,
+            "y": 6.624000000000024
+          },
+          {
+            "x": 18.583000000000027,
+            "y": 42.47399999999999
+          },
+          {
+            "x": 0,
+            "y": 95.87700000000001
+          },
+          {
+            "x": 0,
+            "y": 152.01300000000003
+          },
+          {
+            "x": 0,
+            "y": 208.14900000000006
+          },
+          {
+            "x": 0,
+            "y": 264.285
+          },
+          {
+            "x": 0,
+            "y": 320.421
+          },
+          {
+            "x": 14.810000000000002,
+            "y": 372.25500000000005
+          },
+          {
+            "x": 74.048,
+            "y": 401.82599999999996
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:28",
+          "snap_to": "auto",
+          "position": {
+            "x": 0,
+            "y": 0.8136478420569331
+          }
+        },
+        "end_object": {
+          "id": "o001:32",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.23735416666666667,
+            "y": 0.0061792164064930835
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:9",
+      "type": "connector",
+      "x": 365,
+      "y": 427.088,
+      "width": 24.850000000000023,
+      "height": 285.36499999999995,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "dot"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:29",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.33843283582089567,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:32",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.4389340277777778,
+              "y": 0.015706305479035433
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 20.709000000000003,
+            "y": 5
+          },
+          {
+            "x": 4.141999999999996,
+            "y": 34.355999999999995
+          },
+          {
+            "x": 0,
+            "y": 86.13600000000002
+          },
+          {
+            "x": 0,
+            "y": 142.272
+          },
+          {
+            "x": 0,
+            "y": 198.40799999999996
+          },
+          {
+            "x": 3.569000000000017,
+            "y": 250.325
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:29",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.33843283582089567,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:32",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.4389340277777778,
+            "y": 0.015706305479035433
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:10",
+      "type": "connector",
+      "x": 433.506,
+      "y": 539.36,
+      "width": 55,
+      "height": 172.92599999999993,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "dot"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:30",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.3396792452830186,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:32",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.6024513888888888,
+              "y": 0.012511478420571435
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 51.749000000000024,
+            "y": 5
+          },
+          {
+            "x": 38.745000000000005,
+            "y": 34.355999999999995
+          },
+          {
+            "x": 35.49400000000003,
+            "y": 86.13599999999997
+          },
+          {
+            "x": 29.57800000000003,
+            "y": 138.02499999999998
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:30",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.3396792452830186,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:32",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.6024513888888888,
+            "y": 0.012511478420571435
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:11",
+      "type": "connector",
+      "x": 500.109,
+      "y": 651.632,
+      "width": 112.39100000000002,
+      "height": 60.260000000000105,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "dot"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:31",
+            "snap_to": "bottom",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:32",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.8337118055555555,
+              "y": 0.0049739822467136955
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 112.39100000000002,
+            "y": 5
+          },
+          {
+            "x": 93.65900000000005,
+            "y": 30.043000000000006
+          },
+          {
+            "x": 18.73100000000005,
+            "y": 55.2170000000001
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:31",
+          "snap_to": "bottom",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:32",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.8337118055555555,
+            "y": 0.0049739822467136955
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:12",
+      "type": "connector",
+      "x": 129,
+      "y": 1225.472,
+      "width": 307.989,
+      "height": 77.11000000000013,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:33",
+            "snap_to": "bottom",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:34",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.008241666666666465,
+              "y": 0.3273262932353953
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 0,
+            "y": 5
+          },
+          {
+            "x": 51.33099999999999,
+            "y": 32.85200000000009
+          },
+          {
+            "x": 256.657,
+            "y": 69.25800000000004
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:33",
+          "snap_to": "bottom",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:34",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.008241666666666465,
+            "y": 0.3273262932353953
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:13",
+      "type": "connector",
+      "x": 430.056,
+      "y": 952.853,
+      "width": 49.88100000000003,
+      "height": 332.619,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:34",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.36614166666666675,
+              "y": 8.699635577105604e-15
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:35",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.6480454545454545,
+              "y": 0.986627640036735
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 46.80799999999999,
+            "y": 327.619
+          },
+          {
+            "x": 34.516999999999996,
+            "y": 298.26300000000003
+          },
+          {
+            "x": 31.444000000000017,
+            "y": 245.03499999999997
+          },
+          {
+            "x": 31.444000000000017,
+            "y": 181.659
+          },
+          {
+            "x": 31.444000000000017,
+            "y": 118.28300000000002
+          },
+          {
+            "x": 31.444000000000017,
+            "y": 65.05500000000006
+          },
+          {
+            "x": 26.20300000000003,
+            "y": 30.583000000000084
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:34",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.36614166666666675,
+            "y": 8.699635577105604e-15
+          }
+        },
+        "end_object": {
+          "id": "o001:35",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.6480454545454545,
+            "y": 0.986627640036735
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:14",
+      "type": "connector",
+      "x": 262,
+      "y": 953.552,
+      "width": 75.887,
+      "height": 90.99999999999989,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:35",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.12435795454545455,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:36",
+            "snap_to": "top",
+            "position": {
+              "x": 0.5,
+              "y": 0.01913070094888712
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 63.238999999999976,
+            "y": 5
+          },
+          {
+            "x": 12.648000000000025,
+            "y": 30
+          },
+          {
+            "x": 0,
+            "y": 60.16700000000003
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:35",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.12435795454545455,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:36",
+          "snap_to": "top",
+          "position": {
+            "x": 0.5,
+            "y": 0.01913070094888712
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:15",
+      "type": "connector",
+      "x": 129,
+      "y": 1095.824,
+      "width": 79.37700000000001,
+      "height": 78.37599999999998,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:36",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.23714215686274515,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:33",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130700948891466
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "captions": {
+          "data": [
+            {
+              "text": "报告洞察反馈",
+              "font_weight": "regular",
+              "font_size": 12,
+              "horizontal_align": "center",
+              "vertical_align": "mid",
+              "line_through": false,
+              "underline": false,
+              "italic": false,
+              "angle": 0,
+              "text_color": "#1f2329",
+              "text_color_type": 0,
+              "text_background_color_type": 0,
+              "theme_text_color_code": -1,
+              "theme_text_background_color_code": -1,
+              "rich_text": {
+                "paragraphs": [
+                  {
+                    "paragraph_type": 0,
+                    "elements": [
+                      {
+                        "element_type": 0,
+                        "text_element": {
+                          "text_style": {
+                            "italic": false,
+                            "underline": false,
+                            "line_through": false
+                          },
+                          "text": "报告洞察反馈"
+                        }
+                      }
+                    ],
+                    "indent": 0,
+                    "list_begin_index": 0,
+                    "quote": false
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "turning_points": [
+          {
+            "x": 66.14699999999999,
+            "y": 6.447999999999865
+          },
+          {
+            "x": 13.229000000000013,
+            "y": 38.85500000000002
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "caption_position": 0.6699999999999999,
+        "start_object": {
+          "id": "o001:36",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.23714215686274515,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:33",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130700948891466
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:16",
+      "type": "connector",
+      "x": 289.417,
+      "y": 1095.824,
+      "width": 40.58300000000003,
+      "height": 78.37599999999998,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "dot"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:36",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.6343970588235293,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:37",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130700948891466
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 6.763000000000034,
+            "y": 6.447999999999865
+          },
+          {
+            "x": 33.81900000000002,
+            "y": 38.85500000000002
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:36",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.6343970588235293,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:37",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130700948891466
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:17",
+      "type": "connector",
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:38",
+            "snap_to": "bottom",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:39",
+            "snap_to": "top",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130700948891466
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "straight",
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:38",
+          "snap_to": "bottom",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:39",
+          "snap_to": "top",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130700948891466
+          }
+        }
+      },
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    {
+      "id": "c001:18",
+      "type": "connector",
+      "x": 1029.668,
+      "y": 1225.472,
+      "width": 32.33200000000011,
+      "height": 61,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:39",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.6523665318546931,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:40",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130700948891466
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 5.389000000000124,
+            "y": 5
+          },
+          {
+            "x": 26.94300000000021,
+            "y": 30.166999999999916
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:39",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.6523665318546931,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:40",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130700948891466
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:19",
+      "type": "connector",
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:40",
+            "snap_to": "bottom",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:41",
+            "snap_to": "top",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130700948891466
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "straight",
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:40",
+          "snap_to": "bottom",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:41",
+          "snap_to": "top",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130700948891466
+          }
+        }
+      },
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    {
+      "id": "c001:20",
+      "type": "connector",
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:41",
+            "snap_to": "bottom",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:42",
+            "snap_to": "top",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130700948895817
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "straight",
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:41",
+          "snap_to": "bottom",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:42",
+          "snap_to": "top",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130700948895817
+          }
+        }
+      },
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    {
+      "id": "c001:21",
+      "type": "connector",
+      "x": 1062,
+      "y": 1627.04,
+      "width": 49.750999999999976,
+      "height": 60.52300000000014,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:42",
+            "snap_to": "bottom",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:43",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.24229012345679,
+              "y": 0.010005356596281382
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 0,
+            "y": 5
+          },
+          {
+            "x": 8.291999999999916,
+            "y": 30.08699999999999
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:42",
+          "snap_to": "bottom",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:43",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.24229012345679,
+            "y": 0.010005356596281382
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:22",
+      "type": "connector",
+      "x": 549.532,
+      "y": 188.166,
+      "width": 169.96799999999996,
+      "height": 1108.372,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:34",
+            "snap_to": "auto",
+            "position": {
+              "x": 1,
+              "y": 0.211700336700346
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:27",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.9894782608695657,
+              "y": 0.7249387817569637
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 33.71799999999996,
+            "y": 1101.528
+          },
+          {
+            "x": 142.71799999999996,
+            "y": 1064.794
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 1009.722
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 946.346
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 882.97
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 829.742
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 791.03
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 739.25
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 686.0219999999999
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 644.4259999999999
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 602.8299999999999
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 549.6020000000001
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 493.46599999999995
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 437.33
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 381.194
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 325.05800000000005
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 268.922
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 212.786
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 156.64999999999998
+          },
+          {
+            "x": 169.96799999999996,
+            "y": 100.51400000000001
+          },
+          {
+            "x": 141.64,
+            "y": 46.337999999999994
+          },
+          {
+            "x": 28.327999999999975,
+            "y": 7.396000000000015
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:34",
+          "snap_to": "auto",
+          "position": {
+            "x": 1,
+            "y": 0.211700336700346
+          }
+        },
+        "end_object": {
+          "id": "o001:27",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.9894782608695657,
+            "y": 0.7249387817569637
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:23",
+      "type": "connector",
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:32",
+            "snap_to": "bottom",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:35",
+            "snap_to": "top",
+            "position": {
+              "x": 0.5,
+              "y": 0.01913070094888712
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "straight",
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:32",
+          "snap_to": "bottom",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:35",
+          "snap_to": "top",
+          "position": {
+            "x": 0.5,
+            "y": 0.01913070094888712
+          }
+        }
+      },
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    {
+      "id": "c001:24",
+      "type": "connector",
+      "x": 548,
+      "y": 751.297,
+      "width": 453.5,
+      "height": 293.2549999999999,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:32",
+            "snap_to": "auto",
+            "position": {
+              "x": 1,
+              "y": 0.7588192531374386
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:38",
+            "snap_to": "top",
+            "position": {
+              "x": 0.5,
+              "y": 0.01913070094888712
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 75.58299999999997,
+            "y": 7.100999999999999
+          },
+          {
+            "x": 377.91700000000003,
+            "y": 41.95399999999995
+          },
+          {
+            "x": 453.5,
+            "y": 81.29499999999996
+          },
+          {
+            "x": 453.5,
+            "y": 122.89099999999996
+          },
+          {
+            "x": 453.5,
+            "y": 176.11900000000003
+          },
+          {
+            "x": 453.5,
+            "y": 227.899
+          },
+          {
+            "x": 453.5,
+            "y": 262.422
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:32",
+          "snap_to": "auto",
+          "position": {
+            "x": 1,
+            "y": 0.7588192531374386
+          }
+        },
+        "end_object": {
+          "id": "o001:38",
+          "snap_to": "top",
+          "position": {
+            "x": 0.5,
+            "y": 0.01913070094888712
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:25",
+      "type": "connector",
+      "x": 492,
+      "y": 941.312,
+      "width": 397.803,
+      "height": 102.46600000000001,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:35",
+            "snap_to": "auto",
+            "position": {
+              "x": 1,
+              "y": 0.76584022038568
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:38",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.0459471544715447,
+              "y": 0.004323538414454013
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 44.58299999999997,
+            "y": 7.039999999999964
+          },
+          {
+            "x": 222.91700000000003,
+            "y": 40.19999999999993
+          },
+          {
+            "x": 289.217,
+            "y": 72.27800000000002
+          },
+          {
+            "x": 376.086,
+            "y": 97.428
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:35",
+          "snap_to": "auto",
+          "position": {
+            "x": 1,
+            "y": 0.76584022038568
+          }
+        },
+        "end_object": {
+          "id": "o001:38",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.0459471544715447,
+            "y": 0.004323538414454013
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:26",
+      "type": "connector",
+      "x": 948.514,
+      "y": 77.524,
+      "width": 255.486,
+      "height": 1609.516,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:43",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.6451358024691355,
+              "y": 1.3049453365658405e-14
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:26",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.9939135802469137,
+              "y": 0.7561218243036425
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "captions": {
+          "data": [
+            {
+              "text": "反哺知识查询",
+              "font_weight": "regular",
+              "font_size": 12,
+              "horizontal_align": "center",
+              "vertical_align": "mid",
+              "line_through": false,
+              "underline": false,
+              "italic": false,
+              "angle": 0,
+              "text_color": "#1f2329",
+              "text_color_type": 0,
+              "text_background_color_type": 0,
+              "theme_text_color_code": -1,
+              "theme_text_background_color_code": -1,
+              "rich_text": {
+                "paragraphs": [
+                  {
+                    "paragraph_type": 0,
+                    "elements": [
+                      {
+                        "element_type": 0,
+                        "text_element": {
+                          "text_style": {
+                            "italic": false,
+                            "underline": false,
+                            "line_through": false
+                          },
+                          "text": "反哺知识查询"
+                        }
+                      }
+                    ],
+                    "indent": 0,
+                    "list_begin_index": 0,
+                    "quote": false
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "turning_points": [
+          {
+            "x": 232.99599999999998,
+            "y": 1604.516
+          },
+          {
+            "x": 250.98799999999994,
+            "y": 1575.1599999999999
+          },
+          {
+            "x": 255.486,
+            "y": 1521.9319999999998
+          },
+          {
+            "x": 255.486,
+            "y": 1458.556
+          },
+          {
+            "x": 255.486,
+            "y": 1393.732
+          },
+          {
+            "x": 255.486,
+            "y": 1333.2640000000001
+          },
+          {
+            "x": 255.486,
+            "y": 1287.312
+          },
+          {
+            "x": 255.486,
+            "y": 1234.0839999999998
+          },
+          {
+            "x": 255.486,
+            "y": 1177.9479999999999
+          },
+          {
+            "x": 255.486,
+            "y": 1120.364
+          },
+          {
+            "x": 255.486,
+            "y": 1056.9879999999998
+          },
+          {
+            "x": 255.486,
+            "y": 993.612
+          },
+          {
+            "x": 255.486,
+            "y": 940.384
+          },
+          {
+            "x": 255.486,
+            "y": 901.672
+          },
+          {
+            "x": 255.486,
+            "y": 849.892
+          },
+          {
+            "x": 255.486,
+            "y": 796.664
+          },
+          {
+            "x": 255.486,
+            "y": 755.068
+          },
+          {
+            "x": 255.486,
+            "y": 713.472
+          },
+          {
+            "x": 255.486,
+            "y": 660.244
+          },
+          {
+            "x": 255.486,
+            "y": 604.108
+          },
+          {
+            "x": 255.486,
+            "y": 547.972
+          },
+          {
+            "x": 255.486,
+            "y": 491.836
+          },
+          {
+            "x": 255.486,
+            "y": 435.70000000000005
+          },
+          {
+            "x": 255.486,
+            "y": 379.564
+          },
+          {
+            "x": 255.486,
+            "y": 323.428
+          },
+          {
+            "x": 255.486,
+            "y": 267.292
+          },
+          {
+            "x": 255.486,
+            "y": 211.156
+          },
+          {
+            "x": 255.486,
+            "y": 155.02
+          },
+          {
+            "x": 255.486,
+            "y": 98.88399999999999
+          },
+          {
+            "x": 212.9050000000001,
+            "y": 44.979
+          },
+          {
+            "x": 42.58100000000002,
+            "y": 7.125
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "caption_position": 0.4946875,
+        "start_object": {
+          "id": "o001:43",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.6451358024691355,
+            "y": 1.3049453365658405e-14
+          }
+        },
+        "end_object": {
+          "id": "o001:26",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.9939135802469137,
+            "y": 0.7561218243036425
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:27",
+      "type": "connector",
+      "x": 492,
+      "y": 942.14,
+      "width": 463.97299999999996,
+      "height": 916.795,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "dot"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:35",
+            "snap_to": "auto",
+            "position": {
+              "x": 1,
+              "y": 0.7816804407713545
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:44",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.00810833333333297,
+              "y": 0.23429369452098167
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "captions": {
+          "data": [
+            {
+              "text": "个人报告不准确",
+              "font_weight": "regular",
+              "font_size": 12,
+              "horizontal_align": "center",
+              "vertical_align": "mid",
+              "line_through": false,
+              "underline": false,
+              "italic": false,
+              "angle": 0,
+              "text_color": "#1f2329",
+              "text_color_type": 0,
+              "text_background_color_type": 0,
+              "theme_text_color_code": -1,
+              "theme_text_background_color_code": -1,
+              "rich_text": {
+                "paragraphs": [
+                  {
+                    "paragraph_type": 0,
+                    "elements": [
+                      {
+                        "element_type": 0,
+                        "text_element": {
+                          "text_style": {
+                            "italic": false,
+                            "underline": false,
+                            "line_through": false
+                          },
+                          "text": "个人报告不准确"
+                        }
+                      }
+                    ],
+                    "indent": 0,
+                    "list_begin_index": 0,
+                    "quote": false
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "turning_points": [
+          {
+            "x": 41.25,
+            "y": 6.902000000000044
+          },
+          {
+            "x": 206.25,
+            "y": 39.50999999999999
+          },
+          {
+            "x": 247.5,
+            "y": 75.76800000000003
+          },
+          {
+            "x": 247.5,
+            "y": 128.99599999999998
+          },
+          {
+            "x": 247.5,
+            "y": 192.37199999999996
+          },
+          {
+            "x": 247.5,
+            "y": 255.74799999999993
+          },
+          {
+            "x": 247.5,
+            "y": 313.332
+          },
+          {
+            "x": 247.5,
+            "y": 369.46799999999996
+          },
+          {
+            "x": 247.5,
+            "y": 422.696
+          },
+          {
+            "x": 247.5,
+            "y": 468.648
+          },
+          {
+            "x": 247.5,
+            "y": 529.1160000000001
+          },
+          {
+            "x": 247.5,
+            "y": 593.9399999999999
+          },
+          {
+            "x": 247.5,
+            "y": 657.3159999999999
+          },
+          {
+            "x": 247.5,
+            "y": 714.9
+          },
+          {
+            "x": 247.5,
+            "y": 771.036
+          },
+          {
+            "x": 247.5,
+            "y": 824.264
+          },
+          {
+            "x": 283.57899999999995,
+            "y": 867.901
+          },
+          {
+            "x": 427.895,
+            "y": 908.3059999999999
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "caption_position": 0.5152631578947368,
+        "start_object": {
+          "id": "o001:35",
+          "snap_to": "auto",
+          "position": {
+            "x": 1,
+            "y": 0.7816804407713545
+          }
+        },
+        "end_object": {
+          "id": "o001:44",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.00810833333333297,
+            "y": 0.23429369452098167
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:28",
+      "type": "connector",
+      "x": 941,
+      "y": 1225.472,
+      "width": 44.91700000000003,
+      "height": 621.875,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "dot"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:39",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.3476334681453064,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:44",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.25764166666666694,
+              "y": 0.012607131925328812
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "captions": {
+          "data": [
+            {
+              "text": "团队报告不准确",
+              "font_weight": "regular",
+              "font_size": 12,
+              "horizontal_align": "center",
+              "vertical_align": "mid",
+              "line_through": false,
+              "underline": false,
+              "italic": false,
+              "angle": 0,
+              "text_color": "#1f2329",
+              "text_color_type": 0,
+              "text_background_color_type": 0,
+              "theme_text_color_code": -1,
+              "theme_text_background_color_code": -1,
+              "rich_text": {
+                "paragraphs": [
+                  {
+                    "paragraph_type": 0,
+                    "elements": [
+                      {
+                        "element_type": 0,
+                        "text_element": {
+                          "text_style": {
+                            "italic": false,
+                            "underline": false,
+                            "line_through": false
+                          },
+                          "text": "团队报告不准确"
+                        }
+                      }
+                    ],
+                    "indent": 0,
+                    "list_begin_index": 0,
+                    "quote": false
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "turning_points": [
+          {
+            "x": 26.942999999999984,
+            "y": 5
+          },
+          {
+            "x": 5.38900000000001,
+            "y": 34.355999999999995
+          },
+          {
+            "x": 0,
+            "y": 86.13599999999997
+          },
+          {
+            "x": 0,
+            "y": 139.36400000000003
+          },
+          {
+            "x": 0,
+            "y": 185.31600000000003
+          },
+          {
+            "x": 0,
+            "y": 245.7840000000001
+          },
+          {
+            "x": 0,
+            "y": 310.60799999999995
+          },
+          {
+            "x": 0,
+            "y": 373.9839999999999
+          },
+          {
+            "x": 0,
+            "y": 431.568
+          },
+          {
+            "x": 0,
+            "y": 487.70399999999995
+          },
+          {
+            "x": 0,
+            "y": 540.932
+          },
+          {
+            "x": 7.48599999999999,
+            "y": 582.6379999999999
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "caption_position": 0.5392307692307692,
+        "start_object": {
+          "id": "o001:39",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.3476334681453064,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:44",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.25764166666666694,
+            "y": 0.012607131925328812
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:29",
+      "type": "connector",
+      "x": 1069.935,
+      "y": 1739.312,
+      "width": 83.56500000000005,
+      "height": 107.80000000000018,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "dot"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:43",
+            "snap_to": "bottom",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:44",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.9577916666666663,
+              "y": 0.008111417202343275
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "captions": {
+          "data": [
+            {
+              "text": "复盘不准确",
+              "font_weight": "regular",
+              "font_size": 12,
+              "horizontal_align": "center",
+              "vertical_align": "mid",
+              "line_through": false,
+              "underline": false,
+              "italic": false,
+              "angle": 0,
+              "text_color": "#1f2329",
+              "text_color_type": 0,
+              "text_background_color_type": 0,
+              "theme_text_color_code": -1,
+              "theme_text_background_color_code": -1,
+              "rich_text": {
+                "paragraphs": [
+                  {
+                    "paragraph_type": 0,
+                    "elements": [
+                      {
+                        "element_type": 0,
+                        "text_element": {
+                          "text_style": {
+                            "italic": false,
+                            "underline": false,
+                            "line_through": false
+                          },
+                          "text": "复盘不准确"
+                        }
+                      }
+                    ],
+                    "indent": 0,
+                    "list_begin_index": 0,
+                    "quote": false
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "turning_points": [
+          {
+            "x": 83.56500000000005,
+            "y": 5
+          },
+          {
+            "x": 83.56500000000005,
+            "y": 31.448000000000093
+          },
+          {
+            "x": 69.63800000000015,
+            "y": 68.75900000000001
+          },
+          {
+            "x": 13.928000000000111,
+            "y": 101.28100000000018
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "caption_position": 0.524,
+        "start_object": {
+          "id": "o001:43",
+          "snap_to": "bottom",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:44",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.9577916666666663,
+            "y": 0.008111417202343275
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:30",
+      "type": "connector",
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:44",
+            "snap_to": "bottom",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:45",
+            "snap_to": "top",
+            "position": {
+              "x": 0.5,
+              "y": 0.009068485200240402
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "straight",
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:44",
+          "snap_to": "bottom",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:45",
+          "snap_to": "top",
+          "position": {
+            "x": 0.5,
+            "y": 0.009068485200240402
+          }
+        }
+      },
+      "x": 0,
+      "y": 0,
+      "width": 0,
+      "height": 0
+    },
+    {
+      "id": "c001:31",
+      "type": "connector",
+      "x": 994.12,
+      "y": 2062.417,
+      "width": 10.125999999999976,
+      "height": 85.19100000000026,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:45",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.43819540229885046,
+              "y": 0.9381982733604252
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:46",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.5000000006502325,
+              "y": 0.019130700948900167
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "captions": {
+          "data": [
+            {
+              "text": "源数据有误",
+              "font_weight": "regular",
+              "font_size": 12,
+              "horizontal_align": "center",
+              "vertical_align": "mid",
+              "line_through": false,
+              "underline": false,
+              "italic": false,
+              "angle": 0,
+              "text_color": "#1f2329",
+              "text_color_type": 0,
+              "text_background_color_type": 0,
+              "theme_text_color_code": -1,
+              "theme_text_background_color_code": -1,
+              "rich_text": {
+                "paragraphs": [
+                  {
+                    "paragraph_type": 0,
+                    "elements": [
+                      {
+                        "element_type": 0,
+                        "text_element": {
+                          "text_style": {
+                            "italic": false,
+                            "underline": false,
+                            "line_through": false
+                          },
+                          "text": "源数据有误"
+                        }
+                      }
+                    ],
+                    "indent": 0,
+                    "list_begin_index": 0,
+                    "quote": false
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "turning_points": [
+          {
+            "x": 8.438999999999965,
+            "y": 7.584000000000287
+          },
+          {
+            "x": 1.6879999999999882,
+            "y": 44.534000000000106
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "caption_position": 0.65,
+        "start_object": {
+          "id": "o001:45",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.43819540229885046,
+            "y": 0.9381982733604252
+          }
+        },
+        "end_object": {
+          "id": "o001:46",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.5000000006502325,
+            "y": 0.019130700948900167
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:32",
+      "type": "connector",
+      "x": 994.12,
+      "y": 2198.88,
+      "width": 11.506999999999948,
+      "height": 60.9369999999999,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:46",
+            "snap_to": "bottom",
+            "position": {
+              "x": 0.5000000006502325,
+              "y": 1
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:47",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.45066842105263133,
+              "y": 0.017925466789118605
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "turning_points": [
+          {
+            "x": 0,
+            "y": 5
+          },
+          {
+            "x": 1.9180000000000064,
+            "y": 30.15599999999995
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "start_object": {
+          "id": "o001:46",
+          "snap_to": "bottom",
+          "position": {
+            "x": 0.5000000006502325,
+            "y": 1
+          }
+        },
+        "end_object": {
+          "id": "o001:47",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.45066842105263133,
+            "y": 0.017925466789118605
+          }
+        }
+      }
+    },
+    {
+      "id": "c001:33",
+      "type": "connector",
+      "x": 1059.76,
+      "y": 2040.865,
+      "width": 112.12000000000012,
+      "height": 218.3520000000001,
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "theme_border_color_code": -1,
+        "border_style": "solid"
+      },
+      "connector": {
+        "start": {
+          "attached_object": {
+            "id": "o001:45",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.7572413793103447,
+              "y": 0.7427542803250226
+            }
+          },
+          "arrow_style": "none"
+        },
+        "end": {
+          "attached_object": {
+            "id": "o001:47",
+            "snap_to": "auto",
+            "position": {
+              "x": 0.8794684210526312,
+              "y": 0.006447046219790684
+            }
+          },
+          "arrow_style": "triangle_arrow"
+        },
+        "shape": "curve",
+        "captions": {
+          "data": [
+            {
+              "text": "AI 总结不准",
+              "font_weight": "regular",
+              "font_size": 12,
+              "horizontal_align": "center",
+              "vertical_align": "mid",
+              "line_through": false,
+              "underline": false,
+              "italic": false,
+              "angle": 0,
+              "text_color": "#1f2329",
+              "text_color_type": 0,
+              "text_background_color_type": 0,
+              "theme_text_color_code": -1,
+              "theme_text_background_color_code": -1,
+              "rich_text": {
+                "paragraphs": [
+                  {
+                    "paragraph_type": 0,
+                    "elements": [
+                      {
+                        "element_type": 0,
+                        "text_element": {
+                          "text_style": {
+                            "italic": false,
+                            "underline": false,
+                            "line_through": false
+                          },
+                          "text": "AI 总结不准"
+                        }
+                      }
+                    ],
+                    "indent": 0,
+                    "list_begin_index": 0,
+                    "quote": false
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "turning_points": [
+          {
+            "x": 18.686999999999898,
+            "y": 11.176000000000158
+          },
+          {
+            "x": 93.43299999999999,
+            "y": 66.68299999999977
+          },
+          {
+            "x": 112.12000000000012,
+            "y": 130.4309999999998
+          },
+          {
+            "x": 97.99000000000001,
+            "y": 183.71499999999992
+          },
+          {
+            "x": 41.46900000000005,
+            "y": 213.29600000000005
+          }
+        ],
+        "caption_auto_direction": false,
+        "specified_coordinate": true,
+        "caption_position": 0.44333333333333336,
+        "start_object": {
+          "id": "o001:45",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.7572413793103447,
+            "y": 0.7427542803250226
+          }
+        },
+        "end_object": {
+          "id": "o001:47",
+          "snap_to": "auto",
+          "position": {
+            "x": 0.8794684210526312,
+            "y": 0.006447046219790684
+          }
+        }
+      }
+    },
+    {
+      "id": "o001:23",
+      "type": "composite_shape",
+      "x": 819.5,
+      "y": 1013.5519999999996,
+      "width": 455,
+      "height": 755.7599999999995,
+      "text": {
+        "text": "团队管理与学习循环",
+        "font_weight": "regular",
+        "font_size": 16,
+        "horizontal_align": "center",
+        "vertical_align": "top",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "团队管理与学习循环"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#c2c262",
+        "border_color_type": 1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#ffffde",
+        "fill_color_type": 1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:24",
+      "type": "composite_shape",
+      "x": 8,
+      "y": 871.2799999999999,
+      "width": 771.5,
+      "height": 496.4639999999997,
+      "text": {
+        "text": "个人工作循环",
+        "font_weight": "regular",
+        "font_size": 16,
+        "horizontal_align": "center",
+        "vertical_align": "top",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "个人工作循环"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#c2c262",
+        "border_color_type": 1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#ffffde",
+        "fill_color_type": 1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    },
+    {
+      "id": "o001:25",
+      "type": "composite_shape",
+      "x": 182,
+      "y": 8,
+      "width": 1092.5,
+      "height": 785.9039999999998,
+      "text": {
+        "text": "销售执行循环",
+        "font_weight": "regular",
+        "font_size": 16,
+        "horizontal_align": "center",
+        "vertical_align": "top",
+        "line_through": false,
+        "underline": false,
+        "italic": false,
+        "angle": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "text_background_color_type": 0,
+        "theme_text_color_code": -1,
+        "theme_text_background_color_code": -1,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "paragraph_type": 0,
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text_style": {
+                      "italic": false,
+                      "underline": false,
+                      "line_through": false
+                    },
+                    "text": "销售执行循环"
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "quote": false
+            }
+          ]
+        }
+      },
+      "style": {
+        "border_opacity": 100,
+        "border_width": "narrow",
+        "border_color": "#c2c262",
+        "border_color_type": 1,
+        "border_style": "solid",
+        "fill_opacity": 100,
+        "fill_color": "#ffffde",
+        "fill_color_type": 1
+      },
+      "composite_shape": {
+        "type": "round_rect"
+      }
+    }
+  ]
+}

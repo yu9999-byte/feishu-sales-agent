@@ -1,0 +1,4698 @@
+{
+  "nodes": [
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:4",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "自动汇总个人报告与团队业务数据",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "自动汇总个人报告与团队业务数据",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 246,
+      "x": 878.5,
+      "y": 1043.552001953125,
+      "z_index": 21
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:11",
+            "position": {
+              "x": 0.008241666480898857,
+              "y": 0.32732629776000977
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:11",
+          "position": {
+            "x": 0.008241666480898857,
+            "y": 0.32732629776000977
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:10",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            },
+            "snap_to": "bottom"
+          }
+        },
+        "start_object": {
+          "id": "o1:10",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          },
+          "snap_to": "bottom"
+        },
+        "turning_points": [
+          {
+            "x": 0,
+            "y": 5
+          },
+          {
+            "x": 51.33100128173828,
+            "y": 32.85200119018555
+          },
+          {
+            "x": 256.6570129394531,
+            "y": 69.25800323486328
+          }
+        ]
+      },
+      "height": 77.11000061035156,
+      "id": "c1:12",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 307.989013671875,
+      "x": 129,
+      "y": 1225.4720458984375,
+      "z_index": 44
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 755.760009765625,
+      "id": "o1:1",
+      "style": {
+        "border_color": "#c2c262",
+        "border_color_type": 1,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#ffffde",
+        "fill_color_type": 1,
+        "fill_opacity": 100
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 16,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "团队管理与学习循环",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "团队管理与学习循环",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "top"
+      },
+      "type": "composite_shape",
+      "width": 455,
+      "x": 819.5,
+      "y": 1013.552001953125,
+      "z_index": 30
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:18",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "商机创建或更新",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "商机创建或更新",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 134,
+      "x": 344.5,
+      "y": 374.8160095214844,
+      "z_index": 7
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:6",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "主管直接查看并下钻",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "主管直接查看并下钻",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 162,
+      "x": 981,
+      "y": 1285.4720458984375,
+      "z_index": 19
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "caption_position": 0.5392307639122009,
+        "caption_position_type": 0,
+        "captions": {
+          "data": [
+            {
+              "angle": 0,
+              "font_size": 12,
+              "font_weight": "regular",
+              "horizontal_align": "center",
+              "italic": false,
+              "line_through": false,
+              "rich_text": {
+                "paragraphs": [
+                  {
+                    "elements": [
+                      {
+                        "element_type": 0,
+                        "text_element": {
+                          "text": "团队报告不准确",
+                          "text_style": {
+                            "italic": false,
+                            "line_through": false,
+                            "underline": false
+                          }
+                        }
+                      }
+                    ],
+                    "indent": 0,
+                    "list_begin_index": 0,
+                    "paragraph_type": 0,
+                    "quote": false
+                  }
+                ]
+              },
+              "text": "团队报告不准确",
+              "text_background_color_type": 0,
+              "text_color": "#1f2329",
+              "text_color_type": 0,
+              "theme_text_background_color_code": -1,
+              "theme_text_color_code": -1,
+              "underline": false,
+              "vertical_align": "mid"
+            }
+          ]
+        },
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:22",
+            "position": {
+              "x": 0.25764167308807373,
+              "y": 0.012607132084667683
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:22",
+          "position": {
+            "x": 0.25764167308807373,
+            "y": 0.012607132084667683
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:5",
+            "position": {
+              "x": 0.3476334810256958,
+              "y": 1
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:5",
+          "position": {
+            "x": 0.3476334810256958,
+            "y": 1
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 26.94300079345703,
+            "y": 5
+          },
+          {
+            "x": 5.388999938964844,
+            "y": 34.35599899291992
+          },
+          {
+            "x": 0,
+            "y": 86.13600158691406
+          },
+          {
+            "x": 0,
+            "y": 139.36399841308594
+          },
+          {
+            "x": 0,
+            "y": 185.3159942626953
+          },
+          {
+            "x": 0,
+            "y": 245.78399658203125
+          },
+          {
+            "x": 0,
+            "y": 310.6080017089844
+          },
+          {
+            "x": 0,
+            "y": 373.9840087890625
+          },
+          {
+            "x": 0,
+            "y": 431.5679931640625
+          },
+          {
+            "x": 0,
+            "y": 487.7040100097656
+          },
+          {
+            "x": 0,
+            "y": 540.9320068359375
+          },
+          {
+            "x": 7.486000061035156,
+            "y": 582.6380004882812
+          }
+        ]
+      },
+      "height": 621.875,
+      "id": "c1:28",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "dot",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 44.91699981689453,
+      "x": 941,
+      "y": 1225.4720458984375,
+      "z_index": 27
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:20",
+            "position": {
+              "x": 0.31926119327545166,
+              "y": 0.013850627467036247
+            },
+            "snap_to": "top"
+          }
+        },
+        "end_object": {
+          "id": "o1:20",
+          "position": {
+            "x": 0.31926119327545166,
+            "y": 0.013850627467036247
+          },
+          "snap_to": "top"
+        },
+        "shape": "straight",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:19",
+            "position": {
+              "x": 0.7349905371665955,
+              "y": 1
+            },
+            "snap_to": "bottom"
+          }
+        },
+        "start_object": {
+          "id": "o1:19",
+          "position": {
+            "x": 0.7349905371665955,
+            "y": 1
+          },
+          "snap_to": "bottom"
+        },
+        "turning_points": []
+      },
+      "height": 0,
+      "id": "c1:5",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 0,
+      "x": 0,
+      "y": 0,
+      "z_index": 37
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:19",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "下一步任务",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "下一步任务",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 106,
+      "x": 452.5,
+      "y": 487.0880126953125,
+      "z_index": 6
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "caption_position": 0.5239999890327454,
+        "caption_position_type": 0,
+        "captions": {
+          "data": [
+            {
+              "angle": 0,
+              "font_size": 12,
+              "font_weight": "regular",
+              "horizontal_align": "center",
+              "italic": false,
+              "line_through": false,
+              "rich_text": {
+                "paragraphs": [
+                  {
+                    "elements": [
+                      {
+                        "element_type": 0,
+                        "text_element": {
+                          "text": "复盘不准确",
+                          "text_style": {
+                            "italic": false,
+                            "line_through": false,
+                            "underline": false
+                          }
+                        }
+                      }
+                    ],
+                    "indent": 0,
+                    "list_begin_index": 0,
+                    "paragraph_type": 0,
+                    "quote": false
+                  }
+                ]
+              },
+              "text": "复盘不准确",
+              "text_background_color_type": 0,
+              "text_color": "#1f2329",
+              "text_color_type": 0,
+              "theme_text_background_color_code": -1,
+              "theme_text_color_code": -1,
+              "underline": false,
+              "vertical_align": "mid"
+            }
+          ]
+        },
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:22",
+            "position": {
+              "x": 0.9577916860580444,
+              "y": 0.008111417293548584
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:22",
+          "position": {
+            "x": 0.9577916860580444,
+            "y": 0.008111417293548584
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:9",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            },
+            "snap_to": "bottom"
+          }
+        },
+        "start_object": {
+          "id": "o1:9",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          },
+          "snap_to": "bottom"
+        },
+        "turning_points": [
+          {
+            "x": 83.56500244140625,
+            "y": 5
+          },
+          {
+            "x": 83.56500244140625,
+            "y": 31.447999954223633
+          },
+          {
+            "x": 69.63800048828125,
+            "y": 68.75900268554688
+          },
+          {
+            "x": 13.928000450134277,
+            "y": 101.28099822998047
+          }
+        ]
+      },
+      "height": 107.80000305175781,
+      "id": "c1:29",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "dot",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 83.56500244140625,
+      "x": 1069.93505859375,
+      "y": 1739.31201171875,
+      "z_index": 26
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:18",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130701199173927
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:18",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130701199173927
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:17",
+            "position": {
+              "x": 0.5733804106712341,
+              "y": 1
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:17",
+          "position": {
+            "x": 0.5733804106712341,
+            "y": 1
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 1.2910000085830688,
+            "y": 5
+          },
+          {
+            "x": 6.456999778747559,
+            "y": 30.16699981689453
+          }
+        ]
+      },
+      "height": 61,
+      "id": "c1:3",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 7.749000072479248,
+      "x": 403.7510070800781,
+      "y": 314.8160095214844,
+      "z_index": 35
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 785.9039916992188,
+      "id": "o1:3",
+      "style": {
+        "border_color": "#c2c262",
+        "border_color_type": 1,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#ffffde",
+        "fill_color_type": 1,
+        "fill_opacity": 100
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 16,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "销售执行循环",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "销售执行循环",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "top"
+      },
+      "type": "composite_shape",
+      "width": 1092.5,
+      "x": 182,
+      "y": 8,
+      "z_index": 32
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 496.4639892578125,
+      "id": "o1:2",
+      "style": {
+        "border_color": "#c2c262",
+        "border_color_type": 1,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#ffffde",
+        "fill_color_type": 1,
+        "fill_opacity": 100
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 16,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "个人工作循环",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "个人工作循环",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "top"
+      },
+      "type": "composite_shape",
+      "width": 771.5,
+      "x": 8,
+      "y": 871.280029296875,
+      "z_index": 31
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "diamond"
+      },
+      "height": 110.27200317382812,
+      "id": "o1:23",
+      "style": {
+        "border_color": "#ffa53d",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#feead2",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "判断问题来源",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "判断问题来源",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 174,
+      "x": 928,
+      "y": 1958.9599609375,
+      "z_index": 2
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:16",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "销售活动",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "销售活动",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 92,
+      "x": 458.5,
+      "y": 150.27200317382812,
+      "z_index": 9
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:21",
+            "position": {
+              "x": 0.23735415935516357,
+              "y": 0.00617921631783247
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:21",
+          "position": {
+            "x": 0.23735415935516357,
+            "y": 0.00617921631783247
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:17",
+            "position": {
+              "x": 0,
+              "y": 0.8136478662490845
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:17",
+          "position": {
+            "x": 0,
+            "y": 0.8136478662490845
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 92.91699981689453,
+            "y": 6.624000072479248
+          },
+          {
+            "x": 18.58300018310547,
+            "y": 42.4739990234375
+          },
+          {
+            "x": 0,
+            "y": 95.87699890136719
+          },
+          {
+            "x": 0,
+            "y": 152.01300048828125
+          },
+          {
+            "x": 0,
+            "y": 208.1490020751953
+          },
+          {
+            "x": 0,
+            "y": 264.2850036621094
+          },
+          {
+            "x": 0,
+            "y": 320.4209899902344
+          },
+          {
+            "x": 14.8100004196167,
+            "y": 372.2550048828125
+          },
+          {
+            "x": 74.0479965209961,
+            "y": 401.82598876953125
+          }
+        ]
+      },
+      "height": 406.8800048828125,
+      "id": "c1:8",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "dot",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 111.5,
+      "x": 239.5,
+      "y": 305.07501220703125,
+      "z_index": 40
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:16",
+            "position": {
+              "x": 0.9898043274879456,
+              "y": 0.8194252848625183
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:16",
+          "position": {
+            "x": 0.9898043274879456,
+            "y": 0.8194252848625183
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:20",
+            "position": {
+              "x": 0.6511417627334595,
+              "y": 2.1749089227312115e-15
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:20",
+          "position": {
+            "x": 0.6511417627334595,
+            "y": 2.1749089227312115e-15
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 87.06500244140625,
+            "y": 401.2550048828125
+          },
+          {
+            "x": 102.56300354003906,
+            "y": 371.89898681640625
+          },
+          {
+            "x": 106.43800354003906,
+            "y": 320.1189880371094
+          },
+          {
+            "x": 106.43800354003906,
+            "y": 263.9830017089844
+          },
+          {
+            "x": 106.43800354003906,
+            "y": 207.8470001220703
+          },
+          {
+            "x": 106.43800354003906,
+            "y": 151.71099853515625
+          },
+          {
+            "x": 106.43800354003906,
+            "y": 95.57499694824219
+          },
+          {
+            "x": 88.697998046875,
+            "y": 42.22200012207031
+          },
+          {
+            "x": 17.739999771118164,
+            "y": 6.572999954223633
+          }
+        ]
+      },
+      "height": 406.2550048828125,
+      "id": "c1:6",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 106.43800354003906,
+      "x": 549.56201171875,
+      "y": 193.10499572753906,
+      "z_index": 38
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:25",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "重新生成对应报告或复盘",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "重新生成对应报告或复盘",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 190,
+      "x": 920,
+      "y": 2258.8798828125,
+      "z_index": 0
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:10",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "今日工作建议",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "今日工作建议",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 120,
+      "x": 69,
+      "y": 1173.199951171875,
+      "z_index": 15
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:24",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "修正跟进、商机或任务",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "修正跟进、商机或任务",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 176,
+      "x": 906.1199951171875,
+      "y": 2146.60791015625,
+      "z_index": 1
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:7",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130701199173927
+            },
+            "snap_to": "top"
+          }
+        },
+        "end_object": {
+          "id": "o1:7",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130701199173927
+          },
+          "snap_to": "top"
+        },
+        "shape": "straight",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:6",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            },
+            "snap_to": "bottom"
+          }
+        },
+        "start_object": {
+          "id": "o1:6",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          },
+          "snap_to": "bottom"
+        },
+        "turning_points": []
+      },
+      "height": 0,
+      "id": "c1:19",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 0,
+      "x": 0,
+      "y": 0,
+      "z_index": 51
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:5",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130701199173927
+            },
+            "snap_to": "top"
+          }
+        },
+        "end_object": {
+          "id": "o1:5",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130701199173927
+          },
+          "snap_to": "top"
+        },
+        "shape": "straight",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:4",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            },
+            "snap_to": "bottom"
+          }
+        },
+        "start_object": {
+          "id": "o1:4",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          },
+          "snap_to": "bottom"
+        },
+        "turning_points": []
+      },
+      "height": 0,
+      "id": "c1:17",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 0,
+      "x": 0,
+      "y": 0,
+      "z_index": 49
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:17",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "跟进记录",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "跟进记录",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 92,
+      "x": 351,
+      "y": 262.54400634765625,
+      "z_index": 8
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:7",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "管理动作",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "管理动作",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 92,
+      "x": 1016,
+      "y": 1445.1199951171875,
+      "z_index": 18
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:4",
+            "position": {
+              "x": 0.045947153121232986,
+              "y": 0.004323538392782211
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:4",
+          "position": {
+            "x": 0.045947153121232986,
+            "y": 0.004323538392782211
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:12",
+            "position": {
+              "x": 1,
+              "y": 0.7658402323722839
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:12",
+          "position": {
+            "x": 1,
+            "y": 0.7658402323722839
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 44.58300018310547,
+            "y": 7.039999961853027
+          },
+          {
+            "x": 222.91700744628906,
+            "y": 40.20000076293945
+          },
+          {
+            "x": 289.2170104980469,
+            "y": 72.27799987792969
+          },
+          {
+            "x": 376.08599853515625,
+            "y": 97.4280014038086
+          }
+        ]
+      },
+      "height": 102.46600341796875,
+      "id": "c1:25",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 397.8030090332031,
+      "x": 492,
+      "y": 941.31201171875,
+      "z_index": 57
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:8",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130701199173927
+            },
+            "snap_to": "top"
+          }
+        },
+        "end_object": {
+          "id": "o1:8",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130701199173927
+          },
+          "snap_to": "top"
+        },
+        "shape": "straight",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:7",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            },
+            "snap_to": "bottom"
+          }
+        },
+        "start_object": {
+          "id": "o1:7",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          },
+          "snap_to": "bottom"
+        },
+        "turning_points": []
+      },
+      "height": 0,
+      "id": "c1:20",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 0,
+      "x": 0,
+      "y": 0,
+      "z_index": 52
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:6",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130701199173927
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:6",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130701199173927
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:5",
+            "position": {
+              "x": 0.6523665189743042,
+              "y": 1
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:5",
+          "position": {
+            "x": 0.6523665189743042,
+            "y": 1
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 5.388999938964844,
+            "y": 5
+          },
+          {
+            "x": 26.94300079345703,
+            "y": 30.16699981689453
+          }
+        ]
+      },
+      "height": 61,
+      "id": "c1:18",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 32.332000732421875,
+      "x": 1029.66796875,
+      "y": 1225.4720458984375,
+      "z_index": 50
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "caption_position": 0.6700000166893005,
+        "caption_position_type": 0,
+        "captions": {
+          "data": [
+            {
+              "angle": 0,
+              "font_size": 12,
+              "font_weight": "regular",
+              "horizontal_align": "center",
+              "italic": false,
+              "line_through": false,
+              "rich_text": {
+                "paragraphs": [
+                  {
+                    "elements": [
+                      {
+                        "element_type": 0,
+                        "text_element": {
+                          "text": "报告洞察反馈",
+                          "text_style": {
+                            "italic": false,
+                            "line_through": false,
+                            "underline": false
+                          }
+                        }
+                      }
+                    ],
+                    "indent": 0,
+                    "list_begin_index": 0,
+                    "paragraph_type": 0,
+                    "quote": false
+                  }
+                ]
+              },
+              "text": "报告洞察反馈",
+              "text_background_color_type": 0,
+              "text_color": "#1f2329",
+              "text_color_type": 0,
+              "theme_text_background_color_code": -1,
+              "theme_text_color_code": -1,
+              "underline": false,
+              "vertical_align": "mid"
+            }
+          ]
+        },
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:10",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130701199173927
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:10",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130701199173927
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:13",
+            "position": {
+              "x": 0.2371421605348587,
+              "y": 1
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:13",
+          "position": {
+            "x": 0.2371421605348587,
+            "y": 1
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 66.14700317382812,
+            "y": 6.447999954223633
+          },
+          {
+            "x": 13.229000091552734,
+            "y": 38.85499954223633
+          }
+        ]
+      },
+      "height": 78.3759994506836,
+      "id": "c1:15",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 79.37699890136719,
+      "x": 129,
+      "y": 1095.823974609375,
+      "z_index": 47
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:21",
+            "position": {
+              "x": 0.4389340281486511,
+              "y": 0.01570630632340908
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:21",
+          "position": {
+            "x": 0.4389340281486511,
+            "y": 0.01570630632340908
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:18",
+            "position": {
+              "x": 0.33843284845352173,
+              "y": 1
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:18",
+          "position": {
+            "x": 0.33843284845352173,
+            "y": 1
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 20.708999633789062,
+            "y": 5
+          },
+          {
+            "x": 4.142000198364258,
+            "y": 34.35599899291992
+          },
+          {
+            "x": 0,
+            "y": 86.13600158691406
+          },
+          {
+            "x": 0,
+            "y": 142.27200317382812
+          },
+          {
+            "x": 0,
+            "y": 198.4080047607422
+          },
+          {
+            "x": 3.569000005722046,
+            "y": 250.3249969482422
+          }
+        ]
+      },
+      "height": 285.364990234375,
+      "id": "c1:9",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "dot",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 24.850000381469727,
+      "x": 365,
+      "y": 427.0880126953125,
+      "z_index": 41
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:16",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130701199173927
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:16",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130701199173927
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:15",
+            "position": {
+              "x": 0,
+              "y": 0.7389807105064392
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:15",
+          "position": {
+            "x": 0,
+            "y": 0.7389807105064392
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 235.83299255371094,
+            "y": 7.27400016784668
+          },
+          {
+            "x": 47.16699981689453,
+            "y": 41.5369987487793
+          }
+        ]
+      },
+      "height": 74.64399719238281,
+      "id": "c1:1",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 283,
+      "x": 504.5,
+      "y": 76.62799835205078,
+      "z_index": 33
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "caption_position": 0.6499999761581421,
+        "caption_position_type": 0,
+        "captions": {
+          "data": [
+            {
+              "angle": 0,
+              "font_size": 12,
+              "font_weight": "regular",
+              "horizontal_align": "center",
+              "italic": false,
+              "line_through": false,
+              "rich_text": {
+                "paragraphs": [
+                  {
+                    "elements": [
+                      {
+                        "element_type": 0,
+                        "text_element": {
+                          "text": "源数据有误",
+                          "text_style": {
+                            "italic": false,
+                            "line_through": false,
+                            "underline": false
+                          }
+                        }
+                      }
+                    ],
+                    "indent": 0,
+                    "list_begin_index": 0,
+                    "paragraph_type": 0,
+                    "quote": false
+                  }
+                ]
+              },
+              "text": "源数据有误",
+              "text_background_color_type": 0,
+              "text_color": "#1f2329",
+              "text_color_type": 0,
+              "theme_text_background_color_code": -1,
+              "theme_text_color_code": -1,
+              "underline": false,
+              "vertical_align": "mid"
+            }
+          ]
+        },
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:24",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130701199173927
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:24",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130701199173927
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:23",
+            "position": {
+              "x": 0.4381954073905945,
+              "y": 0.9381982684135437
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:23",
+          "position": {
+            "x": 0.4381954073905945,
+            "y": 0.9381982684135437
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 8.439000129699707,
+            "y": 7.584000110626221
+          },
+          {
+            "x": 1.687999963760376,
+            "y": 44.534000396728516
+          }
+        ]
+      },
+      "height": 85.19100189208984,
+      "id": "c1:31",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 10.12600040435791,
+      "x": 994.1199951171875,
+      "y": 2062.4169921875,
+      "z_index": 24
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:23",
+            "position": {
+              "x": 0.5,
+              "y": 0.009068485349416733
+            },
+            "snap_to": "top"
+          }
+        },
+        "end_object": {
+          "id": "o1:23",
+          "position": {
+            "x": 0.5,
+            "y": 0.009068485349416733
+          },
+          "snap_to": "top"
+        },
+        "shape": "straight",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:22",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            },
+            "snap_to": "bottom"
+          }
+        },
+        "start_object": {
+          "id": "o1:22",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          },
+          "snap_to": "bottom"
+        },
+        "turning_points": []
+      },
+      "height": 0,
+      "id": "c1:30",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 0,
+      "x": 0,
+      "y": 0,
+      "z_index": 25
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:13",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130701199173927
+            },
+            "snap_to": "top"
+          }
+        },
+        "end_object": {
+          "id": "o1:13",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130701199173927
+          },
+          "snap_to": "top"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:12",
+            "position": {
+              "x": 0.12435795366764069,
+              "y": 1
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:12",
+          "position": {
+            "x": 0.12435795366764069,
+            "y": 1
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 63.23899841308594,
+            "y": 5
+          },
+          {
+            "x": 12.64799976348877,
+            "y": 30
+          },
+          {
+            "x": 0,
+            "y": 60.16699981689453
+          }
+        ]
+      },
+      "height": 91,
+      "id": "c1:14",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 75.88700103759766,
+      "x": 262,
+      "y": 953.552001953125,
+      "z_index": 46
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:14",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "无需销售确认或提交",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "无需销售确认或提交",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 162,
+      "x": 249,
+      "y": 1173.199951171875,
+      "z_index": 11
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:8",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "跟踪执行结果",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "跟踪执行结果",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 120,
+      "x": 1002,
+      "y": 1574.7679443359375,
+      "z_index": 17
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:25",
+            "position": {
+              "x": 0.45066842436790466,
+              "y": 0.01792546734213829
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:25",
+          "position": {
+            "x": 0.45066842436790466,
+            "y": 0.01792546734213829
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:24",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            },
+            "snap_to": "bottom"
+          }
+        },
+        "start_object": {
+          "id": "o1:24",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          },
+          "snap_to": "bottom"
+        },
+        "turning_points": [
+          {
+            "x": 0,
+            "y": 5
+          },
+          {
+            "x": 1.9179999828338623,
+            "y": 30.1560001373291
+          }
+        ]
+      },
+      "height": 60.9370002746582,
+      "id": "c1:32",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 11.506999969482422,
+      "x": 994.1199951171875,
+      "y": 2198.8798828125,
+      "z_index": 23
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:4",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130701199173927
+            },
+            "snap_to": "top"
+          }
+        },
+        "end_object": {
+          "id": "o1:4",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130701199173927
+          },
+          "snap_to": "top"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:21",
+            "position": {
+              "x": 1,
+              "y": 0.7588192820549011
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:21",
+          "position": {
+            "x": 1,
+            "y": 0.7588192820549011
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 75.58300018310547,
+            "y": 7.10099983215332
+          },
+          {
+            "x": 377.9169921875,
+            "y": 41.95399856567383
+          },
+          {
+            "x": 453.5,
+            "y": 81.29499816894531
+          },
+          {
+            "x": 453.5,
+            "y": 122.89099884033203
+          },
+          {
+            "x": 453.5,
+            "y": 176.11900329589844
+          },
+          {
+            "x": 453.5,
+            "y": 227.8990020751953
+          },
+          {
+            "x": 453.5,
+            "y": 262.4219970703125
+          }
+        ]
+      },
+      "height": 293.2550048828125,
+      "id": "c1:24",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 453.5,
+      "x": 548,
+      "y": 751.2969970703125,
+      "z_index": 56
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:14",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130701199173927
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:14",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130701199173927
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:13",
+            "position": {
+              "x": 0.634397029876709,
+              "y": 1
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:13",
+          "position": {
+            "x": 0.634397029876709,
+            "y": 1
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 6.763000011444092,
+            "y": 6.447999954223633
+          },
+          {
+            "x": 33.819000244140625,
+            "y": 38.85499954223633
+          }
+        ]
+      },
+      "height": 78.3759994506836,
+      "id": "c1:16",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "dot",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 40.58300018310547,
+      "x": 289.4169921875,
+      "y": 1095.823974609375,
+      "z_index": 48
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:21",
+            "position": {
+              "x": 0.8337118029594421,
+              "y": 0.004973982460796833
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:21",
+          "position": {
+            "x": 0.8337118029594421,
+            "y": 0.004973982460796833
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:20",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            },
+            "snap_to": "bottom"
+          }
+        },
+        "start_object": {
+          "id": "o1:20",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          },
+          "snap_to": "bottom"
+        },
+        "turning_points": [
+          {
+            "x": 112.39099884033203,
+            "y": 5
+          },
+          {
+            "x": 93.65899658203125,
+            "y": 30.042999267578125
+          },
+          {
+            "x": 18.731000900268555,
+            "y": 55.21699905395508
+          }
+        ]
+      },
+      "height": 60.2599983215332,
+      "id": "c1:11",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "dot",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 112.39099884033203,
+      "x": 500.1090087890625,
+      "y": 651.6320190429688,
+      "z_index": 43
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:17",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130701199173927
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:17",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130701199173927
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:16",
+            "position": {
+              "x": 0,
+              "y": 0.9595385789871216
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:16",
+          "position": {
+            "x": 0,
+            "y": 0.9595385789871216
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 51.25,
+            "y": 5.3520002365112305
+          },
+          {
+            "x": 10.25,
+            "y": 31.929000854492188
+          }
+        ]
+      },
+      "height": 63.1150016784668,
+      "id": "c1:2",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 61.5,
+      "x": 397,
+      "y": 200.4290008544922,
+      "z_index": 34
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:9",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "商机复盘与打法建议",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "商机复盘与打法建议",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 162,
+      "x": 1072.5,
+      "y": 1687.0400390625,
+      "z_index": 16
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "caption_position": 0.44333332777023315,
+        "caption_position_type": 0,
+        "captions": {
+          "data": [
+            {
+              "angle": 0,
+              "font_size": 12,
+              "font_weight": "regular",
+              "horizontal_align": "center",
+              "italic": false,
+              "line_through": false,
+              "rich_text": {
+                "paragraphs": [
+                  {
+                    "elements": [
+                      {
+                        "element_type": 0,
+                        "text_element": {
+                          "text": "AI 总结不准",
+                          "text_style": {
+                            "italic": false,
+                            "line_through": false,
+                            "underline": false
+                          }
+                        }
+                      }
+                    ],
+                    "indent": 0,
+                    "list_begin_index": 0,
+                    "paragraph_type": 0,
+                    "quote": false
+                  }
+                ]
+              },
+              "text": "AI 总结不准",
+              "text_background_color_type": 0,
+              "text_color": "#1f2329",
+              "text_color_type": 0,
+              "theme_text_background_color_code": -1,
+              "theme_text_color_code": -1,
+              "underline": false,
+              "vertical_align": "mid"
+            }
+          ]
+        },
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:25",
+            "position": {
+              "x": 0.8794684410095215,
+              "y": 0.006447046063840389
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:25",
+          "position": {
+            "x": 0.8794684410095215,
+            "y": 0.006447046063840389
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:23",
+            "position": {
+              "x": 0.7572413682937622,
+              "y": 0.7427542805671692
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:23",
+          "position": {
+            "x": 0.7572413682937622,
+            "y": 0.7427542805671692
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 18.687000274658203,
+            "y": 11.175999641418457
+          },
+          {
+            "x": 93.43299865722656,
+            "y": 66.68299865722656
+          },
+          {
+            "x": 112.12000274658203,
+            "y": 130.43099975585938
+          },
+          {
+            "x": 97.98999786376953,
+            "y": 183.71499633789062
+          },
+          {
+            "x": 41.46900177001953,
+            "y": 213.29600524902344
+          }
+        ]
+      },
+      "height": 218.3520050048828,
+      "id": "c1:33",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 112.12000274658203,
+      "x": 1059.760009765625,
+      "y": 2040.864990234375,
+      "z_index": 22
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:5",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "团队日报周报与 Review",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "团队日报周报与 Review",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 184.8699951171875,
+      "x": 909.0650024414062,
+      "y": 1173.199951171875,
+      "z_index": 20
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:21",
+            "position": {
+              "x": 0.6024513840675354,
+              "y": 0.01251147873699665
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:21",
+          "position": {
+            "x": 0.6024513840675354,
+            "y": 0.01251147873699665
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:19",
+            "position": {
+              "x": 0.3396792411804199,
+              "y": 1
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:19",
+          "position": {
+            "x": 0.3396792411804199,
+            "y": 1
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 51.749000549316406,
+            "y": 5
+          },
+          {
+            "x": 38.744998931884766,
+            "y": 34.35599899291992
+          },
+          {
+            "x": 35.49399948120117,
+            "y": 86.13600158691406
+          },
+          {
+            "x": 29.577999114990234,
+            "y": 138.02499389648438
+          }
+        ]
+      },
+      "height": 172.92599487304688,
+      "id": "c1:10",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "dot",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 55,
+      "x": 433.5060119628906,
+      "y": 539.3599853515625,
+      "z_index": 42
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:21",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "销售活动、跟进、商机、任务与风险数据",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "销售活动、跟进、商机、任务与风险数据",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 288,
+      "x": 260,
+      "y": 711.6320190429688,
+      "z_index": 4
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:12",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "个人日报周报自动生成",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "个人日报周报自动生成",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 176,
+      "x": 316,
+      "y": 901.280029296875,
+      "z_index": 13
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:20",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "履约与风险提醒",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "履约与风险提醒",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 134,
+      "x": 545.5,
+      "y": 599.3599853515625,
+      "z_index": 5
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:22",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "查看事实依据",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "查看事实依据",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 120,
+      "x": 955,
+      "y": 1846.68798828125,
+      "z_index": 3
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:11",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "执行销售工作",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "执行销售工作",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 120,
+      "x": 436,
+      "y": 1285.4720458984375,
+      "z_index": 14
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:9",
+            "position": {
+              "x": 0.24229012429714203,
+              "y": 0.01000535674393177
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:9",
+          "position": {
+            "x": 0.24229012429714203,
+            "y": 0.01000535674393177
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:8",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            },
+            "snap_to": "bottom"
+          }
+        },
+        "start_object": {
+          "id": "o1:8",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          },
+          "snap_to": "bottom"
+        },
+        "turning_points": [
+          {
+            "x": 0,
+            "y": 5
+          },
+          {
+            "x": 8.291999816894531,
+            "y": 30.086999893188477
+          }
+        ]
+      },
+      "height": 60.52299880981445,
+      "id": "c1:21",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 49.750999450683594,
+      "x": 1062,
+      "y": 1627.0400390625,
+      "z_index": 53
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:12",
+            "position": {
+              "x": 0.6480454802513123,
+              "y": 0.9866276383399963
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:12",
+          "position": {
+            "x": 0.6480454802513123,
+            "y": 0.9866276383399963
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:11",
+            "position": {
+              "x": 0.366141676902771,
+              "y": 8.699635690924846e-15
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:11",
+          "position": {
+            "x": 0.366141676902771,
+            "y": 8.699635690924846e-15
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 46.80799865722656,
+            "y": 327.6189880371094
+          },
+          {
+            "x": 34.516998291015625,
+            "y": 298.26300048828125
+          },
+          {
+            "x": 31.444000244140625,
+            "y": 245.03500366210938
+          },
+          {
+            "x": 31.444000244140625,
+            "y": 181.65899658203125
+          },
+          {
+            "x": 31.444000244140625,
+            "y": 118.28299713134766
+          },
+          {
+            "x": 31.444000244140625,
+            "y": 65.05500030517578
+          },
+          {
+            "x": 26.202999114990234,
+            "y": 30.58300018310547
+          }
+        ]
+      },
+      "height": 332.6189880371094,
+      "id": "c1:13",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 49.88100051879883,
+      "x": 430.0559997558594,
+      "y": 952.85302734375,
+      "z_index": 45
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:19",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130701199173927
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:19",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130701199173927
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:18",
+            "position": {
+              "x": 0.8266044855117798,
+              "y": 1
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:18",
+          "position": {
+            "x": 0.8266044855117798,
+            "y": 1
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 8.371999740600586,
+            "y": 5
+          },
+          {
+            "x": 41.86199951171875,
+            "y": 30.16699981689453
+          }
+        ]
+      },
+      "height": 61,
+      "id": "c1:4",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 50.23500061035156,
+      "x": 455.2650146484375,
+      "y": 427.0880126953125,
+      "z_index": 36
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:15",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "知识查询与沟通准备",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "知识查询与沟通准备",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 162,
+      "x": 787.5,
+      "y": 38,
+      "z_index": 10
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "caption_position": 0.4946874976158142,
+        "caption_position_type": 0,
+        "captions": {
+          "data": [
+            {
+              "angle": 0,
+              "font_size": 12,
+              "font_weight": "regular",
+              "horizontal_align": "center",
+              "italic": false,
+              "line_through": false,
+              "rich_text": {
+                "paragraphs": [
+                  {
+                    "elements": [
+                      {
+                        "element_type": 0,
+                        "text_element": {
+                          "text": "反哺知识查询",
+                          "text_style": {
+                            "italic": false,
+                            "line_through": false,
+                            "underline": false
+                          }
+                        }
+                      }
+                    ],
+                    "indent": 0,
+                    "list_begin_index": 0,
+                    "paragraph_type": 0,
+                    "quote": false
+                  }
+                ]
+              },
+              "text": "反哺知识查询",
+              "text_background_color_type": 0,
+              "text_color": "#1f2329",
+              "text_color_type": 0,
+              "theme_text_background_color_code": -1,
+              "theme_text_color_code": -1,
+              "underline": false,
+              "vertical_align": "mid"
+            }
+          ]
+        },
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:15",
+            "position": {
+              "x": 0.9939135909080505,
+              "y": 0.756121814250946
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:15",
+          "position": {
+            "x": 0.9939135909080505,
+            "y": 0.756121814250946
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:9",
+            "position": {
+              "x": 0.6451358199119568,
+              "y": 1.3049453112870795e-14
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:9",
+          "position": {
+            "x": 0.6451358199119568,
+            "y": 1.3049453112870795e-14
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 232.99600219726562,
+            "y": 1604.5159912109375
+          },
+          {
+            "x": 250.98800659179688,
+            "y": 1575.1600341796875
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 1521.9320068359375
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 1458.5560302734375
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 1393.7320556640625
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 1333.2640380859375
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 1287.31201171875
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 1234.083984375
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 1177.947998046875
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 1120.364013671875
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 1056.988037109375
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 993.6119995117188
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 940.3839721679688
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 901.6719970703125
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 849.8920288085938
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 796.6640014648438
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 755.0679931640625
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 713.4719848632812
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 660.2440185546875
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 604.1079711914062
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 547.9719848632812
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 491.83599853515625
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 435.70001220703125
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 379.5639953613281
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 323.4280090332031
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 267.2919921875
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 211.156005859375
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 155.02000427246094
+          },
+          {
+            "x": 255.48599243164062,
+            "y": 98.88400268554688
+          },
+          {
+            "x": 212.90499877929688,
+            "y": 44.979000091552734
+          },
+          {
+            "x": 42.58100128173828,
+            "y": 7.125
+          }
+        ]
+      },
+      "height": 1609.5159912109375,
+      "id": "c1:26",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 255.48599243164062,
+      "x": 948.5139770507812,
+      "y": 77.52400207519531,
+      "z_index": 29
+    },
+    {
+      "angle": 0,
+      "composite_shape": {
+        "type": "round_rect"
+      },
+      "height": 52.27199935913086,
+      "id": "o1:13",
+      "style": {
+        "border_color": "#4e83fd",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "fill_color": "#e1eaff",
+        "fill_color_type": 0,
+        "fill_opacity": 100,
+        "theme_border_color_code": -1,
+        "theme_fill_color_code": -1
+      },
+      "text": {
+        "angle": 0,
+        "font_size": 14,
+        "font_weight": "regular",
+        "horizontal_align": "center",
+        "italic": false,
+        "line_through": false,
+        "rich_text": {
+          "paragraphs": [
+            {
+              "elements": [
+                {
+                  "element_type": 0,
+                  "text_element": {
+                    "text": "本人和有权限主管直接查看",
+                    "text_style": {
+                      "italic": false,
+                      "line_through": false,
+                      "underline": false
+                    }
+                  }
+                }
+              ],
+              "indent": 0,
+              "list_begin_index": 0,
+              "paragraph_type": 0,
+              "quote": false
+            }
+          ]
+        },
+        "text": "本人和有权限主管直接查看",
+        "text_background_color_type": 0,
+        "text_color": "#1f2329",
+        "text_color_type": 0,
+        "theme_text_background_color_code": -1,
+        "theme_text_color_code": -1,
+        "underline": false,
+        "vertical_align": "mid"
+      },
+      "type": "composite_shape",
+      "width": 204,
+      "x": 160,
+      "y": 1043.552001953125,
+      "z_index": 12
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:12",
+            "position": {
+              "x": 0.5,
+              "y": 0.019130701199173927
+            },
+            "snap_to": "top"
+          }
+        },
+        "end_object": {
+          "id": "o1:12",
+          "position": {
+            "x": 0.5,
+            "y": 0.019130701199173927
+          },
+          "snap_to": "top"
+        },
+        "shape": "straight",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:21",
+            "position": {
+              "x": 0.5,
+              "y": 1
+            },
+            "snap_to": "bottom"
+          }
+        },
+        "start_object": {
+          "id": "o1:21",
+          "position": {
+            "x": 0.5,
+            "y": 1
+          },
+          "snap_to": "bottom"
+        },
+        "turning_points": []
+      },
+      "height": 0,
+      "id": "c1:23",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 0,
+      "x": 0,
+      "y": 0,
+      "z_index": 55
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:21",
+            "position": {
+              "x": 0.17679166793823242,
+              "y": 0.005127027630805969
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:21",
+          "position": {
+            "x": 0.17679166793823242,
+            "y": 0.005127027630805969
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:16",
+            "position": {
+              "x": 0,
+              "y": 0.6632996797561646
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:16",
+          "position": {
+            "x": 0,
+            "y": 0.6632996797561646
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 213.75,
+            "y": 7.934000015258789
+          },
+          {
+            "x": 42.75,
+            "y": 49.02299880981445
+          },
+          {
+            "x": 0,
+            "y": 103.73600006103516
+          },
+          {
+            "x": 0,
+            "y": 159.8719940185547
+          },
+          {
+            "x": 0,
+            "y": 216.00799560546875
+          },
+          {
+            "x": 0,
+            "y": 272.1440124511719
+          },
+          {
+            "x": 0,
+            "y": 328.2799987792969
+          },
+          {
+            "x": 0,
+            "y": 384.4159851074219
+          },
+          {
+            "x": 0,
+            "y": 440.552001953125
+          },
+          {
+            "x": 18.152999877929688,
+            "y": 492.37701416015625
+          },
+          {
+            "x": 90.76300048828125,
+            "y": 521.9110107421875
+          }
+        ]
+      },
+      "height": 526.9559936523438,
+      "id": "c1:7",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "dot",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 256.5,
+      "x": 202,
+      "y": 184.94400024414062,
+      "z_index": 39
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "caption_position": 0.5152631402015686,
+        "caption_position_type": 0,
+        "captions": {
+          "data": [
+            {
+              "angle": 0,
+              "font_size": 12,
+              "font_weight": "regular",
+              "horizontal_align": "center",
+              "italic": false,
+              "line_through": false,
+              "rich_text": {
+                "paragraphs": [
+                  {
+                    "elements": [
+                      {
+                        "element_type": 0,
+                        "text_element": {
+                          "text": "个人报告不准确",
+                          "text_style": {
+                            "italic": false,
+                            "line_through": false,
+                            "underline": false
+                          }
+                        }
+                      }
+                    ],
+                    "indent": 0,
+                    "list_begin_index": 0,
+                    "paragraph_type": 0,
+                    "quote": false
+                  }
+                ]
+              },
+              "text": "个人报告不准确",
+              "text_background_color_type": 0,
+              "text_color": "#1f2329",
+              "text_color_type": 0,
+              "theme_text_background_color_code": -1,
+              "theme_text_color_code": -1,
+              "underline": false,
+              "vertical_align": "mid"
+            }
+          ]
+        },
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:22",
+            "position": {
+              "x": 0.008108333684504032,
+              "y": 0.23429369926452637
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:22",
+          "position": {
+            "x": 0.008108333684504032,
+            "y": 0.23429369926452637
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:12",
+            "position": {
+              "x": 1,
+              "y": 0.7816804647445679
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:12",
+          "position": {
+            "x": 1,
+            "y": 0.7816804647445679
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 41.25,
+            "y": 6.9019999504089355
+          },
+          {
+            "x": 206.25,
+            "y": 39.5099983215332
+          },
+          {
+            "x": 247.5,
+            "y": 75.76799774169922
+          },
+          {
+            "x": 247.5,
+            "y": 128.99600219726562
+          },
+          {
+            "x": 247.5,
+            "y": 192.3719940185547
+          },
+          {
+            "x": 247.5,
+            "y": 255.7480010986328
+          },
+          {
+            "x": 247.5,
+            "y": 313.3320007324219
+          },
+          {
+            "x": 247.5,
+            "y": 369.4679870605469
+          },
+          {
+            "x": 247.5,
+            "y": 422.6960144042969
+          },
+          {
+            "x": 247.5,
+            "y": 468.64801025390625
+          },
+          {
+            "x": 247.5,
+            "y": 529.1160278320312
+          },
+          {
+            "x": 247.5,
+            "y": 593.9400024414062
+          },
+          {
+            "x": 247.5,
+            "y": 657.3159790039062
+          },
+          {
+            "x": 247.5,
+            "y": 714.9000244140625
+          },
+          {
+            "x": 247.5,
+            "y": 771.0360107421875
+          },
+          {
+            "x": 247.5,
+            "y": 824.2639770507812
+          },
+          {
+            "x": 283.5790100097656,
+            "y": 867.9010009765625
+          },
+          {
+            "x": 427.8949890136719,
+            "y": 908.3060302734375
+          }
+        ]
+      },
+      "height": 916.7949829101562,
+      "id": "c1:27",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "dot",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 463.9729919433594,
+      "x": 492,
+      "y": 942.1400146484375,
+      "z_index": 28
+    },
+    {
+      "angle": 0,
+      "connector": {
+        "caption_auto_direction": false,
+        "end": {
+          "arrow_style": "triangle_arrow",
+          "attached_object": {
+            "id": "o1:16",
+            "position": {
+              "x": 0.9894782900810242,
+              "y": 0.7249388098716736
+            },
+            "snap_to": "auto"
+          }
+        },
+        "end_object": {
+          "id": "o1:16",
+          "position": {
+            "x": 0.9894782900810242,
+            "y": 0.7249388098716736
+          },
+          "snap_to": "auto"
+        },
+        "shape": "curve",
+        "specified_coordinate": true,
+        "start": {
+          "arrow_style": "none",
+          "attached_object": {
+            "id": "o1:11",
+            "position": {
+              "x": 1,
+              "y": 0.21170033514499664
+            },
+            "snap_to": "auto"
+          }
+        },
+        "start_object": {
+          "id": "o1:11",
+          "position": {
+            "x": 1,
+            "y": 0.21170033514499664
+          },
+          "snap_to": "auto"
+        },
+        "turning_points": [
+          {
+            "x": 33.71799850463867,
+            "y": 1101.5279541015625
+          },
+          {
+            "x": 142.71800231933594,
+            "y": 1064.7939453125
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 1009.7219848632812
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 946.3460083007812
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 882.969970703125
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 829.7420043945312
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 791.030029296875
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 739.25
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 686.02197265625
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 644.426025390625
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 602.8300170898438
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 549.6019897460938
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 493.46600341796875
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 437.3299865722656
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 381.1940002441406
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 325.0580139160156
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 268.9219970703125
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 212.78599548339844
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 156.64999389648438
+          },
+          {
+            "x": 169.96800231933594,
+            "y": 100.51399993896484
+          },
+          {
+            "x": 141.63999938964844,
+            "y": 46.3380012512207
+          },
+          {
+            "x": 28.327999114990234,
+            "y": 7.395999908447266
+          }
+        ]
+      },
+      "height": 1108.3719482421875,
+      "id": "c1:22",
+      "style": {
+        "border_color": "#bbbfc4",
+        "border_color_type": 0,
+        "border_opacity": 100,
+        "border_style": "solid",
+        "border_width": "narrow",
+        "theme_border_color_code": -1
+      },
+      "type": "connector",
+      "width": 169.96800231933594,
+      "x": 549.531982421875,
+      "y": 188.16600036621094,
+      "z_index": 54
+    }
+  ]
+}

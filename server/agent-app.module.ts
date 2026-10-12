@@ -19,6 +19,8 @@ import { TaskFulfillmentModule } from
   './modules/insight/task-fulfillment.module';
 import { OpportunityDecisionModule } from
   './modules/insight/opportunity-decision.module';
+import { ProactiveSalesNotificationModule } from
+  './modules/insight/proactive-sales-notification.module';
 import { FeishuWebhookBridge } from './modules/feishu/feishu-webhook.bridge';
 import { FeishuWebhookController } from './modules/feishu/feishu-webhook.controller';
 
@@ -34,6 +36,7 @@ import { FeishuWebhookController } from './modules/feishu/feishu-webhook.control
     TeamReviewModule,
     TaskFulfillmentModule,
     OpportunityDecisionModule,
+    ProactiveSalesNotificationModule,
   ],
   controllers: [FeishuWebhookController],
   providers: [

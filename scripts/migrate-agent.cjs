@@ -23,6 +23,7 @@ const MIGRATION_FILES = [
   '017_stale_opportunity_reminder_reconciliations.sql',
   '018_playbook_optimization.sql',
   '019_playbook_optimization_tenant_cleanup.sql',
+  '020_proactive_sales_notifications.sql',
 ];
 
 const checksum = (content) => createHash('sha256')

@@ -1565,6 +1565,30 @@ export interface StaleOpportunityReminderReconciliationResponse {
   updatedAt: string;
 }
 
+export type ProactiveSalesNotificationRunStatus =
+  | 'disabled'
+  | 'plan_only'
+  | 'completed'
+  | 'partial'
+  | 'blocked';
+
+export interface ProactiveSalesNotificationRunSummary {
+  tenantCount: number;
+  memberCount: number;
+  plannedCount: number;
+  sentCount: number;
+  skippedCount: number;
+  failedCount: number;
+}
+
+export interface ProactiveSalesNotificationRunResponse {
+  mode: 'scheduler-run';
+  status: ProactiveSalesNotificationRunStatus;
+  generatedAt: string;
+  summary: ProactiveSalesNotificationRunSummary;
+  warnings: string[];
+}
+
 export type PlatformSectionKey =
   | 'customers'
   | 'opportunities'

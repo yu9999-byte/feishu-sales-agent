@@ -30,6 +30,7 @@ describe('Agent migration runner', (): void => {
       '017_stale_opportunity_reminder_reconciliations.sql',
       '018_playbook_optimization.sql',
       '019_playbook_optimization_tenant_cleanup.sql',
+      '020_proactive_sales_notifications.sql',
     ]);
     expect(result.stdout).not.toContain('004_agent_p0_demo_tenant');
   });

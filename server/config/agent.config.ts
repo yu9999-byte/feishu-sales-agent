@@ -55,6 +55,12 @@ export interface AgentRuntimeConfig {
       allowedRecipientOpenId: string | undefined;
     };
   };
+  proactiveSalesNotifications?: {
+    enabled: boolean;
+    deliveryEnabled: boolean;
+    triggerToken: string | undefined;
+    webPublicUrl: string | undefined;
+  };
   longTermMemory?: LongTermMemoryRuntimeConfig;
 }
 
@@ -170,6 +176,20 @@ const loadAgentConfig = (): AgentRuntimeConfig => ({
         'STALE_OPPORTUNITY_REMINDER_ALLOWED_RECIPIENT_OPEN_ID',
       ),
     },
+  },
+  proactiveSalesNotifications: {
+    enabled: parseBoolean(
+      process.env.PROACTIVE_SALES_NOTIFICATIONS_ENABLED,
+      false,
+    ),
+    deliveryEnabled: parseBoolean(
+      process.env.PROACTIVE_SALES_NOTIFICATIONS_DELIVERY_ENABLED,
+      false,
+    ),
+    triggerToken: optionalEnvironment(
+      'PROACTIVE_SALES_NOTIFICATION_TRIGGER_TOKEN',
+    ),
+    webPublicUrl: optionalEnvironment('WEB_PUBLIC_URL')?.replace(/\/+$/u, ''),
   },
   longTermMemory: {
     enabled: parseBoolean(process.env.MEM0_ENABLED, false),

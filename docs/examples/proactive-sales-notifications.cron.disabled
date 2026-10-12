@@ -1,0 +1,4 @@
+# Disabled example only. Do not uncomment until plan-only, one-recipient real
+# delivery, ledger readback and duplicate-run verification have all passed.
+# Run every five minutes so the 30-minute tenant-local schedule window is met.
+# */5 * * * * cd /opt/sales-agent && /usr/bin/node scripts/proactive-sales-notification-runner.mjs

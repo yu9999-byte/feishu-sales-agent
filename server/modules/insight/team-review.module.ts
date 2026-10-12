@@ -26,6 +26,7 @@ import { TeamReviewService } from './team-review.service';
   ],
   controllers: [TeamReviewController, TeamOpportunityDecisionController],
   providers: [TeamReviewService, TeamOpportunityDecisionService],
+  exports: [TeamReviewService],
 })
 class TeamReviewModule {}
 
