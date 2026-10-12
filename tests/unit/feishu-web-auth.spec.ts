@@ -8,7 +8,8 @@ import {
 } from '@server/modules/web-auth/feishu-web-auth.service';
 import type {
   FeishuOAuthGateway,
-  FeishuOAuthIdentity,
+  FeishuOAuthGrant,
+  FeishuOAuthTokenResponse,
   LoginStateRecord,
   SessionRecord,
   TokenGenerator,
@@ -40,6 +41,8 @@ import type {
   SaveIntentClarificationSessionInput,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
+import type { FeishuUserTokenService } from
+  '@server/modules/web-auth/feishu-user-token.service';
 
 const TENANT_ID: string = '00000000-0000-4000-8000-00000000000a';
 const TENANT_KEY: string = 'tenant-a';
@@ -315,15 +318,24 @@ class FakeWebAuthStore implements WebAuthStore {
 class FakeOAuthGateway implements FeishuOAuthGateway {
   exchangeCalls: number = 0;
 
-  identity: FeishuOAuthIdentity = {
+  identity: FeishuOAuthGrant = {
     tenantKey: TENANT_KEY,
     openId: 'ou_current',
     displayName: '季然',
+    accessToken: 'uat-test',
+    refreshToken: 'urt-test',
+    expiresIn: 7200,
+    refreshTokenExpiresIn: 2_592_000,
+    scope: 'auth:user.id:read',
   };
 
-  async exchangeCode(): Promise<FeishuOAuthIdentity> {
+  async exchangeCode(): Promise<FeishuOAuthGrant> {
     this.exchangeCalls += 1;
     return structuredClone(this.identity);
+  }
+
+  async refreshAccessToken(): Promise<FeishuOAuthTokenResponse> {
+    throw new Error('not used');
   }
 }
 
@@ -346,6 +358,7 @@ interface Harness {
   identities: FakeIdentityRepository;
   oauth: FakeOAuthGateway;
   store: FakeWebAuthStore;
+  savedAuthorizations: Array<{ tenantId: string; memberId: string }>;
 }
 
 const createHarness = (): Harness => {
@@ -353,6 +366,18 @@ const createHarness = (): Harness => {
     new FakeIdentityRepository();
   const oauth: FakeOAuthGateway = new FakeOAuthGateway();
   const store: FakeWebAuthStore = new FakeWebAuthStore();
+  const savedAuthorizations: Array<{
+    tenantId: string;
+    memberId: string;
+  }> = [];
+  const userTokens = {
+    saveAuthorization: async (
+      tenant: TenantIntegration,
+      memberId: string,
+    ): Promise<void> => {
+      savedAuthorizations.push({ tenantId: tenant.tenantId, memberId });
+    },
+  } as unknown as FeishuUserTokenService;
   const service: FeishuWebAuthService = new FeishuWebAuthService(
     new FakeControlStore(),
     identities,
@@ -360,8 +385,15 @@ const createHarness = (): Harness => {
     oauth,
     new FixedTokenGenerator(),
     'https://agent.example.com',
+    userTokens,
   );
-  return { service, identities, oauth, store };
+  return {
+    service,
+    identities,
+    oauth,
+    store,
+    savedAuthorizations,
+  };
 };
 
 describe('FeishuWebAuthService', (): void => {
@@ -383,7 +415,9 @@ describe('FeishuWebAuthService', (): void => {
       'https://agent.example.com/api/auth/feishu/callback',
     );
     expect(parsed.searchParams.get('state')).toBe(STATE_TOKEN);
-    expect(parsed.searchParams.has('scope')).toBe(false);
+    expect(parsed.searchParams.get('scope')).toBe(
+      'minutes:minutes:readonly',
+    );
     expect(harness.store.state?.stateHash).toBe(hashToken(STATE_TOKEN));
     expect(JSON.stringify(harness.store.state)).not.toContain(STATE_TOKEN);
   });
@@ -503,5 +537,9 @@ describe('FeishuWebAuthService', (): void => {
       SESSION_TOKEN,
     );
     expect(harness.identities.updatedDisplayName).toBe('季然');
+    expect(harness.savedAuthorizations).toEqual([{
+      tenantId: TENANT_ID,
+      memberId: 'member-current',
+    }]);
   });
 });

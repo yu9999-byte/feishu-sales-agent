@@ -213,7 +213,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | `FUP-001..003` 提取、生成和证据 | B1 | Implemented / UI verified | 来源 quote、生成正文与版本通过；本次沟通方式/时间/主题、`nowLocal` 与显式 offset 契约已进入 126 项回归 | 真实飞书卡片已正确区分本次“飞书”与下一步“飞书会议”，时间为 `2026-09-21T10:15:00+08:00`，主题为“试点方案” |
 | `FUP-004..006` 保存前可用性、卡内编辑和检查修改 | B2 | Implementing / regression fix | 阻断/建议分离、无数字等级、中文化去重，以及“检查修改只更新、确认保存携编辑值一次执行” Red/Green 均已进入 137 项回归 | 无评分主视觉和取消终态已验收；本次确认按钮修复待真实复测 |
 | `ING-003` 语音输入 | B3 | Draft | 待飞书语音契约测试 | 待真实语音验收 |
-| `ING-004` 妙记/会议输入 | B4 | Draft | 待 Minutes/Note 契约测试 | 待真实妙记验收 |
+| `ING-004` 妙记/会议输入 | B4 | Implemented / automated green / real source and UI pending | 当前销售 OAuth 密文存储/刷新、`minutes:minutes:readonly` scope、妙记 URL 安全解析、Transcript 说话人/时间证据、120k 上限、LangGraph 意图路由、同聊天单草案、失败原地终态、重复消息幂等和确认前零 Base/Task 已实现；定向 `94/94`、Agent `667/667`、PostgreSQL `32 passed / 3 controlled probes skipped`、三套 TypeScript、Lint/Stylelint、双构建、迁移 022 双次幂等和隔离启动通过 | 待应用开通 scope、当前销售重新 OAuth，并提供一条本人可读的真实妙记完成飞书 UI 验收 |
 | `ING-005..007` 文档输入和失败恢复 | B5 | Draft | 待 Docs 权限/异常测试 | 待真实文档验收 |
 | `FUP-007..009` 写入、结果/项目质检卡、策略推送和幂等 | B6 | Implementing / regression fix | 三项 Base 后建任务、原卡唯一成功终态、原卡 patch 失败时补发、幂等、`followupRecordUrl` 持久化、成功卡记录链接，以及 `card.source_finalized`/补发 `card.result_sent` 审计均进入 137 项回归 | 历史双成功卡仅保留为 D-022 前的缺陷证据；本次唯一“跟进登记成功＋查看跟进记录”待真实复测 |
 | `FUP-010..011` 即时执行反馈、失败恢复和成功结果修订 | B6 | Isolated callback E2E Verified / real UI pending | 飞书 SDK 回调入口贯通真实 Bridge/Workflow/Executor/MemoryStore；测试替身验证同卡执行中、唯一成功/失败终态、重试及修订原跟进/任务；真实机器人 API E2E 仍只到待确认卡，无真实业务确认 | 本轮不要求手工 UI；真实飞书点击、业务写入和 Base/Task 回读仍待独立验收 |

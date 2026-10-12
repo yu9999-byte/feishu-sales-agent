@@ -32,6 +32,7 @@ describe('Agent migration runner', (): void => {
       '019_playbook_optimization_tenant_cleanup.sql',
       '020_proactive_sales_notifications.sql',
       '021_proactive_notification_reconciliations.sql',
+      '022_feishu_user_credentials.sql',
     ]);
     expect(result.stdout).not.toContain('004_agent_p0_demo_tenant');
   });

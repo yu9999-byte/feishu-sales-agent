@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 
 import {
   CONTROL_STORE,
@@ -29,6 +29,7 @@ import {
   type TokenGenerator,
   type WebAuthStore,
 } from './web-auth.ports';
+import { FeishuUserTokenService } from './feishu-user-token.service';
 
 type WebAuthErrorCode =
   | 'ACCESS_DENIED'
@@ -39,6 +40,7 @@ type WebAuthErrorCode =
 
 const LOGIN_STATE_TTL_MS: number = 5 * 60 * 1000;
 const SESSION_TTL_MS: number = 7 * 24 * 60 * 60 * 1000;
+const REQUIRED_USER_SCOPES: string = 'minutes:minutes:readonly';
 
 const hashToken = (value: string): string =>
   createHash('sha256').update(value, 'utf8').digest('hex');
@@ -113,6 +115,8 @@ class FeishuWebAuthService {
     private readonly tokenGenerator: TokenGenerator,
     @Inject(WEB_PUBLIC_URL)
     publicUrl: string,
+    @Optional()
+    private readonly userTokens?: FeishuUserTokenService,
   ) {
     this.publicUrl = normalizePublicUrl(publicUrl);
   }
@@ -163,6 +167,7 @@ class FeishuWebAuthService {
       this.getCallbackUrl(),
     );
     authorizationUrl.searchParams.set('state', stateToken);
+    authorizationUrl.searchParams.set('scope', REQUIRED_USER_SCOPES);
     return authorizationUrl.toString();
   }
 
@@ -232,6 +237,14 @@ class FeishuWebAuthService {
         integration.tenantId,
         member.id,
         identity.displayName,
+      );
+    }
+    if (this.userTokens !== undefined) {
+      await this.userTokens.saveAuthorization(
+        integration,
+        member.id,
+        identity,
+        now,
       );
     }
 

@@ -9,6 +9,7 @@ import type {
   PendingActionPayload,
   PlatformSessionResponse,
   FollowupProgressSnapshot,
+  FollowupSourceSnapshot,
   SalesContext,
 } from '@shared/api.interface';
 import type { TenantIntegration } from '@server/modules/agent-core/agent.types';
@@ -31,6 +32,7 @@ interface CreateChatDraftPayloadInput {
   now: Date;
   inputForm?: FollowupCardFormInput;
   salesContext?: SalesContext;
+  source?: FollowupSourceSnapshot;
 }
 
 interface ReviewedChatDraft {
@@ -165,6 +167,7 @@ class FollowupChatDraftService {
       now: input.now,
       inputForm,
       salesContext: input.salesContext,
+      source: input.source,
     });
   }
 
@@ -250,6 +253,7 @@ class FollowupChatDraftService {
       now,
       inputForm,
       salesContext: current.salesContext,
+      source: current.source,
     });
     payload.operationKind = current.operationKind;
     payload.revisionOfActionId = current.revisionOfActionId;
@@ -290,6 +294,7 @@ class FollowupChatDraftService {
     now: Date;
     inputForm?: FollowupCardFormInput;
     salesContext?: SalesContext;
+    source?: FollowupSourceSnapshot;
   }): PendingActionPayload {
     const progressAssessment: FollowupProgressSnapshot = this.assessProgress(
       input.draft,
@@ -310,6 +315,7 @@ class FollowupChatDraftService {
       interactionStage: 'draft',
       sourceMessageId: input.sourceMessageId,
       rawText: input.rawText,
+      source: input.source,
       draft: input.draft,
       draftVersion: input.draftVersion,
       ownerMemberId: input.ownerMemberId,

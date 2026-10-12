@@ -41,12 +41,49 @@ interface FeishuOAuthIdentity {
   displayName: string;
 }
 
+interface FeishuOAuthTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  refreshTokenExpiresIn?: number;
+  scope?: string;
+}
+
+interface FeishuOAuthGrant extends FeishuOAuthIdentity,
+  FeishuOAuthTokenResponse {}
+
 interface FeishuOAuthGateway {
   exchangeCode(
     integration: TenantIntegration,
     code: string,
     redirectUri: string,
-  ): Promise<FeishuOAuthIdentity>;
+  ): Promise<FeishuOAuthGrant>;
+  refreshAccessToken(
+    integration: TenantIntegration,
+    refreshToken: string,
+  ): Promise<FeishuOAuthTokenResponse>;
+}
+
+interface FeishuUserCredentialRecord {
+  tenantId: string;
+  memberId: string;
+  accessTokenCiphertext: string;
+  refreshTokenCiphertext: string;
+  accessTokenExpiresAt: Date;
+  refreshTokenExpiresAt: Date | null;
+  scope: string | null;
+  version: number;
+  updatedAt: Date;
+}
+
+interface FeishuUserCredentialStore {
+  getCredential(
+    tenantId: string,
+    memberId: string,
+  ): Promise<FeishuUserCredentialRecord | null>;
+  saveCredential(
+    record: Omit<FeishuUserCredentialRecord, 'version'>,
+  ): Promise<FeishuUserCredentialRecord>;
 }
 
 interface TokenGenerator {
@@ -66,12 +103,16 @@ interface AuthenticatedWebSession {
 }
 
 const WEB_AUTH_STORE = Symbol('WEB_AUTH_STORE');
+const FEISHU_USER_CREDENTIAL_STORE = Symbol(
+  'FEISHU_USER_CREDENTIAL_STORE',
+);
 const FEISHU_OAUTH_GATEWAY = Symbol('FEISHU_OAUTH_GATEWAY');
 const TOKEN_GENERATOR = Symbol('TOKEN_GENERATOR');
 const WEB_PUBLIC_URL = Symbol('WEB_PUBLIC_URL');
 
 export {
   FEISHU_OAUTH_GATEWAY,
+  FEISHU_USER_CREDENTIAL_STORE,
   TOKEN_GENERATOR,
   WEB_AUTH_STORE,
   WEB_PUBLIC_URL,
@@ -81,7 +122,11 @@ export type {
   AuthenticatedWebSession,
   CompletedWebLogin,
   FeishuOAuthGateway,
+  FeishuOAuthGrant,
   FeishuOAuthIdentity,
+  FeishuOAuthTokenResponse,
+  FeishuUserCredentialRecord,
+  FeishuUserCredentialStore,
   LoginStateRecord,
   SessionRecord,
   TokenGenerator,

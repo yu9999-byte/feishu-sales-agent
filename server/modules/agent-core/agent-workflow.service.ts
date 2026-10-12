@@ -10,6 +10,7 @@ import type {
   ConfirmationCardAction,
   FollowupCardFormInput,
   FollowupDraft,
+  FollowupSourceSnapshot,
   JsonObject,
   JsonValue,
   OpportunityDecisionResponse,
@@ -43,6 +44,15 @@ import {
   createProcessingCard,
 } from './agent.cards';
 import { FollowupChatDraftService } from '@server/modules/sales-behavior/followup-chat-draft.service';
+import {
+  MinutesIngestionError,
+  MinutesIngestionService,
+  type MinutesIngestionResult,
+} from '@server/modules/sales-behavior/minutes-ingestion.service';
+import {
+  findMinutesReference,
+  MinutesReferenceError,
+} from '@server/modules/sales-behavior/minutes-reference';
 import type {
   AgentSession,
   ConversationContext,
@@ -81,6 +91,8 @@ import {
   PLAYBOOK_OPTIMIZATION_OBSERVER,
   type PlaybookOptimizationObserver,
 } from '@server/modules/knowledge/playbook-optimization.ports';
+import { FeishuWebAuthService } from
+  '@server/modules/web-auth/feishu-web-auth.service';
 
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const ACTION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -128,6 +140,10 @@ export class AgentWorkflowService {
     @Optional()
     @Inject(LONG_TERM_MEMORY)
     private readonly longTermMemory?: LongTermMemoryPort,
+    @Optional()
+    private readonly minutesIngestion?: MinutesIngestionService,
+    @Optional()
+    private readonly webAuth?: FeishuWebAuthService,
   ) {}
 
   async handleMessage(message: IncomingMessage): Promise<void> {
@@ -532,11 +548,12 @@ export class AgentWorkflowService {
             waitingMessageId,
             '已识别为跟进记录，正在生成草案。',
           );
-          await this.processFollowupText(
+          await this.processFollowupTextWithProgress(
             integration,
             message,
             explicitSource,
             null,
+            waitingMessageId,
           );
           return;
         }
@@ -570,6 +587,22 @@ export class AgentWorkflowService {
         decision.intent === 'followup_capture' &&
         decision.confidence >= 0.55
       ) {
+        if (this.hasMinutesReference(message.text)) {
+          await this.finishConversationWaiting(
+            integration,
+            message,
+            waitingMessageId,
+            '正在读取妙记逐字稿并整理跟进，请稍候。',
+          );
+          await this.processFollowupTextWithProgress(
+            integration,
+            message,
+            message.text,
+            null,
+            waitingMessageId,
+          );
+          return;
+        }
         const prefillSource: string | null =
           this.followupInputPrefillSource(message.text);
         await this.finishConversationWaiting(
@@ -647,11 +680,12 @@ export class AgentWorkflowService {
         waitingMessageId,
         '已识别为跟进记录，正在生成草案。',
       );
-      await this.processFollowupText(
+      await this.processFollowupTextWithProgress(
         integration,
         message,
         explicitSource.length > 0 ? explicitSource : session.rawText,
         null,
+        waitingMessageId,
         explicitSource.length > 0 ? undefined : session.sourceMessageId,
       );
       return;
@@ -691,11 +725,12 @@ export class AgentWorkflowService {
         waitingMessageId,
         '已识别为当前跟进的补充，正在更新草案。',
       );
-      await this.processFollowupText(
+      await this.processFollowupTextWithProgress(
         integration,
         message,
         message.text,
         session,
+        waitingMessageId,
       );
       return;
     }
@@ -774,11 +809,58 @@ export class AgentWorkflowService {
     session: AgentSession | null,
     sourceMessageId?: string,
   ): Promise<void> {
-    const combinedText: string = session
+    let combinedText: string = session
       ? `${session.rawText}\n补充信息：${currentText}`
       : currentText;
+    let normalizedCurrentText: string = currentText;
+    let source: FollowupSourceSnapshot = { type: 'text' };
+    if (this.hasMinutesReference(combinedText)) {
+      if (this.minutesIngestion === undefined) {
+        throw new MinutesIngestionError(
+          'MINUTES_DEPENDENCY_UNAVAILABLE',
+          true,
+          '妙记读取服务尚未就绪',
+        );
+      }
+      await this.store.appendAudit({
+        tenantId: integration.tenantId,
+        traceId: message.messageId,
+        eventType: 'minutes.ingestion.started.v1',
+        actorOpenId: message.senderOpenId,
+        outcome: 'accepted',
+        details: { sourceType: 'minutes' },
+      });
+      const minutes: MinutesIngestionResult =
+        await this.minutesIngestion.ingest({
+          integration,
+          actorOpenId: message.senderOpenId,
+          sourceText: combinedText,
+          now: message.receivedAt,
+        });
+      normalizedCurrentText = minutes.normalizedText;
+      combinedText = minutes.normalizedText;
+      source = {
+        type: 'minutes',
+        refHash: minutes.sourceRefHash,
+        title: minutes.title,
+        segmentCount: minutes.segmentCount,
+        truncated: minutes.truncated,
+      };
+      await this.store.appendAudit({
+        tenantId: integration.tenantId,
+        traceId: message.messageId,
+        eventType: 'minutes.ingestion.completed.v1',
+        actorOpenId: message.senderOpenId,
+        outcome: 'succeeded',
+        details: {
+          sourceRefHash: minutes.sourceRefHash,
+          segmentCount: minutes.segmentCount,
+          truncated: minutes.truncated,
+        },
+      });
+    }
     const extractionInput = {
-      currentText,
+      currentText: normalizedCurrentText,
       combinedText,
       previousDraft: session?.draft ?? null,
       timezone: 'Asia/Shanghai',
@@ -814,6 +896,7 @@ export class AgentWorkflowService {
       draft,
       now: message.receivedAt,
       salesContext,
+      source,
     });
     const pending: PendingAction =
       await this.store.createPendingAction({
@@ -853,6 +936,38 @@ export class AgentWorkflowService {
         missingFields: payload.quality?.missingItems ?? [],
       },
     });
+  }
+
+  private async processFollowupTextWithProgress(
+    integration: TenantIntegration,
+    message: IncomingMessage,
+    currentText: string,
+    session: AgentSession | null,
+    waitingMessageId: string | null,
+    sourceMessageId?: string,
+  ): Promise<void> {
+    try {
+      await this.processFollowupText(
+        integration,
+        message,
+        currentText,
+        session,
+        sourceMessageId,
+      );
+      await this.finishConversationWaiting(
+        integration,
+        message,
+        waitingMessageId,
+        '已生成待确认草案，请检查下方卡片。',
+      );
+    } catch (error: unknown) {
+      await this.handleMessageFailure(
+        integration,
+        message,
+        error,
+        waitingMessageId,
+      );
+    }
   }
 
   private async handleOpportunityStatusOperation(
@@ -2266,13 +2381,30 @@ export class AgentWorkflowService {
         message: safeMessage,
       },
     });
+    if (error instanceof MinutesIngestionError) {
+      await this.store.appendAudit({
+        tenantId: integration.tenantId,
+        traceId: message.messageId,
+        eventType: 'minutes.ingestion.failed.v1',
+        actorOpenId: message.senderOpenId,
+        outcome: 'failed',
+        details: {
+          errorCode: error.code,
+          retryable: error.retryable,
+        },
+      });
+    }
+
+    const failureText: string = error instanceof MinutesIngestionError
+      ? this.minutesFailureText(integration, error)
+      : MESSAGE_FAILURE_TEXT;
 
     if (waitingMessageId) {
       try {
         await this.messenger.updateText(
           integration,
           waitingMessageId,
-          MESSAGE_FAILURE_TEXT,
+          failureText,
         );
         return;
       } catch (updateError: unknown) {
@@ -2289,7 +2421,7 @@ export class AgentWorkflowService {
       await this.messenger.sendText(
         integration,
         message.chatId,
-        MESSAGE_FAILURE_TEXT,
+        failureText,
         `${message.messageId}-failed`,
       );
     } catch (sendError: unknown) {
@@ -2336,6 +2468,50 @@ export class AgentWorkflowService {
       message.senderType === 'user' &&
       message.text.trim().length > 0
     );
+  }
+
+  private hasMinutesReference(text: string): boolean {
+    try {
+      return findMinutesReference(text) !== null;
+    } catch (error: unknown) {
+      if (error instanceof MinutesReferenceError) {
+        throw new MinutesIngestionError(
+          'MINUTES_INVALID_REFERENCE',
+          false,
+          '妙记链接安全校验失败',
+        );
+      }
+      throw error;
+    }
+  }
+
+  private minutesFailureText(
+    integration: TenantIntegration,
+    error: MinutesIngestionError,
+  ): string {
+    if (error.code === 'MINUTES_AUTHORIZATION_REQUIRED') {
+      const loginUrl: string | null = this.webAuth === undefined
+        ? null
+        : `${this.webAuth.publicOrigin}/api/auth/feishu/start?` +
+          new URLSearchParams({
+            tenantKey: integration.feishuTenantKey,
+            returnTo: '/',
+          }).toString();
+      return loginUrl === null
+        ? '需要先完成飞书用户授权，授权后请重新发送这条妙记链接。'
+        : '需要先完成飞书用户授权。' +
+          `[打开授权页](${loginUrl})，授权后请重新发送这条妙记链接。`;
+    }
+    if (error.code === 'MINUTES_ACCESS_DENIED') {
+      return '无法读取这条妙记，请确认当前账号已获查看权限。业务数据尚未写入。';
+    }
+    if (error.code === 'MINUTES_TRANSCRIPT_EMPTY') {
+      return '这条妙记暂时没有可用逐字稿。请等待转写完成后重试，业务数据尚未写入。';
+    }
+    if (error.code === 'MINUTES_INVALID_REFERENCE') {
+      return '妙记链接无效，请重新复制完整的飞书妙记链接。业务数据尚未写入。';
+    }
+    return '妙记读取暂时没有完成，请稍后重新发送该链接。业务数据尚未写入。';
   }
 
   private isRecordOrAnalyzeClarification(reply: string): boolean {

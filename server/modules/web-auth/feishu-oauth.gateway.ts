@@ -9,7 +9,8 @@ import {
 } from '@server/modules/feishu/feishu-client.factory';
 import type {
   FeishuOAuthGateway,
-  FeishuOAuthIdentity,
+  FeishuOAuthGrant,
+  FeishuOAuthTokenResponse,
 } from './web-auth.ports';
 
 @Injectable()
@@ -22,7 +23,7 @@ class FeishuOAuthApiGateway implements FeishuOAuthGateway {
     integration: TenantIntegration,
     code: string,
     redirectUri: string,
-  ): Promise<FeishuOAuthIdentity> {
+  ): Promise<FeishuOAuthGrant> {
     const client: lark.Client = this.clients.getClient(integration);
     const token = await client.accessToken.retrieveByAuthorizationCode({
       code,
@@ -39,10 +40,44 @@ class FeishuOAuthApiGateway implements FeishuOAuthGateway {
         `Feishu user identity failed with code ${String(response.code)}`,
       );
     }
+    if (
+      !token.refreshToken ||
+      token.expiresIn === undefined ||
+      token.expiresIn <= 0
+    ) {
+      throw new Error('Feishu OAuth grant did not include refresh metadata');
+    }
     return {
       tenantKey,
       openId,
       displayName: response.data?.name?.trim() || '飞书用户',
+      accessToken: token.accessToken,
+      refreshToken: token.refreshToken,
+      expiresIn: token.expiresIn,
+      refreshTokenExpiresIn: token.refreshTokenExpiresIn,
+      scope: token.scope,
+    };
+  }
+
+  async refreshAccessToken(
+    integration: TenantIntegration,
+    refreshToken: string,
+  ): Promise<FeishuOAuthTokenResponse> {
+    const client: lark.Client = this.clients.getClient(integration);
+    const token = await client.accessToken.refresh({ refreshToken });
+    if (
+      !token.refreshToken ||
+      token.expiresIn === undefined ||
+      token.expiresIn <= 0
+    ) {
+      throw new Error('Feishu OAuth refresh did not include metadata');
+    }
+    return {
+      accessToken: token.accessToken,
+      refreshToken: token.refreshToken,
+      expiresIn: token.expiresIn,
+      refreshTokenExpiresIn: token.refreshTokenExpiresIn,
+      scope: token.scope,
     };
   }
 }

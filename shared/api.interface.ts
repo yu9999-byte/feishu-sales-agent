@@ -91,6 +91,7 @@ export interface PendingActionPayload {
   interactionStage?: 'input' | 'generating' | 'draft';
   sourceMessageId: string;
   rawText: string;
+  source?: FollowupSourceSnapshot;
   draft: FollowupDraft;
   draftVersion?: number;
   ownerMemberId?: string;
@@ -106,6 +107,14 @@ export interface PendingActionPayload {
   operationKind?: FollowupOperationKind;
   revisionOfActionId?: string;
   executionTarget?: ExecutionTarget;
+}
+
+export interface FollowupSourceSnapshot {
+  type: 'text' | 'card_form' | 'minutes';
+  refHash?: string;
+  title?: string;
+  segmentCount?: number;
+  truncated?: boolean;
 }
 
 export type FollowupProgressState =

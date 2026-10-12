@@ -85,6 +85,7 @@ Playbook 优化。当前销售
 | P0 文本跟进闭环 | `UI Verified`（历史基线） | 已有真实 Base/Task 写入和两租户自动化隔离；需持续回归 |
 | LangGraph 对话编排 | `Automated Green / UI pending` | 当前项目回归基线为 34 个 Agent 测试文件、303 项测试及 4 个 Postgres 集成测试文件、13 项测试；类型检查、Lint、构建通过，最新 UI 内容仍待对账 |
 | 跟进草稿、质检、确认 | `Partial` | 结构化抽取、卡内编辑、版本和确认门已有；最新确认按钮与终态需真实 UI 对账 |
+| 飞书妙记逐字稿输入 B4 | `Implemented / automated green / real source and UI pending` | 当前销售 OAuth 密文/刷新、妙记 URL 安全解析、Transcript 说话人/时间证据、120k 上限、LangGraph 意图路由、同聊天单确认卡、失败原地终态、重复消息幂等和确认前零写入已实现。Agent `667/667`、PostgreSQL `32 passed / 3 controlled probes skipped`、迁移 022、类型、Lint、双构建与隔离启动通过；仍需 scope、重新 OAuth 和本人可读真实妙记完成 UI 验收 |
 | 执行中、成功/失败、结果修订 | `Automated Green / UI pending` | 同卡状态机、超时恢复、结果修订已测；真实飞书需观察唯一终态和原记录更新 |
 | 短期上下文 | `Automated Green / UI pending` | LangGraph Checkpointer 已成为生产主路径；需干净双轮和自然路由复测 |
 | 长期语义记忆 | `Partial` | Mem0 适配、ACL 和批准门存在；真实向量后端、中文召回、删除、容量评测未完成，生产写入关闭 |
@@ -254,6 +255,18 @@ Playbook 的共同基础，优先级高于语音、报告、RAG 和管理看板�
 - [x] 飞书卡片和 Web 草案区分事实、判断、建议和确认后动作。
 - 完成失败、超时、重试、取消、部分成功和修订的真实 UI 验收。
 - 用有效跟进闭环率、人工修改率、任务确认率和错误写入率建立第一版评测。
+
+### 阶段 B4：飞书妙记逐字稿输入（自动化完成，真实来源/UI 待验收）
+
+- [x] 用飞书/Lark URL 仅识别来源模态，业务意图继续由 LangChain/LangGraph 主分类。
+- [x] 使用当前销售 `user_access_token` 读取 Transcript；按租户/成员加密保存和刷新授权，
+  不使用 bot token 代读用户资源。
+- [x] 保留说话人、相对时间和原话；拒绝以 AI Summary 代替事实，并限制超长送模正文。
+- [x] 复用现有草案、单卡确认、Base/Task 执行器、幂等和审计；确认前零业务副作用。
+- [x] 授权、权限、空稿和上游失败原地结束等待消息；重复事件只读取一次。
+- [x] 单元/集成、三套 TypeScript、Lint/Stylelint、双构建、迁移 022 和隔离启动通过。
+- [ ] 应用开通 `minutes:minutes:readonly` 后由当前销售重新 OAuth，并用一条本人可读妙记在真实
+  私聊核对等待态、确认卡、说话人/时间证据和确认前零写入。
 
 ### 阶段 S4：P1 内部主动触发器
 

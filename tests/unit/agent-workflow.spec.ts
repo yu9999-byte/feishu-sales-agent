@@ -22,6 +22,11 @@ import type { TaskEventIngestionService } from
 import { FollowupChatDraftService } from '@server/modules/sales-behavior/followup-chat-draft.service';
 import { FollowupQualityService } from '@server/modules/sales-behavior/followup-quality.service';
 import {
+  MinutesIngestionError,
+  type MinutesIngestionResult,
+  type MinutesIngestionService,
+} from '@server/modules/sales-behavior/minutes-ingestion.service';
+import {
   FollowupProjectRiskService,
 } from '@server/modules/insight/followup-project-risk.service';
 import {
@@ -587,6 +592,7 @@ const createHarness = (
   salesContext?: SalesContextReader,
   opportunityDecisions: FakeOpportunityDecisionReader =
     new FakeOpportunityDecisionReader(),
+  minutesIngestion?: MinutesIngestionService,
 ): TestHarness => {
   const integrationA: TenantIntegration = createIntegration(
     '00000000-0000-0000-0000-00000000000a',
@@ -709,6 +715,8 @@ const createHarness = (
     playbookOptimization,
     salesContext,
     opportunityDecisions,
+    undefined,
+    minutesIngestion,
   );
   return {
     integrationA,
@@ -953,6 +961,134 @@ const withIsolatedDispatcher = async (
 };
 
 describe('AgentWorkflowService', (): void => {
+  it('turns a minutes transcript into one confirmation card in the source chat', async (): Promise<void> => {
+    const normalizedText: string = [
+      '销售 00:00:01.120',
+      '张总，今天主要确认试点方案。',
+      '',
+      '张总 00:00:08.300',
+      '方案认可，下周二请王工线上演示。',
+    ].join('\n');
+    const result: MinutesIngestionResult = {
+      sourceType: 'minutes',
+      sourceRefHash: 'a'.repeat(64),
+      title: '北辰制造项目沟通',
+      normalizedText,
+      segments: [
+        {
+          index: 0,
+          speaker: '销售',
+          relativeTime: '00:00:01.120',
+          text: '张总，今天主要确认试点方案。',
+        },
+        {
+          index: 1,
+          speaker: '张总',
+          relativeTime: '00:00:08.300',
+          text: '方案认可，下周二请王工线上演示。',
+        },
+      ],
+      segmentCount: 2,
+      truncated: false,
+    };
+    const ingest = vi.fn(async (): Promise<MinutesIngestionResult> =>
+      structuredClone(result));
+    const minutes = { ingest } as unknown as MinutesIngestionService;
+    const harness: TestHarness = createHarness(
+      completeDraft,
+      undefined,
+      new FakeOpportunityDecisionReader(),
+      minutes,
+    );
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'followup_capture',
+      confidence: 0.99,
+      reply: '我会从妙记逐字稿整理一份待确认跟进。',
+    };
+    const message: IncomingMessage = {
+      ...createMessage('tenant-a', 'om-minutes-source'),
+      text: 'https://ldkj.feishu.cn/minutes/obcnq3b9jl72l83w4f14xxxx?from=chat',
+    };
+
+    await harness.workflow.handleMessage(message);
+    await harness.workflow.handleMessage(message);
+
+    expect(ingest).toHaveBeenCalledTimes(1);
+    expect(harness.messenger.texts).toEqual([
+      expect.stringContaining('已生成待确认草案'),
+    ]);
+    expect(harness.extractor.lastInput).toMatchObject({
+      currentText: normalizedText,
+      combinedText: normalizedText,
+    });
+    expect(harness.messenger.actions).toHaveLength(1);
+    expect(harness.messenger.actions[0]).toMatchObject({
+      chatId: 'oc_tenant-a',
+      payload: {
+        sourceMessageId: 'om-minutes-source',
+        rawText: normalizedText,
+        source: {
+          type: 'minutes',
+          refHash: 'a'.repeat(64),
+          segmentCount: 2,
+          truncated: false,
+        },
+      },
+    });
+    expect(harness.records.customerCalls).toBe(0);
+    expect(harness.records.opportunityCalls).toBe(0);
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+    const audits = harness.store.getAudits(harness.integrationA.tenantId);
+    expect(audits.some((event): boolean =>
+      event.eventType === 'minutes.ingestion.completed.v1')).toBe(true);
+    expect(JSON.stringify(audits)).not.toContain('obcnq3b9jl72l83w4f14xxxx');
+  });
+
+  it('returns a safe authorization prompt without creating a draft', async (): Promise<void> => {
+    const minutes = {
+      ingest: vi.fn(async (): Promise<never> => {
+        throw new MinutesIngestionError(
+          'MINUTES_AUTHORIZATION_REQUIRED',
+          false,
+          'authorization required',
+        );
+      }),
+    } as unknown as MinutesIngestionService;
+    const harness: TestHarness = createHarness(
+      completeDraft,
+      undefined,
+      new FakeOpportunityDecisionReader(),
+      minutes,
+    );
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'followup_capture',
+      confidence: 0.99,
+      reply: '我会从妙记整理跟进。',
+    };
+
+    await harness.workflow.handleMessage({
+      ...createMessage('tenant-a', 'om-minutes-auth'),
+      text: 'https://ldkj.feishu.cn/minutes/obcnq3b9jl72l83w4f14xxxx',
+    });
+
+    expect(harness.messenger.actions).toHaveLength(0);
+    expect(harness.messenger.texts).toHaveLength(1);
+    expect(harness.messenger.texts.at(-1)).toContain('飞书用户授权');
+    expect(harness.messenger.textUpdates.at(-1)).toMatchObject({
+      messageId: 'om_text_1',
+      text: expect.stringContaining('飞书用户授权'),
+    });
+    expect(harness.records.customerCalls).toBe(0);
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+    const audits = harness.store.getAudits(harness.integrationA.tenantId);
+    expect(audits.some((event): boolean =>
+      event.eventType === 'minutes.ingestion.failed.v1')).toBe(true);
+  });
+
   it('does not claim or process a message from an unknown member', async (): Promise<void> => {
     const harness: TestHarness = createHarness();
     const activeMember: PlatformMember | null = harness.sessions.activeMember;

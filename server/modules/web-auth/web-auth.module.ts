@@ -5,12 +5,20 @@ import { ControlDatabaseModule } from '@server/modules/control-store/control-dat
 import { FeishuApiModule } from '@server/modules/feishu/feishu-api.module';
 import { IdentityAccessModule } from '@server/modules/identity-access/identity-access.module';
 import { FeishuOAuthApiGateway } from './feishu-oauth.gateway';
+import { FeishuOAuthTokenCipher } from './feishu-oauth-token.cipher';
+import { FeishuUserTokenService } from './feishu-user-token.service';
+import {
+  FEISHU_USER_TOKEN_PROVIDER,
+} from './feishu-user-token.service';
 import { FeishuWebAuthController } from './feishu-web-auth.controller';
 import { FeishuWebAuthService } from './feishu-web-auth.service';
 import { PostgresWebAuthStore } from './postgres-web-auth.store';
+import { PostgresFeishuUserCredentialStore } from
+  './postgres-feishu-user-credential.store';
 import { SecureTokenGenerator } from './secure-token.generator';
 import {
   FEISHU_OAUTH_GATEWAY,
+  FEISHU_USER_CREDENTIAL_STORE,
   TOKEN_GENERATOR,
   WEB_AUTH_STORE,
   WEB_PUBLIC_URL,
@@ -26,6 +34,9 @@ import {
   controllers: [FeishuWebAuthController],
   providers: [
     FeishuOAuthApiGateway,
+    FeishuOAuthTokenCipher,
+    FeishuUserTokenService,
+    PostgresFeishuUserCredentialStore,
     FeishuWebAuthService,
     PostgresWebAuthStore,
     SecureTokenGenerator,
@@ -36,6 +47,14 @@ import {
     {
       provide: WEB_AUTH_STORE,
       useExisting: PostgresWebAuthStore,
+    },
+    {
+      provide: FEISHU_USER_CREDENTIAL_STORE,
+      useExisting: PostgresFeishuUserCredentialStore,
+    },
+    {
+      provide: FEISHU_USER_TOKEN_PROVIDER,
+      useExisting: FeishuUserTokenService,
     },
     {
       provide: TOKEN_GENERATOR,
@@ -57,7 +76,11 @@ import {
       },
     },
   ],
-  exports: [FeishuWebAuthService],
+  exports: [
+    FEISHU_USER_TOKEN_PROVIDER,
+    FeishuUserTokenService,
+    FeishuWebAuthService,
+  ],
 })
 class WebAuthModule {}
 
