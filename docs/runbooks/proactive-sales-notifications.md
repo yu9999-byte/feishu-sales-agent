@@ -17,7 +17,8 @@
 
 - `PROACTIVE_SALES_NOTIFICATION_ENABLED_KINDS=daily_report,weekly_team`
 - 必须同时配置 allowed tenant/member/open_id 三项，真实值只保存在 `.env.local`。
-- 日报每天 17:00，包括周末；空数据发送“今日无新增”。
+- 日报周一至周五 17:00；周末不发，工作日空数据发送“今日无新增”。当前工作日按星期定义，
+  尚未接法定节假日与调休日历。
 - 团队周报每周五 17:05；目标成员必须仍拥有 `review:read-team`。
 - 首次安装调度前，用固定时间完成日报和周五计划演算，并真实发送一次本人团队周报。
 - 当前临时 Serveo 地址不是长期域名。地址失效后应先更新 `WEB_PUBLIC_URL` 与飞书 OAuth 回调；

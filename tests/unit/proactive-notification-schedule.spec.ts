@@ -24,7 +24,7 @@ describe('proactive notification schedule', (): void => {
     ).kinds).toEqual([]);
   });
 
-  it('matches reports and Friday weekly reports without cross-day drift', (): void => {
+  it('matches weekday reports and Friday weekly reports without drift', (): void => {
     expect(matchProactiveNotificationSchedules(
       new Date('2026-10-16T09:02:00.000Z'),
       'Asia/Shanghai',
@@ -39,6 +39,14 @@ describe('proactive notification schedule', (): void => {
     ).kinds).toEqual(['daily_report', 'weekly_personal', 'weekly_team']);
     expect(matchProactiveNotificationSchedules(
       new Date('2026-10-17T09:05:00.000Z'),
+      'Asia/Shanghai',
+    ).kinds).toEqual([]);
+    expect(matchProactiveNotificationSchedules(
+      new Date('2026-10-18T09:05:00.000Z'),
+      'Asia/Shanghai',
+    ).kinds).toEqual([]);
+    expect(matchProactiveNotificationSchedules(
+      new Date('2026-10-19T09:05:00.000Z'),
       'Asia/Shanghai',
     ).kinds).toEqual(['daily_report']);
   });

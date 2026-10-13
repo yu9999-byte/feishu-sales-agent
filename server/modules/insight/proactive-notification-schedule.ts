@@ -24,13 +24,14 @@ interface ScheduleDefinition {
   hour: number;
   minute: number;
   weekday?: number;
+  weekdays?: number[];
 }
 
 const WINDOW_MINUTES: number = 30;
 const DEFINITIONS: ScheduleDefinition[] = [
   { kind: 'task_action', hour: 9, minute: 0 },
   { kind: 'opportunity_risk', hour: 10, minute: 0 },
-  { kind: 'daily_report', hour: 17, minute: 0 },
+  { kind: 'daily_report', hour: 17, minute: 0, weekdays: [1, 2, 3, 4, 5] },
   { kind: 'weekly_personal', hour: 17, minute: 0, weekday: 5 },
   { kind: 'weekly_team', hour: 17, minute: 5, weekday: 5 },
 ];
@@ -90,6 +91,10 @@ const localClock = (now: Date, timezone: string): LocalClock | null => {
 };
 
 const matches = (clock: LocalClock, definition: ScheduleDefinition): boolean => {
+  if (
+    definition.weekdays !== undefined &&
+    !definition.weekdays.includes(clock.weekday)
+  ) return false;
   if (
     definition.weekday !== undefined &&
     definition.weekday !== clock.weekday

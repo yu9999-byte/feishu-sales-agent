@@ -66,6 +66,7 @@
 | D-058 | 文档录入以当前销售 user OAuth 读取 Docx `raw_content`；Wiki 只解析到 Docx；token 获取按调用场景校验 required scopes，文档来源仍由 LangGraph 判断业务意图 | bot token 不能代表销售读取用户文档；把妙记 scope 硬编码到通用 token 服务会错误阻断文档；自动下钻附件/表格会扩大权限和证据边界 | `40-document-ingestion-sdd.md` 已完成 Red/Green 和自动化门禁；真实文档、消息和业务写入测试未执行，问答见 `decisions/2026-10-13-document-ingestion.md` |
 | D-059 | 长期用户 OAuth 必须把 `offline_access` 与妙记、Docx、Wiki 资源 scope 同次请求；回调继续强制要求 refresh token，缺失时不落凭据、不建 Session | 飞书只有在授权包含 `offline_access` 时才返回 refresh token；短期 access token 不能支撑长期 Agent，也不能用 bot token 冒充当前销售 | 已实现并完成 Red/Green 与完整自动化门禁；真实长期凭据和 Session 待重新 OAuth 验收 |
 | D-060 | 主动报告首轮持久灰度只向产品负责人本人发送：每日 17:00 个人日报（含周末和“今日无新增”空日报），周五 17:05 团队周报；本人保留 sales 并追加 manager，不发送个人周报、任务卡或风险卡 | 先让一个真实用户获得稳定、低噪声的日报/主管周报闭环，同时以类型白名单和 tenant/member/open_id 三重白名单控制误发半径 | 已上线；主管角色、固定时间 plan-only、本人团队周报真实投递/回读/去重、完整自动化和每 5 分钟本机调度均通过，决策问答见 `decisions/2026-10-13-proactive-report-push.md` |
+| D-061 | D-060 的日报频率调整为周一至周五 17:00，周六和周日不发；周五 17:05 团队周报保持不变 | 周末没有固定日报消费场景，停止周末空报可降低噪声；工作日空日报仍保留“今日无新增”作为运行反馈 | 已实现并完成周末不命中、工作日命中的 TDD；一次性周报任务按未来时间运行，真实飞书 UI、账本 sent 和重复去重均通过，测试任务已删除 |
 
 其中 D-052 覆盖 D-011 的“勾选待办”、D-017 的确认卡检查展示，以及 D-020 中
 “过期待办不阻止保存跟进”的旧口径；D-026 的整表一次提交、执行中和结果修订
