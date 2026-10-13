@@ -12,6 +12,10 @@ import type {
   FeishuOAuthGrant,
   FeishuOAuthTokenResponse,
 } from './web-auth.ports';
+import {
+  FeishuOAuthCallbackError,
+  toFeishuOAuthCallbackError,
+} from './feishu-oauth-callback.error';
 
 @Injectable()
 class FeishuOAuthApiGateway implements FeishuOAuthGateway {
@@ -25,27 +29,42 @@ class FeishuOAuthApiGateway implements FeishuOAuthGateway {
     redirectUri: string,
   ): Promise<FeishuOAuthGrant> {
     const client: lark.Client = this.clients.getClient(integration);
-    const token = await client.accessToken.retrieveByAuthorizationCode({
-      code,
-      redirectUri,
-    });
-    const response = await client.authen.userInfo.get(
-      {},
-      lark.withUserAccessToken(token.accessToken),
-    );
+    let token: lark.AccessTokenResponse;
+    try {
+      token = await client.accessToken.retrieveByAuthorizationCode({
+        code,
+        redirectUri,
+      });
+    } catch (error: unknown) {
+      throw toFeishuOAuthCallbackError('token_exchange', error);
+    }
+    let response: Awaited<ReturnType<typeof client.authen.userInfo.get>>;
+    try {
+      response = await client.authen.userInfo.get(
+        {},
+        lark.withUserAccessToken(token.accessToken),
+      );
+    } catch (error: unknown) {
+      throw toFeishuOAuthCallbackError('user_info', error);
+    }
     const tenantKey: string | undefined = response.data?.tenant_key;
     const openId: string | undefined = response.data?.open_id;
     if (response.code !== 0 || !tenantKey || !openId) {
-      throw new Error(
-        `Feishu user identity failed with code ${String(response.code)}`,
-      );
+      throw new FeishuOAuthCallbackError({
+        stage: 'user_info',
+        errorType: 'FeishuApiError',
+        upstreamCode: response.code,
+      });
     }
     if (
       !token.refreshToken ||
       token.expiresIn === undefined ||
       token.expiresIn <= 0
     ) {
-      throw new Error('Feishu OAuth grant did not include refresh metadata');
+      throw new FeishuOAuthCallbackError({
+        stage: 'grant_validation',
+        errorType: 'InvalidGrantResponse',
+      });
     }
     return {
       tenantKey,

@@ -162,6 +162,7 @@
     "lint": "node ./scripts/lint.js",
     "migrate:agent": "node ./scripts/migrate-agent.cjs",
     "observe:stale-opportunity-schedule": "node scripts/stale-opportunity-schedule-observer.mjs",
+    "probe:proactive-sales-notifications": "node --env-file=.env.local scripts/proactive-sales-notification-probe.mjs",
     "run:proactive-sales-notifications": "node scripts/proactive-sales-notification-runner.mjs",
     "precommit": "node scripts/hooks/run-precommit.js",
     "start": "NODE_ENV=production node main.js",

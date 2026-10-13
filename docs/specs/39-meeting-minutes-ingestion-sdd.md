@@ -70,6 +70,11 @@ tenant/app 上下文派生，明文不得进入日志、审计、API 响应或 G
 不可读，用户需重新授权。access token 到期前 60 秒刷新，刷新后同时替换 access token 和
 refresh token；refresh token 过期或被撤销时进入重新授权，不用 bot token 降级。
 
+授权入口必须同时请求 `offline_access`。飞书只有在用户授权包含该 scope 时才返回
+`refresh_token` 和其有效期；因此妙记、Docx、Wiki 三类资源 scope 与 `offline_access` 必须在
+同一次用户授权中出现。回调仍须拒绝缺少 refresh token 的响应，不能把短期 access token
+冒充为可持续凭据，也不能在凭据到期后回退为 bot token。
+
 ## 5. 来源与逐字稿契约
 
 内部标准结果：
@@ -120,6 +125,7 @@ FeishuMinutesGateway.readTranscript(integration, minuteToken, accessToken)
 
 | ID | Red 场景 | Green 验收 |
 | --- | --- | --- |
+| `MIN-AUTH-00` | OAuth 入口仅请求资源 scope | 授权 URL 同时包含 `offline_access`，回调可获得可续期凭据 |
 | `MIN-URL-01` | 合法飞书/Lark 妙记 URL | 稳定提取同一 token，query/hash 不影响 |
 | `MIN-URL-02` | HTTP、相似后缀、IP、端口、路径混淆、短/非法 token | 拒绝且零网络调用 |
 | `MIN-AUTH-01` | OAuth code 交换成功 | token 仅以密文按 tenant/member 保存 |
@@ -139,7 +145,8 @@ FeishuMinutesGateway.readTranscript(integration, minuteToken, accessToken)
 自动化完成：规格、Red/Green、单元/契约/集成、租户与权限负向测试、三套 TypeScript、Lint、
 Agent/Web 构建和迁移幂等全部通过。
 
-真实完成：用户提供一条当前销售有权访问的妙记，重新完成带妙记 scope 的用户授权；在真实
+真实完成：用户提供一条当前销售有权访问的妙记，重新完成带妙记 scope 与
+`offline_access` 的用户授权；在真实
 飞书私聊验证等待反馈、同聊天草案卡、说话人/时间证据和确认前零写入。只有这一步完成，
 `ING-004` 才可标记 `UI Verified`。
 
@@ -157,3 +164,8 @@ Agent/Web 构建和迁移幂等全部通过。
 - `gen:db-schema` 属于妙搭平台 schema 工具，本地缺少平台内部域名时安全停止；它没有改写
   独立 Agent 控制库 schema，也不影响迁移 022 的 PostgreSQL 仓储集成验证。
 - 当前没有读取真实妙记、发送真实测试消息或写 Base/Task。真实完成条件仍以第 9 节为准。
+- 长期 OAuth 修复先把授权 URL 期望改为三类资源 scope 加 `offline_access`，定向测试按预期
+  `1 failed / 6 passed`，实际 URL 缺少 `offline_access`；随后只修改统一 scope 列表，Green
+  为 `7/7`。OAuth 相关回归 `4 files / 21 tests`、全量 Agent `83 files / 705 tests`、
+  PostgreSQL `32 passed / 3 controlled probes skipped`、三套 TypeScript、统一 Lint、Agent/Web
+  构建均通过。真实长期凭据与 Session 仍须重新 OAuth 后验收。

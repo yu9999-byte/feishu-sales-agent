@@ -1,6 +1,6 @@
 # 主动销售通知运行手册
 
-状态：代码、自动化、PostgreSQL 与一次本人真实投递已验证；生产投递和 cron 默认关闭。
+状态：日报与本人团队周报灰度已批准；持久投递和调度正在按门禁启用。
 
 1. 在 Secret 管理中设置独立的 `PROACTIVE_SALES_NOTIFICATION_TRIGGER_TOKEN`，不得复用 S4
    扫描、观察或执行凭证。
@@ -13,11 +13,37 @@
 5. 经产品负责人单独确认后，只在测试租户开启一次真实投递，回读飞书消息、账本和重复调用。
 6. 全部通过后才可安装每 5 分钟 cron；仓库中的 cron 文件始终保持注释，避免代码发布即启用。
 
+### 2026-10-13 本人灰度配置
+
+- `PROACTIVE_SALES_NOTIFICATION_ENABLED_KINDS=daily_report,weekly_team`
+- 必须同时配置 allowed tenant/member/open_id 三项，真实值只保存在 `.env.local`。
+- 日报每天 17:00，包括周末；空数据发送“今日无新增”。
+- 团队周报每周五 17:05；目标成员必须仍拥有 `review:read-team`。
+- 首次安装调度前，用固定时间完成日报和周五计划演算，并真实发送一次本人团队周报。
+- 当前临时 Serveo 地址不是长期域名。地址失效后应先更新 `WEB_PUBLIC_URL` 与飞书 OAuth 回调；
+  在此之前保持 `PROACTIVE_SALES_NOTIFICATION_WEB_PUBLIC_URL` 为空，使主动报告卡不显示失效的
+  详情按钮。消息投递、日报正文和去重不受影响。
+
 命令：
 
 ```text
 npm run run:proactive-sales-notifications
+npm run probe:proactive-sales-notifications -- 2026-10-18T09:05:00.000Z
+npm run probe:proactive-sales-notifications -- 2026-10-16T09:10:00.000Z
 ```
+
+固定时间 probe 直接装配已构建的通知模块，仅供发布前 plan-only 和单收件人投递验收；它仍使用
+同一配置、权限、白名单、业务生成器和投递账本。常规持久运行必须使用受独立令牌保护的 runner，
+不能把固定时间 probe 安装为 cron。
+
+Windows 本机灰度使用两个不含密钥的包装脚本：
+
+- `scripts/start-agent-runtime.ps1`：登录后检查 3100 端口；仅在 Agent 未运行时后台启动。
+- `scripts/run-proactive-notifications-scheduled.ps1`：每 5 分钟调用受保护 runner，结果追加到
+  Git 忽略的 `logs/proactive-sales-notifications.log`。
+
+计划任务只保存脚本路径，独立令牌和白名单继续只存在于 `.env.local`。调度窗口与持久账本共同
+保证同一个日报或周报不会因 5 分钟轮询重复发送。
 
 退出码：`0=completed`、`2=plan_only`、`3=disabled`、`4=partial`、`5=blocked`、
 `10..14=配置或调用错误`。输出不包含 Token、open_id 或业务正文。

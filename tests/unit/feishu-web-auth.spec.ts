@@ -416,7 +416,8 @@ describe('FeishuWebAuthService', (): void => {
     );
     expect(parsed.searchParams.get('state')).toBe(STATE_TOKEN);
     expect(parsed.searchParams.get('scope')).toBe(
-      'minutes:minutes:readonly docx:document:readonly wiki:node:read',
+      'minutes:minutes:readonly docx:document:readonly wiki:node:read ' +
+      'offline_access',
     );
     expect(harness.store.state?.stateHash).toBe(hashToken(STATE_TOKEN));
     expect(JSON.stringify(harness.store.state)).not.toContain(STATE_TOKEN);

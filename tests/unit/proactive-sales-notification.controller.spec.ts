@@ -26,6 +26,10 @@ const config = (token: string | undefined): AgentRuntimeConfig => ({
   proactiveSalesNotifications: {
     enabled: true, deliveryEnabled: false, triggerToken: token,
     webPublicUrl: 'https://agent.example.com',
+    enabledKinds: ['daily_report', 'weekly_team'],
+    allowedTenantId: 'tenant-a',
+    allowedMemberId: 'member-a',
+    allowedRecipientOpenId: 'ou_sales_a',
   },
 });
 

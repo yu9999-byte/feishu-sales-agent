@@ -18,6 +18,13 @@ export interface LongTermMemoryRuntimeConfig {
   historyDbPath: string | undefined;
 }
 
+export type ProactiveSalesNotificationKind =
+  | 'task_action'
+  | 'opportunity_risk'
+  | 'daily_report'
+  | 'weekly_personal'
+  | 'weekly_team';
+
 export interface AgentRuntimeConfig {
   host: string;
   port: number;
@@ -60,6 +67,10 @@ export interface AgentRuntimeConfig {
     deliveryEnabled: boolean;
     triggerToken: string | undefined;
     webPublicUrl: string | undefined;
+    enabledKinds: ProactiveSalesNotificationKind[];
+    allowedTenantId: string | undefined;
+    allowedMemberId: string | undefined;
+    allowedRecipientOpenId: string | undefined;
   };
   longTermMemory?: LongTermMemoryRuntimeConfig;
 }
@@ -109,6 +120,29 @@ const parsePositiveInteger = (value: string | undefined): number | undefined => 
     throw new Error('Memory dimension must be a positive integer');
   }
   return parsed;
+};
+
+const parseProactiveNotificationKinds = (
+  value: string | undefined,
+): ProactiveSalesNotificationKind[] => {
+  if (value === undefined || value.trim().length === 0) return [];
+  const allowedKinds: Set<string> = new Set<string>([
+    'task_action',
+    'opportunity_risk',
+    'daily_report',
+    'weekly_personal',
+    'weekly_team',
+  ]);
+  const kinds: string[] = value
+    .split(',')
+    .map((kind: string): string => kind.trim())
+    .filter((kind: string): boolean => kind.length > 0);
+  if (kinds.some((kind: string): boolean => !allowedKinds.has(kind))) {
+    throw new Error(
+      'PROACTIVE_SALES_NOTIFICATION_ENABLED_KINDS contains an unknown kind',
+    );
+  }
+  return [...new Set<string>(kinds)] as ProactiveSalesNotificationKind[];
 };
 
 const loadAgentConfig = (): AgentRuntimeConfig => ({
@@ -189,7 +223,21 @@ const loadAgentConfig = (): AgentRuntimeConfig => ({
     triggerToken: optionalEnvironment(
       'PROACTIVE_SALES_NOTIFICATION_TRIGGER_TOKEN',
     ),
-    webPublicUrl: optionalEnvironment('WEB_PUBLIC_URL')?.replace(/\/+$/u, ''),
+    webPublicUrl: optionalEnvironment(
+      'PROACTIVE_SALES_NOTIFICATION_WEB_PUBLIC_URL',
+    )?.replace(/\/+$/u, ''),
+    enabledKinds: parseProactiveNotificationKinds(
+      process.env.PROACTIVE_SALES_NOTIFICATION_ENABLED_KINDS,
+    ),
+    allowedTenantId: optionalEnvironment(
+      'PROACTIVE_SALES_NOTIFICATION_ALLOWED_TENANT_ID',
+    ),
+    allowedMemberId: optionalEnvironment(
+      'PROACTIVE_SALES_NOTIFICATION_ALLOWED_MEMBER_ID',
+    ),
+    allowedRecipientOpenId: optionalEnvironment(
+      'PROACTIVE_SALES_NOTIFICATION_ALLOWED_RECIPIENT_OPEN_ID',
+    ),
   },
   longTermMemory: {
     enabled: parseBoolean(process.env.MEM0_ENABLED, false),

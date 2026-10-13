@@ -1,5 +1,41 @@
 # 当前工程说明
 
+## 2026-10-13 日报与本人团队周报灰度已上线
+
+- 产品决策已确认：个人日报按租户时区每天 17:00 发送，包括周末；当日零活动仍发送简短
+  “今日无新增”。
+- 当前 Demo 租户的产品负责人本人已保留销售角色并追加主管角色；每周五 17:05 只向本人发送
+  团队周报，不额外发送个人周报。
+- 首轮持久配置只开放 `daily_report` 和 `weekly_team`，并要求 tenant/member/open_id 三重白名单
+  完全匹配。任务行动与商机风险通知继续关闭。
+- 状态：`Single-recipient rollout active`。周日 17:05 固定时间演算为 1 张本人日报；周五
+  17:10 为本人日报 + 团队周报共 2 张，均 0 警告、0 发送。主管角色回读为
+  `sales + manager`。
+- 已补发并回读 2026-10-05 至 2026-10-09 团队周报：飞书 message ID
+  `om_x100b63ea097b8cb8de76154402b7eeb`，Card 类型为 interactive，标题和周期匹配且不含临时
+  域名。账本唯一记录 `sent`、`attempt_count=1`；重复触发返回 `already_sent`。真实飞书
+  “销售agent”单聊 UI 已看到同周期“团队销售周报”卡片，包含团队人数、逾期任务和主管关注项。
+- 本机 `SalesAgentProactiveReports` 每 5 分钟运行一次；`SalesAgentRuntime` 在用户登录后确保 Agent
+  运行。手动触发调度退出码 0，非发送窗口为 0 计划、0 发送，飞书长连接已恢复。
+- 质量门：Agent `83 files / 709 tests`、PostgreSQL `32 passed / 3 controlled probes skipped`、
+  三套 TypeScript、统一 Lint、Agent/Web 构建、runner、发布器和 diff 检查均通过。
+- 临时 Serveo 地址仍可能失效；主动通知详情地址已独立留空，因此报告卡不带失效链接，消息
+  正文与去重不受影响。OAuth 回调和 Web 页面长期运行仍需稳定 HTTPS 地址。
+
+## 2026-10-13 当前切片：长期用户 OAuth 修复（自动化 Green，真实回调待复验）
+
+- 用户已在真实飞书授权页完成操作，最新回调也成功进入 Agent；但脱敏日志稳定复现
+  `stage=grant_validation`、`errorType=InvalidGrantResponse`，用户凭据与 Web Session 均未建立。
+- 根因不是用户漏点授权，而是授权 URL 只请求妙记、Docx、Wiki 三类资源 scope，没有请求
+  `offline_access`；飞书因此不返回 refresh token，而当前长期凭据契约正确地拒绝该响应。
+- 已按 D-059 更新 B4/B5 SDD 与决策问答。授权 URL 测试先按预期得到 `1 failed / 6 passed`，
+  随后统一 scope 列表加入 `offline_access`，最小 Green `7/7`、OAuth 定向 `21/21`。
+- 全量 Agent `83 files / 705 tests`、PostgreSQL `32 passed / 3 controlled probes skipped`、
+  三套 TypeScript、统一 Lint、Agent/Web 构建通过。下一步是重启运行时并重新 OAuth，验收一次性
+  state、加密凭据和 Web Session；自动化结果不冒充真实授权证据。
+- 本次修复只验收 OAuth state、加密凭据和 Web Session；未经另行确认，不发送真实机器人消息、
+  不读取妙记/文档、不写 Base/Task、不启用 cron。
+
 ## 2026-10-13 当前切片：飞书文档录入跟进（自动化 Green，真实来源/UI 待验收）
 
 - B5 已接入现有唯一机器人跟进链：销售发送本人可读的飞书 Docx/Wiki 链接，
@@ -78,13 +114,15 @@
   证据。后续唯一 UI 解锁条件是为受控测试账号授予 admin 角色，再查看空态或隔离 unknown 并
   完成一次人工裁决。
 
-## 2026-10-12 主动任务、风险、日报与周报通知（本人真实投递已验收，默认关闭）
+## 2026-10-12 主动任务、风险、日报与周报通知（历史实现记录，当前启用口径见 D-060）
 
 - 已把现有任务履约、商机决策、个人日报和团队 Review 接入统一主动通知链。独立调度客户端
   每 5 分钟调用受保护内部入口，由服务端按每个租户时区命中：09:00 任务行动卡、10:00
-  商机风险变化卡、18:00 个人日报，以及周五 17:00 个人/团队周报。
+  商机风险变化卡、当时的 18:00 个人日报，以及当时周五 17:00 个人/团队周报；D-060 已将当前
+  灰度改为每日 17:00 日报与周五 17:05 团队周报。
 - 任务提醒按销售每天合并一张卡，仅包含逾期、今日到期和明日到期；风险只在首次达到
-  `at_risk/critical` 或等级升级时发送；全零且无关键变化/下一步的日报不制造空卡片。
+  `at_risk/critical` 或等级升级时发送；“空日报不发”的历史规则已由 D-060 覆盖，当前发送
+  简短“今日无新增”。
 - 收件人在每次运行时重新校验 active tenant/member 和当前权限。卡片只发当前成员表中的
   `open_id`，详情跳转只接受 HTTPS；团队周报只给拥有 `review:read-team` 的成员。
 - 新增通用持久投递账本、风险观察状态、5 分钟租约、5 分钟重试、最多 3 次尝试和

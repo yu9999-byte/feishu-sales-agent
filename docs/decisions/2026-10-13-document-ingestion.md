@@ -17,6 +17,13 @@
 固定使用当前销售按租户/成员保存的 `user_access_token`；缺授权或 scope 时给本人授权入口，
 不回退到 bot token，也不通过另一个用户代读。
 
+## 问：为什么授权入口还要请求 `offline_access`？
+
+答：Docx/Wiki 的只读 scope 只授予资源访问范围；飞书需要 `offline_access` 才会返回
+refresh token。销售 Agent 是长期服务，不能在短期 access token 到期后静默失效，所以四项
+scope 必须同次授权。回调缺少 refresh token 时不落凭据、不建 Web Session，并输出脱敏阶段
+诊断；修复后仍须用数据库和会话证据确认成功，不能只看浏览器授权页。
+
 ## 问：为什么需要把 token 服务改成按场景校验 scope？
 
 答：B4 曾把 token 获取硬编码为妙记权限，导致一个只授权 Docx 的合法 token 也会被妙记规则

@@ -27,6 +27,14 @@ OAuth 获得的 `user_access_token`，授权按 `tenant_id + member_id` 隔离�
 应用 Secret 和租户/应用上下文派生。数据库同时保存有效期、scope 和版本；临期 access token
 通过最新 refresh token 刷新，并同时轮换两份密文。明文不得进入日志、审计、Git 或 API 响应。
 
+## 问：资源只读 scope 已经开通，为什么还必须请求 `offline_access`？
+
+答：资源 scope 决定“可以读什么”，`offline_access` 决定“能否获得 refresh token 并在
+access token 过期后继续代表当前销售访问”。本项目需要长期运行的 Agent，不能只保存一枚短期
+access token。授权入口因此固定把 `offline_access` 与妙记、Docx、Wiki scope 一起请求；回调
+缺 refresh token 时继续 fail closed，不回退 bot token，也不把页面上的“授权完成”当作凭据
+已经落库。
+
 ## 问：使用飞书 AI Summary 还是逐字稿？
 
 答：只使用 Transcript 作为跟进事实源。AI Summary、AI Todo 和 Chapter 都不能替代原话，
@@ -57,7 +65,7 @@ minute token、URL、逐字稿或用户 token。
 `Implemented / automated green / real source and UI pending`。升级为 `UI Verified` 还需要：
 
 1. 飞书应用已开通 `minutes:minutes:readonly`；
-2. 当前销售重新完成包含该 scope 的 OAuth；
+2. 当前销售重新完成包含该 scope 与 `offline_access` 的 OAuth；
 3. 提供一条该账号确实有权访问的真实妙记链接；
 4. 在真实飞书私聊核对等待态、同聊天确认卡、说话人/时间证据和确认前零写入。
 

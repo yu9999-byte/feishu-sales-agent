@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { Logger } from '@nestjs/common';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { Request, Response } from 'express';
 import {
@@ -8,6 +9,13 @@ import {
   FeishuWebAuthError,
   FeishuWebAuthService,
 } from '@server/modules/web-auth/feishu-web-auth.service';
+import {
+  FeishuOAuthCallbackError,
+} from '@server/modules/web-auth/feishu-oauth-callback.error';
+
+afterEach((): void => {
+  vi.restoreAllMocks();
+});
 
 const response = (): Response => {
   const result = {
@@ -103,6 +111,41 @@ describe('FeishuWebAuthController HTTP boundary', (): void => {
       'sales-agent-session',
       'secret',
       expect.objectContaining({ httpOnly: true, secure: true }),
+    );
+  });
+
+  it('logs only allow-listed OAuth diagnostics for an unexpected callback failure', async (): Promise<void> => {
+    const { controller, auth } = setup();
+    const logError = vi.spyOn(Logger.prototype, 'error')
+      .mockImplementation((): void => undefined);
+    vi.mocked(auth.completeLogin).mockRejectedValueOnce(
+      new FeishuOAuthCallbackError({
+        stage: 'token_exchange',
+        errorType: 'AccessTokenError',
+        upstreamStatus: 400,
+        upstreamCode: 20029,
+      }),
+    );
+    const res: Response = response();
+
+    await controller.callback(
+      'sensitive-code',
+      'sensitive-state',
+      undefined,
+      request(undefined),
+      res,
+    );
+
+    const logged: string = JSON.stringify(logError.mock.calls);
+    expect(logged).toContain('oauth_callback_failed');
+    expect(logged).toContain('token_exchange');
+    expect(logged).toContain('AccessTokenError');
+    expect(logged).toContain('20029');
+    expect(logged).not.toContain('sensitive-code');
+    expect(logged).not.toContain('sensitive-state');
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith(
+      '登录暂时不可用，请稍后重试',
     );
   });
 });

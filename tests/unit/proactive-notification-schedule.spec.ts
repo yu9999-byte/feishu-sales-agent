@@ -26,17 +26,21 @@ describe('proactive notification schedule', (): void => {
 
   it('matches reports and Friday weekly reports without cross-day drift', (): void => {
     expect(matchProactiveNotificationSchedules(
-      new Date('2026-10-16T10:05:00.000Z'),
+      new Date('2026-10-16T09:02:00.000Z'),
       'Asia/Shanghai',
     )).toEqual({
       localDate: '2026-10-16',
       localWeekday: 5,
-      kinds: ['daily_report'],
+      kinds: ['daily_report', 'weekly_personal'],
     });
     expect(matchProactiveNotificationSchedules(
-      new Date('2026-10-16T09:05:00.000Z'),
+      new Date('2026-10-16T09:10:00.000Z'),
       'Asia/Shanghai',
-    ).kinds).toEqual(['weekly_personal', 'weekly_team']);
+    ).kinds).toEqual(['daily_report', 'weekly_personal', 'weekly_team']);
+    expect(matchProactiveNotificationSchedules(
+      new Date('2026-10-17T09:05:00.000Z'),
+      'Asia/Shanghai',
+    ).kinds).toEqual(['daily_report']);
   });
 
   it('returns an explicit invalid result for an invalid timezone', (): void => {

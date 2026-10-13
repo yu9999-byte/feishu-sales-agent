@@ -199,7 +199,7 @@ describe('ProactiveNotificationPlannerService', (): void => {
     })).toBeNull();
   });
 
-  it('does not send a zero-activity daily report', (): void => {
+  it('sends a concise zero-activity daily report', (): void => {
     const planner = new ProactiveNotificationPlannerService();
     const report: DailySalesReportResponse = {
       reportDate: scope.localDate,
@@ -220,6 +220,12 @@ describe('ProactiveNotificationPlannerService', (): void => {
       warnings: ['当天没有可汇总的销售活动'],
     };
 
-    expect(planner.planDailyReport(scope, report)).toBeNull();
+    const planned = planner.planDailyReport(scope, report);
+    expect(planned?.kind).toBe('daily_report');
+    expect(planned?.subtitle).toBe(`${scope.localDate} · 数据截至 17:00`);
+    expect(planned?.sections).toEqual([{
+      title: '今日概览',
+      lines: ['今日无新增'],
+    }]);
   });
 });

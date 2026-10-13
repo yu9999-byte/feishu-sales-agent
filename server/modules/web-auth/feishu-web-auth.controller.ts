@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpStatus,
+  Logger,
   Post,
   Query,
   Req,
@@ -14,6 +15,9 @@ import {
   FeishuWebAuthError,
   FeishuWebAuthService,
 } from './feishu-web-auth.service';
+import {
+  FeishuOAuthCallbackError,
+} from './feishu-oauth-callback.error';
 
 const SESSION_COOKIE: string = 'sales-agent-session';
 const OAUTH_STATE_COOKIE: string = 'sales-agent-oauth-state';
@@ -49,6 +53,10 @@ const readCookie = (request: Request, name: string): string | null => {
 
 @Controller('api/auth/feishu')
 class FeishuWebAuthController {
+  private readonly logger: Logger = new Logger(
+    FeishuWebAuthController.name,
+  );
+
   constructor(private readonly auth: FeishuWebAuthService) {}
 
   @Get('start')
@@ -149,6 +157,15 @@ class FeishuWebAuthController {
           ? '无权访问当前工作区'
           : '飞书授权未完成或已失效，请重新登录');
       return;
+    }
+    if (error instanceof FeishuOAuthCallbackError) {
+      this.logger.error(JSON.stringify(error.toDiagnostic()));
+    } else {
+      this.logger.error(JSON.stringify({
+        event: 'oauth_callback_failed',
+        stage: 'grant_validation',
+        errorType: 'UnknownError',
+      }));
     }
     response.status(HttpStatus.INTERNAL_SERVER_ERROR)
       .send('登录暂时不可用，请稍后重试');

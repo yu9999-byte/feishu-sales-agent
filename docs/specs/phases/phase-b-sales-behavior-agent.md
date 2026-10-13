@@ -385,7 +385,7 @@ Red/Green 和全量回归，真实飞书 UI 仍待验收；语音、风险第三
 - URL 只识别飞书/Lark 妙记来源，主业务意图继续由 LangChain/LangGraph 分类；纯妙记链接已
   加入 `followup_capture` 提示词示例，普通问答和只分析意图不进入写入链。
 - 读取固定使用当前销售的 `user_access_token`，按租户/成员保存 AES-256-GCM 密文并处理
-  access/refresh token 轮换；bot token 不作为降级路径。
+  access/refresh token 轮换；授权 URL 同时请求 `offline_access`，bot token 不作为降级路径。
 - 事实源只读取 Transcript，保留说话人、相对时间和原话；AI Summary/Todo/Chapter 不进入
   跟进事实。超长文本保留首尾证据，单段超长也不突破 120,000 上限。
 - 复用现有“草案 -> 一张确认卡 -> 确认后 Base/Task”链路；同消息重复投递只读取一次。
@@ -394,7 +394,7 @@ Red/Green 和全量回归，真实飞书 UI 仍待验收；语音、风险第三
   `32 passed / 3 controlled probes skipped`，三套 TypeScript、Lint/Stylelint、Agent/Web
   构建、迁移 022 双次幂等和隔离启动均通过。
 - 当前状态只能是 `Implemented / automated green / real source and UI pending`。真实验收需要
-  当前销售重新授权并提供本人可读妙记；详见
+  当前销售使用包含 `offline_access` 的新 URL 重新授权并提供本人可读妙记；详见
   [B4 SDD](../39-meeting-minutes-ingestion-sdd.md) 与
   [决策问答](../../decisions/2026-10-13-meeting-minutes-ingestion.md)。
 
@@ -403,16 +403,17 @@ Red/Green 和全量回归，真实飞书 UI 仍待验收；语音、风险第三
 - URL 只识别飞书/Lark Docx/Wiki 来源，主业务意图继续由 LangChain/LangGraph 分类；纯文档
   链接已加入 `followup_capture` 示例，普通问答或只分析意图不进入写入链。
 - 读取固定使用当前销售的 `user_access_token`。Docx 要求 `docx:document:readonly`；Wiki
-  还要求 `wiki:node:read`。token 按租户/成员加密隔离，bot token 不作为降级路径。
+  还要求 `wiki:node:read`，长期授权同次请求 `offline_access`。token 按租户/成员加密隔离，
+  bot token 不作为降级路径。
 - 事实源只使用 Docx `raw_content`；Wiki 只解析到 Docx。标题/revision 仅作元数据，图片、
   附件、Sheet、Base、画板、思维笔记和子文档不自动下钻。超长正文保留首尾且不突破 120,000。
 - 复用现有“草案 -> 一张确认卡 -> 确认后 Base/Task”链路；同消息重复投递只读取一次。授权、
   权限、类型、空正文和上游失败把原等待消息更新为可操作终态，确认前零业务写入。
-- 回归覆盖跨租户/成员 OAuth 与来源哈希隔离、妙记/文档混发零读取、无标题正文回退和多文档
-  拒绝。全量 Agent `82 files / 701 tests`，PostgreSQL
+- 回归覆盖跨租户/成员 OAuth 与来源哈希隔离、妙记/文档混发零读取、无标题正文回退、多文档
+  拒绝和 `offline_access` 授权 URL。全量 Agent `83 files / 705 tests`，PostgreSQL
   `32 passed / 3 controlled probes skipped`，三套 TypeScript、Lint/Stylelint、Agent/Web 构建、
   差异检查和隔离启动通过。
 - 当前状态只能是 `Implemented / automated green / real source and UI pending`。真实验收需要确认
-  `wiki:node:read`、当前销售重新授权，并提供本人可读 Docx 与 Wiki->Docx；详见
+  `wiki:node:read`、当前销售使用新 URL 重新授权，并提供本人可读 Docx 与 Wiki->Docx；详见
   [B5 SDD](../40-document-ingestion-sdd.md) 与
   [决策问答](../../decisions/2026-10-13-document-ingestion.md)。

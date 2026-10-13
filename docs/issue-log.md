@@ -6,6 +6,24 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-13 页面授权完成但长期凭据未落库（代码已修复，真实复验中）
+
+- 复现：当前销售在真实飞书授权页完成同意，OAuth callback 已到达 Agent；回调返回服务端错误，
+  `feishu_user_credentials` 与 `web_sessions` 均无新增记录。
+- 脱敏证据：日志只记录 `oauth_callback_failed`、`stage=grant_validation` 和
+  `errorType=InvalidGrantResponse`，未记录 code、state、token、Secret 或客户原文。
+- 根因：授权 URL 请求了 `minutes:minutes:readonly`、`docx:document:readonly`、
+  `wiki:node:read`，但遗漏 `offline_access`。飞书因此不返回 refresh token；网关按长期凭据
+  契约 fail closed。
+- 决策：保留 refresh token 强校验，在授权入口加入 `offline_access`；不降低为短期 token，
+  不回退 bot token。真实成功必须同时验证一次性 state 被消费、加密凭据和 Web Session 落库。
+- TDD 证据：授权 URL 用例先得到 `1 failed / 6 passed`，失败差异只有缺少
+  `offline_access`；最小实现后 `7/7`，OAuth 定向 `21/21`，全量 Agent `705/705`，PostgreSQL
+  `32 passed / 3 controlled probes skipped`，三套 TypeScript、统一 Lint 和双构建通过。
+- 状态：`Resolved in code / automated green / real OAuth pending`。
+- 下一动作：重启 Agent 后重新发起一次授权；确认 state 已消费、加密凭据与 Web Session 各自
+  落库，再把本问题标记为真实解决。
+
 ## 2026-10-13 文档录入误拒无标题正文、混合来源提示错误（已解决）
 
 - 复现一：Docx metadata 的标题为空或仅空白，但 `revision_id` 与 `raw_content` 完整时，网关在

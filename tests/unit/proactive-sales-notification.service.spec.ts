@@ -17,6 +17,10 @@ const config = (
     deliveryEnabled,
     triggerToken: 'scheduler-token',
     webPublicUrl: 'https://agent.example.com',
+    enabledKinds: ['daily_report', 'weekly_team'],
+    allowedTenantId: '10000000-0000-4000-8000-00000000000a',
+    allowedMemberId: '20000000-0000-4000-8000-00000000000a',
+    allowedRecipientOpenId: 'ou_sales_a',
   },
 });
 
@@ -128,20 +132,105 @@ describe('ProactiveSalesNotificationService', (): void => {
 
   it('plans a tenant-local task notification without sending when delivery is off', async (): Promise<void> => {
     const deps = dependencies();
+    deps.dailyReports.generate.mockResolvedValue({
+      reportDate: '2026-10-12', timezone: 'Asia/Shanghai',
+      status: 'empty' as const, generatedAt: '2026-10-12T09:05:00.000Z',
+      metrics: {
+        followupCount: 0, opportunityCount: 0,
+        openTaskCount: 0, overdueTaskCount: 0,
+      },
+      followups: [], opportunities: [], tasks: [], highlights: [],
+      nextActions: [], warnings: [],
+    });
+    deps.planner.planDailyReport.mockReturnValue({
+      tenantId: '10000000-0000-4000-8000-00000000000a',
+      recipientMemberId: '20000000-0000-4000-8000-00000000000a',
+      recipientOpenId: 'ou_sales_a', kind: 'daily_report' as const,
+      notificationKey: '2026-10-12', subjectKey: '2026-10-12',
+      title: '销售日报', subtitle: '今日无新增', sections: [],
+      payloadFingerprint: 'daily-fingerprint',
+    });
     const service = new ProactiveSalesNotificationService(
       config(true, false), deps.control, deps.identity, deps.sessions,
       deps.tasks, deps.opportunities, deps.dailyReports, deps.teamReviews,
       deps.planner, deps.delivery, deps.riskStates,
     );
     const result = await service.run({
-      now: new Date('2026-10-12T01:05:00.000Z'),
+      now: new Date('2026-10-12T09:05:00.000Z'),
     });
     expect(result.status).toBe('plan_only');
     expect(result.summary).toEqual(expect.objectContaining({
       tenantCount: 1, memberCount: 1, plannedCount: 1, sentCount: 0,
     }));
-    expect(deps.tasks.analyze).toHaveBeenCalledOnce();
+    expect(deps.dailyReports.generate).toHaveBeenCalledOnce();
+    expect(deps.tasks.analyze).not.toHaveBeenCalled();
     expect(deps.delivery.deliver).not.toHaveBeenCalled();
     expect(deps.riskStates.saveRiskState).not.toHaveBeenCalled();
+  });
+
+  it('fails closed before any tenant read when the exact rollout scope is absent', async (): Promise<void> => {
+    const deps = dependencies();
+    const unsafeConfig: AgentRuntimeConfig = config(true, true);
+    unsafeConfig.proactiveSalesNotifications = {
+      ...unsafeConfig.proactiveSalesNotifications!,
+      allowedMemberId: undefined,
+    };
+    const service = new ProactiveSalesNotificationService(
+      unsafeConfig, deps.control, deps.identity, deps.sessions,
+      deps.tasks, deps.opportunities, deps.dailyReports, deps.teamReviews,
+      deps.planner, deps.delivery, deps.riskStates,
+    );
+
+    const result = await service.run({
+      now: new Date('2026-10-12T09:05:00.000Z'),
+    });
+
+    expect(result.status).toBe('blocked');
+    expect(result.warnings).toEqual(['rollout_scope_not_configured']);
+    expect(deps.control.listActiveIntegrations).not.toHaveBeenCalled();
+    expect(deps.identity.listMembers).not.toHaveBeenCalled();
+    expect(deps.delivery.deliver).not.toHaveBeenCalled();
+  });
+
+  it('does not read member business data outside the exact rollout allowlist', async (): Promise<void> => {
+    const deps = dependencies();
+    const restrictedConfig: AgentRuntimeConfig = config(true, true);
+    restrictedConfig.proactiveSalesNotifications = {
+      ...restrictedConfig.proactiveSalesNotifications!,
+      allowedRecipientOpenId: 'ou_other_user',
+    };
+    const service = new ProactiveSalesNotificationService(
+      restrictedConfig, deps.control, deps.identity, deps.sessions,
+      deps.tasks, deps.opportunities, deps.dailyReports, deps.teamReviews,
+      deps.planner, deps.delivery, deps.riskStates,
+    );
+
+    await service.run({
+      now: new Date('2026-10-12T09:05:00.000Z'),
+    });
+
+    expect(deps.sessions.getSessionByMembership).not.toHaveBeenCalled();
+    expect(deps.dailyReports.generate).not.toHaveBeenCalled();
+    expect(deps.delivery.deliver).not.toHaveBeenCalled();
+  });
+
+  it('does not count a member when only disabled notification kinds match', async (): Promise<void> => {
+    const deps = dependencies();
+    const service = new ProactiveSalesNotificationService(
+      config(true, false), deps.control, deps.identity, deps.sessions,
+      deps.tasks, deps.opportunities, deps.dailyReports, deps.teamReviews,
+      deps.planner, deps.delivery, deps.riskStates,
+    );
+
+    const result = await service.run({
+      now: new Date('2026-10-12T01:05:00.000Z'),
+    });
+
+    expect(result.summary).toEqual(expect.objectContaining({
+      tenantCount: 0,
+      memberCount: 0,
+      plannedCount: 0,
+    }));
+    expect(deps.tasks.analyze).not.toHaveBeenCalled();
   });
 });

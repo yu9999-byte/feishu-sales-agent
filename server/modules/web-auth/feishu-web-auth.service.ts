@@ -24,12 +24,17 @@ import {
   type AuthenticatedWebSession,
   type CompletedWebLogin,
   type FeishuOAuthGateway,
+  type FeishuOAuthGrant,
   type LoginStateRecord,
   type SessionRecord,
   type TokenGenerator,
   type WebAuthStore,
 } from './web-auth.ports';
 import { FeishuUserTokenService } from './feishu-user-token.service';
+import {
+  FeishuOAuthCallbackError,
+  toFeishuOAuthCallbackError,
+} from './feishu-oauth-callback.error';
 
 type WebAuthErrorCode =
   | 'ACCESS_DENIED'
@@ -44,6 +49,7 @@ const REQUIRED_USER_SCOPES: string = [
   'minutes:minutes:readonly',
   'docx:document:readonly',
   'wiki:node:read',
+  'offline_access',
 ].join(' ');
 
 const hashToken = (value: string): string =>
@@ -212,11 +218,17 @@ class FeishuWebAuthService {
 
     const integration: TenantIntegration | null =
       await this.resolveIntegrationForState(state);
-    const identity = await this.oauthGateway.exchangeCode(
-      integration,
-      code,
-      this.getCallbackUrl(),
-    );
+    let identity: FeishuOAuthGrant;
+    try {
+      identity = await this.oauthGateway.exchangeCode(
+        integration,
+        code,
+        this.getCallbackUrl(),
+      );
+    } catch (error: unknown) {
+      if (error instanceof FeishuOAuthCallbackError) throw error;
+      throw toFeishuOAuthCallbackError('token_exchange', error);
+    }
     if (identity.tenantKey !== integration.feishuTenantKey) {
       throw new FeishuWebAuthError(
         'TENANT_MISMATCH',
@@ -224,11 +236,15 @@ class FeishuWebAuthService {
       );
     }
 
-    const member: PlatformMember | null =
-      await this.identities.resolveMemberByOpenId(
+    let member: PlatformMember | null;
+    try {
+      member = await this.identities.resolveMemberByOpenId(
         integration.tenantId,
         identity.openId,
       );
+    } catch (error: unknown) {
+      throw toFeishuOAuthCallbackError('member_resolution', error);
+    }
     if (member === null || member.status !== 'active') {
       throw new FeishuWebAuthError(
         'ACCESS_DENIED',
@@ -237,19 +253,27 @@ class FeishuWebAuthService {
     }
     if (identity.displayName.trim().length > 0 &&
       identity.displayName !== member.displayName) {
-      await this.identities.updateMemberDisplayName(
-        integration.tenantId,
-        member.id,
-        identity.displayName,
-      );
+      try {
+        await this.identities.updateMemberDisplayName(
+          integration.tenantId,
+          member.id,
+          identity.displayName,
+        );
+      } catch (error: unknown) {
+        throw toFeishuOAuthCallbackError('member_resolution', error);
+      }
     }
     if (this.userTokens !== undefined) {
-      await this.userTokens.saveAuthorization(
-        integration,
-        member.id,
-        identity,
-        now,
-      );
+      try {
+        await this.userTokens.saveAuthorization(
+          integration,
+          member.id,
+          identity,
+          now,
+        );
+      } catch (error: unknown) {
+        throw toFeishuOAuthCallbackError('credential_persist', error);
+      }
     }
 
     const sessionToken: string = formatScopedToken(
@@ -259,12 +283,16 @@ class FeishuWebAuthService {
     const expiresAt: Date = new Date(
       now.getTime() + SESSION_TTL_MS,
     );
-    await this.authStore.saveSession({
-      tokenHash: hashToken(sessionToken),
-      tenantId: integration.tenantId,
-      memberId: member.id,
-      expiresAt,
-    });
+    try {
+      await this.authStore.saveSession({
+        tokenHash: hashToken(sessionToken),
+        tenantId: integration.tenantId,
+        memberId: member.id,
+        expiresAt,
+      });
+    } catch (error: unknown) {
+      throw toFeishuOAuthCallbackError('session_persist', error);
+    }
     return {
       sessionToken,
       redirectPath: state.redirectPath,

@@ -64,6 +64,8 @@
 | D-056 | 通用主动通知的 `uncertain` 记录复用 D-042 的人工裁决原则，但使用独立通用对账账本和管理员页面；“确认未送达”只释放一次额外尝试且不在裁决请求内发送 | 直接改库缺少权限、并发和审计保障；复用 S4 商机主键会把任务、风险、日报和周报错误耦合；裁决时直接发送会扩大误操作和超时重试风险 | 已实现并通过自动化、PostgreSQL、迁移、构建和隔离启动门禁；真实管理员 UI 待验收，消息与 cron 保持关闭 |
 | D-057 | 妙记录入以当前销售的 user OAuth 读取 Transcript；URL 只识别来源模态，LangChain/LangGraph 继续判断业务意图；AI Summary 不作为跟进事实，确认前继续零业务写入 | bot token 不能代表用户读取个人妙记；关键词路由会破坏已确认的 AI 主分类；二次 AI 总结缺失可定位原始证据 | `39-meeting-minutes-ingestion-sdd.md` 已实现并完成自动化门禁；真实妙记与 UI 待验收，问答见 `decisions/2026-10-13-meeting-minutes-ingestion.md` |
 | D-058 | 文档录入以当前销售 user OAuth 读取 Docx `raw_content`；Wiki 只解析到 Docx；token 获取按调用场景校验 required scopes，文档来源仍由 LangGraph 判断业务意图 | bot token 不能代表销售读取用户文档；把妙记 scope 硬编码到通用 token 服务会错误阻断文档；自动下钻附件/表格会扩大权限和证据边界 | `40-document-ingestion-sdd.md` 已完成 Red/Green 和自动化门禁；真实文档、消息和业务写入测试未执行，问答见 `decisions/2026-10-13-document-ingestion.md` |
+| D-059 | 长期用户 OAuth 必须把 `offline_access` 与妙记、Docx、Wiki 资源 scope 同次请求；回调继续强制要求 refresh token，缺失时不落凭据、不建 Session | 飞书只有在授权包含 `offline_access` 时才返回 refresh token；短期 access token 不能支撑长期 Agent，也不能用 bot token 冒充当前销售 | 已实现并完成 Red/Green 与完整自动化门禁；真实长期凭据和 Session 待重新 OAuth 验收 |
+| D-060 | 主动报告首轮持久灰度只向产品负责人本人发送：每日 17:00 个人日报（含周末和“今日无新增”空日报），周五 17:05 团队周报；本人保留 sales 并追加 manager，不发送个人周报、任务卡或风险卡 | 先让一个真实用户获得稳定、低噪声的日报/主管周报闭环，同时以类型白名单和 tenant/member/open_id 三重白名单控制误发半径 | 已上线；主管角色、固定时间 plan-only、本人团队周报真实投递/回读/去重、完整自动化和每 5 分钟本机调度均通过，决策问答见 `decisions/2026-10-13-proactive-report-push.md` |
 
 其中 D-052 覆盖 D-011 的“勾选待办”、D-017 的确认卡检查展示，以及 D-020 中
 “过期待办不阻止保存跟进”的旧口径；D-026 的整表一次提交、执行中和结果修订
@@ -86,6 +88,8 @@ D-027..034 的框架替换、Checkpointer/Mem0 分层、意图主分类、执行
 暂不引入外部记忆框架”已被 D-028 覆盖；其 AI 优先意图原则和租户/用户/聊天隔离原则继续有效。
 D-057 的用户授权、Transcript 事实源、同聊天失败终态和真实验收边界见
 [飞书妙记录入决策问答](decisions/2026-10-13-meeting-minutes-ingestion.md)。
+D-058..059 的文档读取边界、按场景 scope 与长期 OAuth 约束见
+[飞书文档录入决策问答](decisions/2026-10-13-document-ingestion.md)。
 
 ## 妙搭资产处置
 

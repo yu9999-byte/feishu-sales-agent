@@ -79,8 +79,11 @@ Docx/Wiki URL 解析只识别输入来源，不代替 AI 业务意图：
 妙记权限。妙记继续要求其只读 scope；文档只要求文档相关 scope。刷新响应未返回 scope 时保留
 原凭据的已知 scope，不能把已知授权静默覆盖为未知。缺 scope 时 fail closed，不调用文档网关。
 
-OAuth 授权入口请求妙记、Docx 和 Wiki 三类最小 scope。access/refresh token 继续只以
-AES-256-GCM 密文保存，明文不进入日志、审计、API 响应或 Git。
+OAuth 授权入口请求妙记、Docx 和 Wiki 三类最小资源 scope，并必须同时请求
+`offline_access`。飞书只在授权包含 `offline_access` 时返回 `refresh_token` 和其有效期；
+因此回调继续要求可续期凭据完整，不能把只有短期 access token 的响应保存为长期授权。
+access/refresh token 继续只以 AES-256-GCM 密文保存，明文不进入日志、审计、API 响应或
+Git。
 
 ## 5. 来源与正文契约
 
@@ -140,6 +143,7 @@ FeishuDocumentGateway.readDocument(integration, reference, accessToken)
 
 | ID | Red 场景 | Green 验收 |
 | --- | --- | --- |
+| `DOC-AUTH-00` | OAuth 入口只请求三类资源 scope | 同一授权 URL 还包含 `offline_access`，可建立长期用户凭据 |
 | `DOC-URL-01` | 合法飞书/Lark Docx、Wiki URL | 提取稳定类型/token，query/hash 不影响 |
 | `DOC-URL-02` | HTTP、相似域、IP、端口、凭据、额外路径、非法 token | 网络调用前拒绝 |
 | `DOC-URL-03` | 一条消息含两个不同文档来源 | 明确拒绝，不猜选 |
@@ -161,7 +165,8 @@ FeishuDocumentGateway.readDocument(integration, reference, accessToken)
 自动化完成：规格、Red/Green、单元/工作流/租户与权限负向测试、三套 TypeScript、Lint、
 Agent/Web 构建和隔离启动全部通过。
 
-真实完成：应用已开通 `docx:document:readonly` 与 `wiki:node:read`，当前销售重新 OAuth，
+真实完成：应用已开通 `docx:document:readonly` 与 `wiki:node:read`，当前销售以三类资源 scope
+和 `offline_access` 重新 OAuth，
 并提供本人可读的 Docx 和 Wiki->Docx 各一条；在真实私聊核对等待态、同聊天确认卡、正文证据、
 失败终态和确认前零写入。完成前不得标记 `ING-005..007` 为 `UI Verified`。
 
@@ -184,7 +189,9 @@ Agent/Web 构建和隔离启动全部通过。
   现有确认卡接入。
 - Docx 使用 metadata + `raw_content`；Wiki 使用同一用户 token 解析节点且仅接受 Docx。
   HTTP 401/403/404 与已知无权错误统一为不可读取，非 Docx Wiki 明确拒绝。
-- OAuth 入口请求妙记、Docx 和 Wiki 最小 scope；token 刷新响应省略 scope 时保留原已知授权，
+- OAuth 入口请求妙记、Docx 和 Wiki 最小资源 scope；本次真实 OAuth 诊断发现当时未请求
+  `offline_access`，导致飞书不返回 refresh token。该缺口按 `DOC-AUTH-00` 进入独立 Red/Green，
+  在完成前不能把页面授权动作记为长期授权成功。token 刷新响应省略 scope 时保留原已知授权，
   妙记与文档不再被彼此 scope 错误阻断。
 - 新增跨租户/成员 token 与来源哈希隔离、妙记与文档混发零读取、无标题 Docx 安全回退回归。
   后两项先分别复现“无标题正文被误拒”和“混合来源提示错误”，再完成最小 Green 修复。
@@ -192,3 +199,7 @@ Agent/Web 构建和隔离启动全部通过。
   差异检查与隔离 webhook 启动均通过；隔离服务已关闭。
 - 自动化全过程没有读取真实文档、发送飞书消息、写 Base/Task 或启用 cron。真实 Docx/Wiki
   来源和 UI 仍按第 9 节门禁待验收，因此不得升级为 `UI Verified`。
+- `DOC-AUTH-00` 的 Red 先稳定复现授权 URL 仅含三类资源 scope；实现只在统一授权列表增加
+  `offline_access`，不放宽 refresh token 校验。最小 Green `7/7`，OAuth 定向 `21/21`，全量
+  Agent `83 files / 705 tests`，PostgreSQL `32 passed / 3 controlled probes skipped`，三套
+  TypeScript、统一 Lint 和双构建通过。真实凭据与 Session 落库仍待重新 OAuth 验收。

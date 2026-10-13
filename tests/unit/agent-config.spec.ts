@@ -89,6 +89,10 @@ describe('loadAgentConfig proactive sales notifications', (): void => {
       deliveryEnabled: false,
       triggerToken: undefined,
       webPublicUrl: undefined,
+      enabledKinds: [],
+      allowedTenantId: undefined,
+      allowedMemberId: undefined,
+      allowedRecipientOpenId: undefined,
     });
   });
 
@@ -100,13 +104,42 @@ describe('loadAgentConfig proactive sales notifications', (): void => {
       'PROACTIVE_SALES_NOTIFICATION_TRIGGER_TOKEN',
       'proactive-trigger-token',
     );
-    vi.stubEnv('WEB_PUBLIC_URL', 'https://agent.example.com///');
+    vi.stubEnv(
+      'PROACTIVE_SALES_NOTIFICATION_WEB_PUBLIC_URL',
+      'https://agent.example.com///',
+    );
+    vi.stubEnv(
+      'PROACTIVE_SALES_NOTIFICATION_ENABLED_KINDS',
+      'daily_report,weekly_team',
+    );
+    vi.stubEnv('PROACTIVE_SALES_NOTIFICATION_ALLOWED_TENANT_ID', 'tenant-a');
+    vi.stubEnv('PROACTIVE_SALES_NOTIFICATION_ALLOWED_MEMBER_ID', 'member-a');
+    vi.stubEnv(
+      'PROACTIVE_SALES_NOTIFICATION_ALLOWED_RECIPIENT_OPEN_ID',
+      'ou_sales_a',
+    );
 
     expect(loadAgentConfig().proactiveSalesNotifications).toEqual({
       enabled: true,
       deliveryEnabled: true,
       triggerToken: 'proactive-trigger-token',
       webPublicUrl: 'https://agent.example.com',
+      enabledKinds: ['daily_report', 'weekly_team'],
+      allowedTenantId: 'tenant-a',
+      allowedMemberId: 'member-a',
+      allowedRecipientOpenId: 'ou_sales_a',
     });
+  });
+
+  it('rejects unknown proactive notification kinds', (): void => {
+    requiredEnvironment();
+    vi.stubEnv(
+      'PROACTIVE_SALES_NOTIFICATION_ENABLED_KINDS',
+      'daily_report,unknown_kind',
+    );
+
+    expect((): void => {
+      loadAgentConfig();
+    }).toThrow('PROACTIVE_SALES_NOTIFICATION_ENABLED_KINDS');
   });
 });

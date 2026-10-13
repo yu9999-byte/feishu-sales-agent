@@ -153,15 +153,16 @@ class ProactiveNotificationPlannerService {
       report.metrics.overdueTaskCount > 0 ||
       report.highlights.length > 0 ||
       report.nextActions.length > 0;
-    if (!hasActivity) return null;
     const sections: ProactiveNotificationSection[] = [{
       title: '今日概览',
-      lines: [
-        `跟进 ${report.metrics.followupCount} 条`,
-        `涉及商机 ${report.metrics.opportunityCount} 个`,
-        `未完成任务 ${report.metrics.openTaskCount} 个`,
-        `逾期任务 ${report.metrics.overdueTaskCount} 个`,
-      ],
+      lines: hasActivity
+        ? [
+            `跟进 ${report.metrics.followupCount} 条`,
+            `涉及商机 ${report.metrics.opportunityCount} 个`,
+            `未完成任务 ${report.metrics.openTaskCount} 个`,
+            `逾期任务 ${report.metrics.overdueTaskCount} 个`,
+          ]
+        : ['今日无新增'],
     }];
     if (report.highlights.length > 0) {
       sections.push({
@@ -175,7 +176,7 @@ class ProactiveNotificationPlannerService {
         lines: compactLines(report.nextActions),
       });
     }
-    if (report.warnings.length > 0) {
+    if (hasActivity && report.warnings.length > 0) {
       sections.push({
         title: '数据覆盖说明',
         lines: compactLines(report.warnings),
@@ -186,7 +187,7 @@ class ProactiveNotificationPlannerService {
       notificationKey: report.reportDate,
       subjectKey: report.reportDate,
       title: '销售日报',
-      subtitle: `${report.reportDate} · 数据截至 18:00`,
+      subtitle: `${report.reportDate} · 数据截至 17:00`,
       sections,
       actionLabel: '查看完整日报',
       actionUrl: pageUrl(scope, `/daily-report?date=${report.reportDate}`),

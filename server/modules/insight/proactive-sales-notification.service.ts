@@ -171,6 +171,16 @@ class ProactiveSalesNotificationService {
     if (settings?.enabled !== true) {
       return this.response('disabled', now, emptySummary(), []);
     }
+    if (
+      settings.enabledKinds.length === 0 ||
+      !settings.allowedTenantId ||
+      !settings.allowedMemberId ||
+      !settings.allowedRecipientOpenId
+    ) {
+      return this.response('blocked', now, emptySummary(), [
+        'rollout_scope_not_configured',
+      ]);
+    }
     let integrations: TenantIntegration[];
     try {
       integrations = await this.control.listActiveIntegrations();
@@ -181,7 +191,11 @@ class ProactiveSalesNotificationService {
     }
     const counters: RunCounters = emptySummary();
     const warnings: Set<string> = new Set();
-    for (const integration of integrations) {
+    const allowedIntegrations: TenantIntegration[] = integrations.filter(
+      (integration: TenantIntegration): boolean =>
+        integration.tenantId === settings.allowedTenantId,
+    );
+    for (const integration of allowedIntegrations) {
       const tenantResult: boolean = await this.processTenant(
         integration,
         now,
@@ -215,7 +229,11 @@ class ProactiveSalesNotificationService {
     }
     const activeMembers: PlatformMember[] = members.filter(
       (member: PlatformMember): boolean =>
-        member.status === 'active' && member.tenantId === integration.tenantId,
+        member.status === 'active' &&
+        member.tenantId === integration.tenantId &&
+        member.id === this.config.proactiveSalesNotifications?.allowedMemberId &&
+        member.feishuOpenId ===
+          this.config.proactiveSalesNotifications?.allowedRecipientOpenId,
     );
     let matchedSchedule = false;
     for (const member of activeMembers) {
@@ -236,7 +254,15 @@ class ProactiveSalesNotificationService {
         warnings.add('invalid_timezone');
         continue;
       }
-      if (schedule.kinds.length === 0) continue;
+      const enabledKinds: Set<ProactiveNotificationScheduleKind> = new Set(
+        this.config.proactiveSalesNotifications?.enabledKinds ?? [],
+      );
+      const scheduledKinds: ProactiveNotificationScheduleKind[] =
+        schedule.kinds.filter(
+          (scheduledKind: ProactiveNotificationScheduleKind): boolean =>
+            enabledKinds.has(scheduledKind),
+        );
+      if (scheduledKinds.length === 0) continue;
       matchedSchedule = true;
       counters.memberCount += 1;
       const scope: ProactiveNotificationPlanScope = {
@@ -247,7 +273,7 @@ class ProactiveSalesNotificationService {
         timezone: session.tenant.timezone,
         webPublicUrl: this.config.proactiveSalesNotifications?.webPublicUrl,
       };
-      for (const kind of schedule.kinds) {
+      for (const kind of scheduledKinds) {
         await this.processKind(
           kind,
           integration,
