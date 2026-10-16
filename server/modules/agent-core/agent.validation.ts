@@ -5,6 +5,7 @@ import type {
   ConfirmationCardAction,
   FollowupDraft,
   FollowupMissingField,
+  FollowupOpportunityAssociation,
   FollowupProgressSnapshot,
   FollowupTaskCandidate,
   JsonObject,
@@ -116,6 +117,22 @@ const pendingActionStatusSchema = z.enum([
   'failed',
   'cancelled',
   'expired',
+]);
+
+const followupOpportunityAssociationSchema = z.discriminatedUnion('mode', [
+  z.object({
+    mode: z.literal('none'),
+  }),
+  z.object({
+    mode: z.literal('existing'),
+    opportunityRecordId: z.string().trim().min(1),
+    opportunityName: z.string().trim().min(1),
+    opportunityRecordUrl: z.string().url().optional(),
+  }),
+  z.object({
+    mode: z.literal('create'),
+    opportunityName: nullableTrimmedStringSchema,
+  }),
 ]);
 
 const taskReplacementFields = {
@@ -294,6 +311,7 @@ const pendingActionPayloadSchema = z.object({
   }).optional(),
   inputError: z.string().trim().min(1).optional(),
   salesContext: salesContextSchema.optional(),
+  opportunityAssociation: followupOpportunityAssociationSchema.optional(),
   opportunityStatusUpdate: z.object({
     recordId: z.string().trim().min(1),
     opportunityName: z.string().trim().min(1),
@@ -325,6 +343,10 @@ const agentExecutionResultSchema = z.object({
   customerRecordUrl: z.string().url().optional(),
   opportunityRecordId: z.string().optional(),
   opportunityRecordUrl: z.string().url().optional(),
+  opportunityAssociationMode: z.enum([
+    'none', 'existing', 'create',
+  ]).optional(),
+  opportunityName: z.string().trim().min(1).optional(),
   opportunityStatus: z.object({
     opportunityName: z.string().trim().min(1),
     previousStatus: z.enum([
@@ -554,6 +576,27 @@ const parseOpportunityStatusUpdate = (
 const parseJsonObject = (value: unknown): JsonObject =>
   jsonObjectSchema.parse(value) as JsonObject;
 
+const parseFollowupOpportunityAssociation = (
+  value: unknown,
+): FollowupOpportunityAssociation => {
+  const parsed = followupOpportunityAssociationSchema.parse(value);
+  if (parsed.mode === 'none') {
+    return { mode: 'none' };
+  }
+  if (parsed.mode === 'existing') {
+    return {
+      mode: 'existing',
+      opportunityRecordId: parsed.opportunityRecordId,
+      opportunityName: parsed.opportunityName,
+      opportunityRecordUrl: parsed.opportunityRecordUrl,
+    };
+  }
+  return {
+    mode: 'create',
+    opportunityName: parsed.opportunityName ?? null,
+  };
+};
+
 const parsePendingActionPayload = (
   value: unknown,
 ): PendingActionPayload => {
@@ -588,6 +631,9 @@ const parsePendingActionPayload = (
     progressAssessment: parsed.progressAssessment === undefined
       ? undefined
       : parseProgressAssessment(parsed.progressAssessment),
+    opportunityAssociation: parsed.opportunityAssociation === undefined
+      ? undefined
+      : parseFollowupOpportunityAssociation(parsed.opportunityAssociation),
     taskCandidates,
     selectedTaskCandidateIds: parsed.selectedTaskCandidateIds,
     inputForm: parsed.inputForm,

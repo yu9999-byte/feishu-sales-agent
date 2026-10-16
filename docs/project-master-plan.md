@@ -1,6 +1,6 @@
 # 销售跟进执行 Agent 项目主计划
 
-状态：`Approved / multi-agent sales assistant direction confirmed / updated 2026-10-13`
+状态：`Approved / followup domain relationship refactor UI verified / updated 2026-10-16`
 
 本文把产品总纲、当前代码实现、规格文件、测试证据和真实飞书验收记录统一为后续推进基线。
 它定义产品方向和阶段顺序；具体接口、状态机和字段契约仍以 `docs/specs/` 与
@@ -83,7 +83,7 @@ Playbook 优化。当前销售
 
 | 能力 | 当前状态 | 证据与缺口 |
 | --- | --- | --- |
-| P0 文本跟进闭环 | `UI Verified`（历史基线） | 已有真实 Base/Task 写入和两租户自动化隔离；需持续回归 |
+| P0 文本跟进闭环 | `Historical UI baseline / current refactor UI pending` | 历史 Base/Task 写入和两租户隔离证据仍保留；D-062 已把强制商机关联改为可选，当前版本需重新验收无商机、已有商机、新建商机三条路径 |
 | LangGraph 对话编排 | `Automated Green / UI pending` | 当前项目回归基线为 34 个 Agent 测试文件、303 项测试及 4 个 Postgres 集成测试文件、13 项测试；类型检查、Lint、构建通过，最新 UI 内容仍待对账 |
 | 跟进草稿、质检、确认 | `Partial` | 结构化抽取、卡内编辑、版本和确认门已有；最新确认按钮与终态需真实 UI 对账 |
 | 飞书妙记逐字稿输入 B4 | `Implemented / automated green / real source and UI pending` | 当前销售 OAuth 密文/刷新、妙记 URL 安全解析、Transcript 说话人/时间证据、120k 上限、LangGraph 意图路由、同聊天单确认卡、失败原地终态、重复消息幂等和确认前零写入已实现。Agent `667/667`、PostgreSQL `32 passed / 3 controlled probes skipped`、迁移 022、类型、Lint、双构建与隔离启动通过；仍需 scope、重新 OAuth 和本人可读真实妙记完成 UI 验收 |
@@ -482,6 +482,21 @@ Playbook 的共同基础，优先级高于语音、报告、RAG 和管理看板�
 - [x] 观测失败不阻断可信问答，不修改文档、发布 Playbook 或写入任何销售业务记录。
 - [ ] 下一切片建立版本化 Playbook 草稿与单独的 `playbook:publish` 管理员确认门；在真实登录态
   验收前保持 `UI pending`，不得把候选接受等同于资料发布。
+
+### 阶段 S12：客户—商机—跟进关系重构（自动化 Green，UI Verified）
+
+- [x] 冻结 D-062 和 `FUP-012..020`：跟进必须关联客户、商机可选，禁止创建占位商机。
+- [x] 完成 Red 复现：无商机信息的跟进仍调用 `upsertOpportunity`。
+- [x] 增加 `none / existing / create` 确认快照、同卡单选、条件写入和 Base 空关联支持。
+- [x] 完成无商机、已有商机、新建商机、创建不写空关联、修订清空旧关联等定向 Green。
+- [x] 完成 Card `keep_current` 默认值防护和 Pending Action 关联快照无损往返回归；全量 Agent
+  `721/721`、PostgreSQL `32 passed / 3 controlled probes skipped`、
+  三套 TypeScript、ESLint、Agent/Web 构建和差异检查门禁。
+- [x] 只读识别历史泛化商机候选并展示保留证据：完整读取 5 条商机、8 条跟进、5 条客户，
+  仅发现“华南科技 - 销售机会”1 条候选；因有 3 条关联跟进和真实推进信号，暂时保留且零写入。
+- [x] 在真实飞书私聊验收 none/existing/create 三种路径、处理中间态、唯一成功卡、查看链接、
+  Base 客户/商机/跟进关系和 Task v2；验收标识分别为 `UI最终-NONE-R3-20261016`、
+  `UI最终-EXISTING-R4-20261016`、`UI最终-CREATE-R1-20261016`。
 
 ## 8. 统一 Agent 契约
 

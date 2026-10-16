@@ -439,6 +439,7 @@ class FakeRecords implements SalesRecordsGateway {
   opportunityCalls: number = 0;
   followupCalls: number = 0;
   followupUpdateCalls: number = 0;
+  lastUpdatedOpportunityRecordId: string | null | undefined = undefined;
   opportunityStatusCalls: number = 0;
   failNextCustomer: boolean = false;
   failNextFollowup: boolean = false;
@@ -475,8 +476,15 @@ class FakeRecords implements SalesRecordsGateway {
     };
   }
 
-  async updateFollowup(): Promise<SalesRecordResult> {
+  async updateFollowup(
+    _integration: TenantIntegration,
+    _action: PendingAction,
+    _customerRecordId: string,
+    opportunityRecordId: string | null,
+    _followupRecordId: string,
+  ): Promise<SalesRecordResult> {
     this.followupUpdateCalls += 1;
+    this.lastUpdatedOpportunityRecordId = opportunityRecordId;
     return {
       recordId: 'rec_followup',
       recordUrl: 'https://base.example/followups/rec_followup',
@@ -2898,7 +2906,7 @@ describe('AgentWorkflowService', (): void => {
     );
 
     expect(harness.records.customerCalls).toBe(1);
-    expect(harness.records.opportunityCalls).toBe(1);
+    expect(harness.records.opportunityCalls).toBe(0);
     expect(harness.records.followupCalls).toBe(1);
     expect(harness.tasks.calls).toBe(1);
   });
@@ -3029,6 +3037,81 @@ describe('AgentWorkflowService', (): void => {
     expect(harness.tasks.updateCalls).toBe(1);
   });
 
+  it('clears an existing opportunity link when a revision selects none', async (): Promise<void> => {
+    const harness: TestHarness = createHarness(
+      completeDraft,
+      createReadySalesContextReader(),
+    );
+    await harness.workflow.handleMessage(createMessage());
+    const original: PendingAction = harness.messenger.actions[0];
+    await harness.workflow.handleCardAction(
+      createCardAction(
+        'tenant-a',
+        original.id,
+        'confirm',
+        'evt-unlink-seed',
+      ),
+    );
+    await waitForStatus(
+      harness.store,
+      harness.integrationA.tenantId,
+      original.id,
+      'succeeded',
+    );
+
+    const completed: PendingAction | null =
+      await harness.store.getPendingAction(
+        harness.integrationA.tenantId,
+        original.id,
+      );
+    if (completed === null || completed.cardMessageId === null) {
+      throw new Error('Expected completed action with card message');
+    }
+    expect(completed.result).toMatchObject({
+      opportunityAssociationMode: 'existing',
+      opportunityRecordId: 'opportunity-1',
+    });
+
+    await harness.workflow.handleCardAction(
+      createCardAction(
+        'tenant-a',
+        original.id,
+        'edit',
+        'evt-unlink-open',
+        new Date('2026-09-17T10:03:00+08:00'),
+        completed.cardMessageId,
+      ),
+    );
+    const revision: PendingAction | null =
+      await harness.store.getPendingActionByCardMessage(
+        harness.integrationA.tenantId,
+        completed.cardMessageId,
+      );
+    if (revision === null) throw new Error('Expected revision action');
+
+    await harness.workflow.handleCardAction(
+      createDraftFormAction(revision, 1, 'evt-unlink-confirm', {
+        generatedBody: '更新后的跟进正文',
+        opportunityAssociation: 'none',
+      }),
+    );
+    await waitForStatus(
+      harness.store,
+      harness.integrationA.tenantId,
+      revision.id,
+      'succeeded',
+    );
+
+    const revised: PendingAction | null =
+      await harness.store.getPendingAction(
+        harness.integrationA.tenantId,
+        revision.id,
+      );
+    expect(harness.records.lastUpdatedOpportunityRecordId).toBeNull();
+    expect(revised?.result.opportunityAssociationMode).toBe('none');
+    expect(revised?.result.opportunityRecordId).toBeUndefined();
+  });
+
   it('refreshes a stale draft card to the latest saved version', async (): Promise<void> => {
     const harness: TestHarness = createHarness();
     await harness.workflow.handleMessage(createMessage());
@@ -3145,7 +3228,7 @@ describe('AgentWorkflowService', (): void => {
     );
 
     expect(harness.records.customerCalls).toBe(1);
-    expect(harness.records.opportunityCalls).toBe(1);
+    expect(harness.records.opportunityCalls).toBe(0);
     expect(harness.records.followupCalls).toBe(2);
     expect(harness.tasks.calls).toBe(1);
   });
@@ -3179,7 +3262,7 @@ describe('AgentWorkflowService', (): void => {
     );
 
     expect(harness.records.customerCalls).toBe(2);
-    expect(harness.records.opportunityCalls).toBe(1);
+    expect(harness.records.opportunityCalls).toBe(0);
     expect(harness.records.followupCalls).toBe(1);
     expect(harness.tasks.calls).toBe(1);
   });

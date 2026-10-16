@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import type {
   FollowupCardFormInput,
   FollowupDraft,
+  FollowupOpportunityAssociation,
   FollowupTaskCandidate,
   JsonObject,
   JsonValue,
@@ -15,6 +16,12 @@ import type {
 import type { TenantIntegration } from '@server/modules/agent-core/agent.types';
 import { PlatformSessionService } from '@server/modules/platform-shell/platform-session.service';
 import { buildFollowupTaskCandidates } from './followup-task-preview';
+import {
+  defaultFollowupOpportunityAssociation,
+  hasExplicitNoOpportunitySignal,
+  resolveFollowupOpportunityAssociation,
+  type ResolveOpportunityAssociationResult,
+} from './followup-opportunity-association';
 import { FollowupQualityService } from './followup-quality.service';
 import { FollowupProgressService } from './followup-progress.service';
 import type {
@@ -125,8 +132,13 @@ class FollowupChatDraftService {
     const topic: string | null = input.inputForm?.topic ??
       input.draft.topic ??
       null;
+    const opportunityName: string | null =
+      hasExplicitNoOpportunitySignal(input.rawText)
+        ? null
+        : input.draft.opportunityName;
     const draft: FollowupDraft = {
       ...input.draft,
+      opportunityName,
       customerName: input.inputForm?.customerName ??
         input.draft.customerName,
       contactName: input.inputForm?.contactName ?? input.draft.contactName,
@@ -195,6 +207,11 @@ class FollowupChatDraftService {
         'contactName',
         current.draft.contactName,
       ),
+      opportunityName: this.readNullableText(
+        formValue,
+        'opportunityName',
+        current.draft.opportunityName,
+      ),
       nextAction: this.readNullableText(
         formValue,
         'nextAction',
@@ -211,6 +228,14 @@ class FollowupChatDraftService {
         current.draft.nextActionParticipants ?? [],
       ),
     };
+    const associationResolution: ResolveOpportunityAssociationResult =
+      resolveFollowupOpportunityAssociation(
+        this.readOptionalText(formValue, 'opportunityAssociation', undefined),
+        nextDraft,
+        current.salesContext,
+        current.opportunityAssociation,
+        current.rawText,
+      );
     const inputForm: FollowupCardFormInput = {
       ...current.inputForm,
       customerName: nextDraft.customerName ?? undefined,
@@ -238,7 +263,9 @@ class FollowupChatDraftService {
     const contentChanged: boolean = generatedBody !==
       (current.generatedBody ?? this.generateBody(current.draft)) ||
       JSON.stringify(nextDraft) !== JSON.stringify(current.draft) ||
-      JSON.stringify(inputForm) !== JSON.stringify(current.inputForm ?? {});
+      JSON.stringify(inputForm) !== JSON.stringify(current.inputForm ?? {}) ||
+      JSON.stringify(associationResolution.association) !==
+        JSON.stringify(current.opportunityAssociation);
     const draftVersion: number = contentChanged
       ? currentVersion + 1
       : currentVersion;
@@ -254,6 +281,8 @@ class FollowupChatDraftService {
       inputForm,
       salesContext: current.salesContext,
       source: current.source,
+      opportunityAssociation: associationResolution.association,
+      inputError: associationResolution.error,
     });
     payload.operationKind = current.operationKind;
     payload.revisionOfActionId = current.revisionOfActionId;
@@ -270,13 +299,19 @@ class FollowupChatDraftService {
       .map((candidate: FollowupTaskCandidate): string => candidate.id);
     const selectedTaskIds: string[] =
       payload.selectedTaskCandidateIds ?? [];
+    const association: FollowupOpportunityAssociation =
+      payload.opportunityAssociation ?? { mode: 'none' };
+    const opportunityReady: boolean = association.mode !== 'create' ||
+      Boolean(association.opportunityName?.trim());
     return Boolean(
+      !payload.inputError &&
       draft.customerName &&
       draft.nextAction &&
       draft.dueAt &&
       !Number.isNaN(Date.parse(draft.dueAt)) &&
       readyTaskIds.length > 0 &&
       selectedTaskIds.length === readyTaskIds.length &&
+      opportunityReady &&
       readyTaskIds.every((id: string): boolean =>
         selectedTaskIds.includes(id),
       ),
@@ -295,6 +330,8 @@ class FollowupChatDraftService {
     inputForm?: FollowupCardFormInput;
     salesContext?: SalesContext;
     source?: FollowupSourceSnapshot;
+    opportunityAssociation?: FollowupOpportunityAssociation;
+    inputError?: string;
   }): PendingActionPayload {
     const progressAssessment: FollowupProgressSnapshot = this.assessProgress(
       input.draft,
@@ -321,7 +358,14 @@ class FollowupChatDraftService {
       ownerMemberId: input.ownerMemberId,
       generatedBody: input.generatedBody,
       inputForm: input.inputForm,
+      inputError: input.inputError,
       salesContext: input.salesContext,
+      opportunityAssociation: input.opportunityAssociation ??
+        defaultFollowupOpportunityAssociation(
+          input.draft,
+          input.salesContext,
+          input.rawText,
+        ),
       quality: this.quality.review(
         this.qualityInput(
           input.rawText,

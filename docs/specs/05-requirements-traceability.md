@@ -1,6 +1,19 @@
 # 需求追踪矩阵
 
-状态：`Approved / Goal v3 aligned / B5 automated Green / UI pending 2026-10-13`
+状态：`Approved / Goal v3 aligned / S12 automated Green / UI Verified 2026-10-16`
+
+2026-10-16 `FUP-012..020` 客户—商机—跟进关系重构已进入自动化 Green：跟进始终关联客户，
+商机可选；确认卡在同一表单提供暂不关联、关联已有和创建新商机三种模式。无明确商机名默认
+不关联，唯一精确匹配可预选已有商机，只有销售提交创建模式才新增商机；系统不再创建
+“客户名 - 销售机会”占位记录。已有商机 ID 必须来自当前客户授权上下文，伪造 ID 在任何业务
+写入前拒绝；修订为不关联会清空旧链接。Card 以 `keep_current` 保护未操作默认值，Pending Action
+解析已补无损往返回归。定向 `3 files / 123 tests`、新增关联定向 `2 files / 38 tests`、全量 Agent
+`83 files / 721 tests`、PostgreSQL `32 passed / 3 controlled probes skipped`，三套 TypeScript、
+ESLint、Agent/Web 构建和差异检查通过。历史只读盘点完整读取商机 5 条、跟进 8 条、客户 5 条，
+仅发现“华南科技 - 销售机会”1 条候选；因关联 3 条跟进且含线上演示、发送报价等保留证据，
+结论为待确认、暂时保留，盘点全程零写入。真实飞书 none/existing/create 三路径、唯一成功卡、
+Base 关系和 Task v2 均已验收，状态为 `Implemented / Automated Green / UI Verified`；未经逐条
+确认仍不修改历史业务数据。
 
 2026-10-07 `KNO-001..009` 销售资料检索与推荐 Agent v1 已实现：沟通准备页只从当前租户
 `base_mapping.knowledge.sources` 白名单读取单篇 Docx 或单个 Wiki 文档节点，并在排序前同时
@@ -216,6 +229,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | `ING-004` 妙记/会议输入 | B4 | Implemented / automated green / real source and UI pending | 当前销售 OAuth 密文存储/刷新、`minutes:minutes:readonly + offline_access`、妙记 URL 安全解析、Transcript 说话人/时间证据、120k 上限、LangGraph 意图路由、同聊天单草案、失败原地终态、重复消息幂等和确认前零 Base/Task 已实现；长期 OAuth Red/Green、OAuth 定向 `21/21`、Agent `705/705`、PostgreSQL `32 passed / 3 controlled probes skipped`、三套 TypeScript、统一 Lint 和双构建通过 | 当前销售需使用新授权 URL 重新 OAuth，并提供一条本人可读的真实妙记完成飞书 UI 验收 |
 | `ING-005..007` 文档输入和失败恢复 | B5 | Implemented / automated green / real source and UI pending | Docx/Wiki 安全解析、当前销售 user OAuth、按场景资源 scope 与 `offline_access`、Wiki 仅解析到 Docx、`raw_content` 事实源、120k 可见截断、同聊天等待/失败终态、重复消息幂等、跨租户/成员隔离、混合来源拒绝、无标题回退和确认前零写入均已实现；长期 OAuth Red/Green、Agent `705/705` 和完整门禁见 `40-document-ingestion-sdd.md` | 当前销售使用新 URL 重新 OAuth 后，以本人可读 Docx 和 Wiki->Docx 在真实私聊验收；本轮尚未读取真实文档或发送消息 |
 | `FUP-007..009` 写入、结果/项目质检卡、策略推送和幂等 | B6 | Implementing / regression fix | 三项 Base 后建任务、原卡唯一成功终态、原卡 patch 失败时补发、幂等、`followupRecordUrl` 持久化、成功卡记录链接，以及 `card.source_finalized`/补发 `card.result_sent` 审计均进入 137 项回归 | 历史双成功卡仅保留为 D-022 前的缺陷证据；本次唯一“跟进登记成功＋查看跟进记录”待真实复测 |
+| `FUP-012..020` 客户必选、商机可选和历史泛化商机治理 | B6 / S12 | Implemented / automated Green / UI Verified | Red 稳定复现无商机仍 upsert；联合类型、Card 2.0 单表单、`keep_current` 默认值防护、条件执行、授权已有商机、Base 空关联、修订清空、伪造 ID 前置拒绝及 payload 无损往返均已实现。定向 `123/123`、新增关联定向 `38/38`、Agent `721/721`、PostgreSQL `32 passed / 3 controlled probes skipped` 和完整质量门通过；历史只读盘点只发现 1 条候选并因真实推进证据暂时保留，零写入 | 真实飞书 `UI最终-NONE-R3`、`UI最终-EXISTING-R4`、`UI最终-CREATE-R1` 三路径均通过；唯一成功卡、查看链接、Base 客户/商机/跟进关系和 Task v2 已对账。未经确认不改历史数据 |
 | `FUP-010..011` 即时执行反馈、失败恢复和成功结果修订 | B6 | Isolated callback E2E Verified / real UI pending | 飞书 SDK 回调入口贯通真实 Bridge/Workflow/Executor/MemoryStore；测试替身验证同卡执行中、唯一成功/失败终态、重试及修订原跟进/任务；真实机器人 API E2E 仍只到待确认卡，无真实业务确认 | 本轮不要求手工 UI；真实飞书点击、业务写入和 Base/Task 回读仍待独立验收 |
 | `TSK-001..006` 任务预览、一次确认、状态建议/回收和提醒 | B6 / P1-FULFILL | Partial overall / fulfillment v1 automated green / Web implemented / UI pending | 精确版本候选选择、空选择不建任务；`GET /api/platform/task-fulfillment` 和 `/tasks` 按本人范围及租户时区识别未完成任务风险，并按最终选中候选及精确 `taskGuid` 核对最近 180 天 Agent 成功执行的跟进承诺；另按负责人分页读取已完成任务，最多 10 页且仅计入有效 `completed_at`，覆盖范围标记为 `search_scope`/`partial`/`unavailable`；列表未命中时读取精确任务详情，控制库保存最新状态和有效完成时间快照与 `observed`/`changed`/`completed`/`reopened` 事件，输出已完成/部分完成/仍未完成/待核实及变更/重新开放证据；较新的普通事件不覆盖旧终态，`completed_at="0"` 与冲突状态不得误报完成；事件仅是 Agent 观察证据，不是全量历史，且不按标题/时间/列表缺失跨任务关联；跨任务替代仅接受成功 Agent 动作结果中成对的 `relatedTaskGuid + relation: replaces`，原任务可见时不覆盖，缺字段/冲突/读取失败/跨租户/跨销售均待核实；无任务、不可见、详情失败和分页不完整分开呈现，500 条历史上限警告；不发送提醒、不修改任务、不升级主管。Agent `299/299`、完整门禁通过；本地 Postgres 集成 `12/12` 通过 | 真实登录态内容、链接和视觉待验收；全量完成历史、无任务承接的兑现判断、状态更新、提醒与升级仍待闭环 |
 | `CTX-001..012` 客户/商机/跟进/任务上下文读取、匹配与来源 | P1-CTX | Partial / UI pending | Base 富文本数组 Red/Green、本人范围商机回退、真实华南科技只读重放成功；Task 读取权限和真实本人范围已验证 | 原草案 UI 曾失败；最新卡片与 Web 多分支待验收 |

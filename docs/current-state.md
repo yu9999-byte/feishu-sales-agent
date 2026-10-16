@@ -1,5 +1,41 @@
 # 当前工程说明
 
+## 2026-10-16 当前切片：客户—商机—跟进关系重构（自动化 Green，UI Verified）
+
+- 已确认 D-062：跟进必须关联客户但可以不关联商机；客户拜访、电话和会议不自动产生商机。
+  只有销售在同一张确认卡选择已有商机或确认创建新商机时才建立关联。
+- 已新增 `41-followup-opportunity-association-sdd.md`、TDD 清单和可回顾决策问答，并同步覆盖
+  “每次确认都创建商机”“客户名 - 销售机会兜底”“跟进必须有商机 ID”等旧口径。
+- Red 证据：新增“无商机信息不创建占位商机”用例，旧执行器实际多调用一次
+  `upsertOpportunity`，定向结果为 `1 failed / 9 passed`。
+- 当前 Green：共享 payload 增加 `none / existing / create` 关联快照；文本、妙记和文档共用的
+  飞书 Card 2.0 在同一表单增加商机关联单选与名称；执行器只在 `create` 时 upsert，
+  `existing` 只使用授权上下文记录，`none` 跳过商机。Base 跟进创建允许空关联，成功修订可
+  清空旧关联；执行中和成功卡按实际结果表述。
+- 已补充伪造已有商机 ID 在任何 Base 写入前失败，以及原有关联修订为 `none` 后清空旧链接的
+  安全回归；定向 `3 files / 123 tests` 全部通过。
+- 真实复测发现两层缺陷：Card 2.0 未操作下拉的默认值回传不可靠，现以 `keep_current` 固定首项
+  保留当前判断；更深层根因是 `parsePendingActionPayload()` 返回对象遗漏
+  `opportunityAssociation`，导致 PostgreSQL 重载后回退 `none`。新增往返测试先得到
+  `1 failed / 27 passed`，修复后关联定向 `2 files / 38 tests`、全量 Agent
+  `83 files / 721 tests` 通过。
+- 项目 PostgreSQL 已按既定 `127.0.0.1:55432` 恢复，增量迁移 020–022 已应用；集成测试
+  `32 passed / 3 controlled probes skipped`。服务端、客户端、测试 TypeScript、ESLint、
+  Agent/Web 构建和 `git diff --check` 均通过。
+- 历史泛化商机只读盘点已完成：商机 5 条、跟进 8 条、客户 5 条均完整读取；仅发现
+  “华南科技 - 销售机会”1 条候选。该记录关联 3 条跟进，并含线上演示、发送报价等保留证据，
+  结论为“待确认、暂时保留”。详见
+  [历史泛化商机只读候选盘点](historical-opportunity-candidate-audit-2026-10-16.md)。
+- 真实飞书三路径已完成：
+  - `none`：`UI最终-NONE-R3-20261016`，跟进 `reczz28NwagNxZDd`，商机关联为空；
+  - `existing`：`UI最终-EXISTING-R4-20261016`，跟进 `reczz28NwuAJUCzO` 关联
+    `产线看板试点（测试）`；
+  - `create`：`UI最终-CREATE-R1-20261016`，客户 `reczz28Nwxa7UaY2`、新商机
+    `reczz28NwxcA59y1`、跟进 `reczz28Nwxf2dHj2`。
+- 三条路径均有唯一成功卡和查看链接；三条任务均创建，最新两条 Task v2 已真实回读负责人、
+  截止时间和来源跟进。当前状态升级为 `Implemented / Automated Green / UI Verified`。这不代表
+  正式生产部署；未经逐条确认仍不删除、不合并、不重命名、不关闭或改写历史关联。
+
 ## 2026-10-13 日报与本人团队周报灰度已上线
 
 - 产品决策已按 D-061 调整：个人日报按租户时区周一至周五 17:00 发送，周末不发；工作日零

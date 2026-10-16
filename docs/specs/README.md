@@ -1,6 +1,6 @@
 # 销策 Agent SDD 索引
 
-状态：`Approved / Goal v3 B5 automated Green 2026-10-13`
+状态：`Approved / followup opportunity association refactor implementing 2026-10-16`
 
 本目录是 Goal v3 的规格权威来源。代码、测试、飞书配置和 UI 验收都必须能追溯到这里的
 需求编号；参考文档只提供业务输入，不能直接替代本项目规格。
@@ -49,6 +49,8 @@
 | `38-proactive-notification-reconciliation-sdd.md` | 通用主动通知 unknown 对账、单次重试释放、不可变审计和管理员页面 | Implemented / UI pending |
 | `39-meeting-minutes-ingestion-sdd.md` | 妙记逐字稿录入、长期用户授权与同聊天草案 | Implemented / automated green / real OAuth/source/UI pending |
 | `40-document-ingestion-sdd.md` | Docx/Wiki 文档录入、按场景长期用户授权与同聊天草案 | Implemented / automated green / real OAuth/source/UI pending |
+| `41-followup-opportunity-association-sdd.md` | 跟进必须关联客户、商机可选，以及确认卡和写入契约 | Approved / Implementing |
+| `42-followup-opportunity-association-tdd.md` | 三种商机关联路径、Base 空关联和 UI 回归测试 | Red scenarios defined |
 
 ## 2. 规格状态
 
@@ -102,7 +104,7 @@ Draft -> Approved -> Implementing -> Implemented -> UI Verified
 - 飞书私聊文本触发结构化提取。
 - 缺少客户、下一步或截止时间时对话追问。
 - 消息卡片确认或取消。
-- 确认后写入 Base 客户、商机、跟进并创建飞书任务。
+- 确认后写入 Base 客户和跟进；仅在销售确认后关联已有或创建新商机，并创建飞书任务。
 - 事件和卡片幂等、部分失败续跑、审计及两租户代码级隔离。
 
 尚未进入实现的 Goal v3 能力不得在文档或 UI 中标记为可用。

@@ -9,6 +9,7 @@ import {
 
 import type {
   AgentExecutionResult,
+  FollowupOpportunityAssociation,
   FollowupTaskCandidate,
   PendingActionStatus,
 } from '@shared/api.interface';
@@ -265,6 +266,8 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
       return this.executeOpportunityStatusUpdate(integration, action, result);
     }
     this.assertMandatoryFollowupTask(action);
+    const association: FollowupOpportunityAssociation =
+      this.confirmedOpportunityAssociation(action);
     if (result.customerRecordId && !result.customerRecordUrl) {
       result.customerRecordUrl = this.fallbackRecordUrl(
         integration,
@@ -298,21 +301,57 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
       await this.persistProgress(integration, action, result);
     }
 
-    if (!result.opportunityRecordId) {
-      const opportunity: SalesRecordResult =
-        await this.records.upsertOpportunity(
+    if (association.mode === 'existing') {
+      result.opportunityRecordId = association.opportunityRecordId;
+      result.opportunityRecordUrl = association.opportunityRecordUrl ??
+        this.fallbackRecordUrl(
           integration,
-          action,
-          result.customerRecordId,
+          integration.base.opportunities.tableId,
+          association.opportunityRecordId,
         );
-      result.opportunityRecordId = opportunity.recordId;
-      result.opportunityRecordUrl = this.recordUrl(
-        integration,
-        integration.base.opportunities.tableId,
-        opportunity,
-      );
+      result.opportunityAssociationMode = 'existing';
+      result.opportunityName = association.opportunityName;
       await this.persistProgress(integration, action, result);
     }
+
+    if (association.mode === 'create') {
+      const opportunityName: string = association.opportunityName?.trim() ?? '';
+      const createdInThisAction: boolean =
+        action.result.opportunityAssociationMode === 'create' &&
+        Boolean(action.result.opportunityRecordId);
+      if (createdInThisAction) {
+        result.opportunityRecordId = action.result.opportunityRecordId;
+        result.opportunityRecordUrl = action.result.opportunityRecordUrl;
+      } else {
+        const opportunity: SalesRecordResult =
+          await this.records.upsertOpportunity(
+            integration,
+            action,
+            result.customerRecordId,
+          );
+        result.opportunityRecordId = opportunity.recordId;
+        result.opportunityRecordUrl = this.recordUrl(
+          integration,
+          integration.base.opportunities.tableId,
+          opportunity,
+        );
+      }
+      result.opportunityAssociationMode = 'create';
+      result.opportunityName = opportunityName;
+      await this.persistProgress(integration, action, result);
+    }
+
+    if (association.mode === 'none') {
+      result.opportunityRecordId = undefined;
+      result.opportunityRecordUrl = undefined;
+      result.opportunityAssociationMode = 'none';
+      result.opportunityName = undefined;
+    }
+
+    const followupOpportunityRecordId: string | null =
+      association.mode === 'none'
+        ? null
+        : result.opportunityRecordId ?? null;
 
     if (!result.followupRecordId) {
       const followup: SalesRecordResult =
@@ -320,7 +359,7 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
           integration,
           action,
           result.customerRecordId,
-          result.opportunityRecordId,
+          followupOpportunityRecordId,
         );
       result.followupRecordId = followup.recordId;
       result.followupRecordUrl = this.recordUrl(
@@ -337,7 +376,7 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
         integration,
         action,
         result.customerRecordId,
-        result.opportunityRecordId,
+        followupOpportunityRecordId,
         result.followupRecordId,
       );
       result.followupRecordUrl = this.recordUrl(
@@ -374,6 +413,55 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
       result.taskAction = 'unchanged';
     }
     return result;
+  }
+
+  private confirmedOpportunityAssociation(
+    action: PendingAction,
+  ): FollowupOpportunityAssociation {
+    if (
+      action.payload.opportunityAssociation === undefined &&
+      action.result.opportunityRecordId
+    ) {
+      return {
+        mode: 'existing',
+        opportunityRecordId: action.result.opportunityRecordId,
+        opportunityName:
+          action.payload.draft.opportunityName ?? '原已创建商机',
+        ...(action.result.opportunityRecordUrl
+          ? { opportunityRecordUrl: action.result.opportunityRecordUrl }
+          : {}),
+      };
+    }
+    const association: FollowupOpportunityAssociation =
+      action.payload.opportunityAssociation ?? { mode: 'none' };
+    if (association.mode === 'none') return association;
+    if (association.mode === 'create') {
+      const opportunityName: string =
+        association.opportunityName?.trim() ?? '';
+      if (!opportunityName) {
+        throw new Error('Opportunity creation requires a confirmed name');
+      }
+      return { mode: 'create', opportunityName };
+    }
+    const normalizedCustomerName: string =
+      action.payload.draft.customerName?.normalize('NFKC').trim() ?? '';
+    const contextCustomerName: string =
+      action.payload.salesContext?.customer?.name
+        .normalize('NFKC').trim() ?? '';
+    const authorized: boolean =
+      normalizedCustomerName.length > 0 &&
+      normalizedCustomerName === contextCustomerName &&
+      (action.payload.salesContext?.opportunities.some(
+        (opportunity): boolean =>
+          opportunity.source.recordId === association.opportunityRecordId &&
+          opportunity.name === association.opportunityName,
+      ) ?? false);
+    if (!authorized) {
+      throw new Error(
+        'Selected opportunity is not available in the confirmed context',
+      );
+    }
+    return association;
   }
 
   private async executeOpportunityStatusUpdate(

@@ -256,13 +256,13 @@ export interface SalesRecordsGateway {
     integration: TenantIntegration,
     action: PendingAction,
     customerRecordId: string,
-    opportunityRecordId: string,
+    opportunityRecordId: string | null,
   ): Promise<SalesRecordResult>;
   updateFollowup?(
     integration: TenantIntegration,
     action: PendingAction,
     customerRecordId: string,
-    opportunityRecordId: string,
+    opportunityRecordId: string | null,
     followupRecordId: string,
   ): Promise<SalesRecordResult>;
 }

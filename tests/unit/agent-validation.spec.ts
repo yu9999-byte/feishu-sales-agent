@@ -323,6 +323,22 @@ describe('follow-up validation', (): void => {
     })).toThrow();
   });
 
+  it('round-trips the confirmed opportunity association', (): void => {
+    const opportunityAssociation: PendingAction['payload']['opportunityAssociation'] = {
+      mode: 'existing',
+      opportunityRecordId: 'opportunity-1',
+      opportunityName: '北辰数字化项目',
+      opportunityRecordUrl: 'https://feishu.cn/opportunity-1',
+    };
+    const payload: PendingAction['payload'] = {
+      ...pendingAction.payload,
+      opportunityAssociation,
+    };
+
+    expect(parsePendingActionPayload(payload).opportunityAssociation)
+      .toEqual(opportunityAssociation);
+  });
+
   it('round-trips an overdue task candidate in a persisted draft', (): void => {
     const salesContext: SalesContext = {
       status: 'ready',
@@ -475,8 +491,9 @@ describe('follow-up validation', (): void => {
     ).join('\n');
 
     expect(visibleContent).toContain('一、跟进内容');
-    expect(visibleContent).toContain('二、待办');
-    expect(visibleContent).toContain('三、提交');
+    expect(visibleContent).toContain('二、商机关联');
+    expect(visibleContent).toContain('三、待办');
+    expect(visibleContent).toContain('四、提交');
     expect(visibleContent).not.toContain('上下文冲突');
     expect(visibleContent).not.toContain('opportunity-1');
     expect(visibleContent).not.toContain('followup-1');
@@ -551,8 +568,9 @@ describe('follow-up validation', (): void => {
     expect(serialized).not.toContain('等级 B');
     expect(serialized).not.toContain('>76<');
     expect(visibleContent).toContain('一、跟进内容');
-    expect(visibleContent).toContain('二、待办');
-    expect(visibleContent).toContain('三、提交');
+    expect(visibleContent).toContain('二、商机关联');
+    expect(visibleContent).toContain('三、待办');
+    expect(visibleContent).toContain('四、提交');
     expect(visibleContent).toContain('待办内容');
     expect(visibleContent).toContain('待办截止时间');
     expect(visibleContent).toContain('待办执行方式');
@@ -561,6 +579,96 @@ describe('follow-up validation', (): void => {
     expect(visibleContent).not.toContain('事实依据');
     expect(visibleContent).not.toContain('Agent 判断');
     expect(visibleContent).not.toContain('查看来源');
+  });
+
+  it('submits a keep-current sentinel before explicit opportunity overrides', (): void => {
+    const context: SalesContext = {
+      status: 'ready',
+      customer: {
+        name: '北辰制造',
+        contactName: '张总',
+        latestSummary: '客户认可方案',
+        lastFollowupAt: null,
+        source: {
+          recordId: 'customer-1',
+          recordUrl: 'https://feishu.cn/customer-1',
+          sourceVersion: null,
+        },
+      },
+      customerCandidates: [],
+      opportunities: [{
+        name: '北辰数字化项目',
+        progress: '方案评估中',
+        expectedAmount: null,
+        nextAction: '等待客户反馈',
+        dueAt: null,
+        source: {
+          recordId: 'opportunity-1',
+          recordUrl: 'https://feishu.cn/opportunity-1',
+          sourceVersion: null,
+        },
+      }],
+      recentFollowups: [],
+      conflicts: [],
+      tasks: [],
+      warnings: [],
+      readAt: '2026-09-18T02:00:00.000Z',
+    };
+    const existingCard: JsonObject = createConfirmationCard({
+      ...pendingAction,
+      payload: {
+        ...pendingAction.payload,
+        salesContext: context,
+        opportunityAssociation: {
+          mode: 'existing',
+          opportunityRecordId: 'opportunity-1',
+          opportunityName: '北辰数字化项目',
+          opportunityRecordUrl: 'https://feishu.cn/opportunity-1',
+        },
+      },
+    });
+    const createCard: JsonObject = createConfirmationCard({
+      ...pendingAction,
+      payload: {
+        ...pendingAction.payload,
+        salesContext: context,
+        opportunityAssociation: {
+          mode: 'create',
+          opportunityName: '新工厂项目',
+        },
+      },
+    });
+    const existingSelect: JsonObject | null = findNamedComponent(
+      existingCard,
+      'opportunityAssociation',
+    );
+    const createSelect: JsonObject | null = findNamedComponent(
+      createCard,
+      'opportunityAssociation',
+    );
+
+    expect(existingSelect?.initial_option).toBe('keep_current');
+    expect(existingSelect?.options).toEqual(expect.arrayContaining([
+      expect.objectContaining({ value: 'keep_current' }),
+      expect.objectContaining({ value: 'none' }),
+      expect.objectContaining({ value: 'existing:opportunity-1' }),
+      expect.objectContaining({ value: 'create' }),
+    ]));
+    expect((existingSelect?.options as JsonValue[] | undefined)?.[0])
+      .toEqual(expect.objectContaining({
+        value: 'keep_current',
+        text: expect.objectContaining({
+          content: expect.stringContaining('关联已有：北辰数字化项目'),
+        }),
+      }));
+    expect(createSelect?.initial_option).toBe('keep_current');
+    expect((createSelect?.options as JsonValue[] | undefined)?.[0])
+      .toEqual(expect.objectContaining({
+        value: 'keep_current',
+        text: expect.objectContaining({
+          content: expect.stringContaining('创建新商机：新工厂项目'),
+        }),
+      }));
   });
 
   it('keeps the mandatory task fields editable when task data is incomplete', (): void => {

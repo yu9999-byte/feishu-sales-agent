@@ -1,10 +1,28 @@
 # 问题日志
 
-状态：`Active / 2026-10-13`
+状态：`Active / 2026-10-16`
 
 本文件只记录可复现的问题、当前状态、证据和下一动作。产品路线见
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
+
+## 2026-10-16 商机关联确认正确但执行后回退为不关联（已解决）
+
+- 复现：真实确认卡显示“保持当前处理：关联已有：产线看板试点（测试）”，点击确认后成功卡却
+  写“本次未关联商机”，Base 跟进的“关联商机”为空。
+- 第一层问题：Card 2.0 对未操作下拉的默认值回传不可靠。处理为固定首项 `keep_current`，销售
+  不改选时沿用 payload 当前判断，主动改选才覆盖。
+- 真正落库根因：数据库原始 payload 正确包含 `mode=existing` 和商机 record ID，但
+  `parsePendingActionPayload()` 的 schema 解析后，组装返回对象时遗漏
+  `opportunityAssociation`；执行器从 PostgreSQL 重载后按兼容规则回退为 `none`。
+- TDD：新增“确认关联快照持久化往返”用例，修复前稳定为 `1 failed / 27 passed`，收到
+  `undefined`；补齐显式解析和类型收窄后，关联定向 `2 files / 38 tests`、全量 Agent
+  `83 files / 721 tests` 通过。PostgreSQL `32 passed / 3 controlled probes skipped`，三套
+  TypeScript、ESLint、Agent/Web 构建和 `git diff --check` 通过。
+- 真实复验：`UI最终-EXISTING-R4-20261016` 的成功卡和 Base 均关联已有商机；
+  `UI最终-CREATE-R1-20261016` 只创建一个明确命名的新商机。加上已通过的
+  `UI最终-NONE-R3-20261016`，三路径均有唯一成功卡、查看链接和唯一 Task。
+- 状态：`Resolved / automated green / real UI verified`。
 
 ## 2026-10-13 页面授权完成但长期凭据未落库（代码已修复，真实复验中）
 

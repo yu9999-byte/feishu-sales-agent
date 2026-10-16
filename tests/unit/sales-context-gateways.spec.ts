@@ -1322,6 +1322,65 @@ describe('sales context gateways', (): void => {
     };
     expect(requestConfig.data.fields).not.toHaveProperty('本次沟通发生时间');
   });
+
+  it('creates a customer followup without inventing an opportunity link', async (): Promise<void> => {
+    const search = vi.fn(async () => ({
+      code: 0,
+      data: { items: [] },
+    }));
+    const request = vi.fn(async () => ({
+      code: 0,
+      data: { record: { record_id: 'followup-without-opportunity' } },
+    }));
+    const client = {
+      bitable: { appTableRecord: { search } },
+      request,
+    };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    await new FeishuBaseGateway(factory).createFollowup(
+      integration,
+      createPendingAction({}),
+      'customer-1',
+      null,
+    );
+
+    const requestConfig = request.mock.calls[0]?.[0] as {
+      data: { fields: Record<string, unknown> };
+    };
+    expect(requestConfig.data.fields).not.toHaveProperty('商机关联');
+    expect(requestConfig.data.fields.客户关联).toEqual(['customer-1']);
+  });
+
+  it('clears a previous opportunity link when an edited followup is unlinked', async (): Promise<void> => {
+    const request = vi.fn(async () => ({
+      code: 0,
+      data: { record: { record_id: 'followup-existing' } },
+    }));
+    const client = { request };
+    const factory = {
+      getClient: vi.fn(() => client),
+      getRequestOptions: vi.fn(),
+    } as unknown as FeishuClientFactory;
+
+    await new FeishuBaseGateway(factory).updateFollowup(
+      integration,
+      createPendingAction({}),
+      'customer-1',
+      null,
+      'followup-existing',
+    );
+
+    const requestConfig = request.mock.calls[0]?.[0] as {
+      method: string;
+      data: { fields: Record<string, unknown> };
+    };
+    expect(requestConfig.method).toBe('PUT');
+    expect(requestConfig.data.fields.商机关联).toEqual([]);
+  });
 });
 
 interface CommunicationTimeOverride {
@@ -1342,6 +1401,10 @@ function createPendingAction(
       version: 1,
       sourceMessageId: 'message-followup-time',
       rawText: '北辰制造客户认可方案。',
+      opportunityAssociation: {
+        mode: 'create',
+        opportunityName: '北辰数字化项目',
+      },
       draft: {
         customerName: '北辰制造',
         contactName: '张总',

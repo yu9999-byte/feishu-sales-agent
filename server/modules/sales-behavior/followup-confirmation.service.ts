@@ -13,6 +13,7 @@ import {
   type FollowupDraftRepository,
 } from './followup-draft.repository';
 import { buildFollowupTaskCandidates } from './followup-task-preview';
+import { defaultFollowupOpportunityAssociation } from './followup-opportunity-association';
 
 interface ConfirmFollowupDraftCommand {
   tenantId: string;
@@ -184,6 +185,11 @@ class FollowupConfirmationService {
         draft: confirmed.version.draft,
         generatedBody: confirmed.version.generatedBody,
         salesContext: confirmed.version.salesContext,
+        opportunityAssociation: defaultFollowupOpportunityAssociation(
+          confirmed.version.draft,
+          confirmed.version.salesContext,
+          confirmed.version.sourceText,
+        ),
         progressAssessment: confirmed.version.progressAssessment,
         taskCandidates,
         selectedTaskCandidateIds,

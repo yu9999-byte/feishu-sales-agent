@@ -50,6 +50,21 @@ export type PendingActionStatus =
 
 export type FollowupOperationKind = 'create' | 'update';
 
+export type FollowupOpportunityAssociation =
+  | {
+      mode: 'none';
+    }
+  | {
+      mode: 'existing';
+      opportunityRecordId: string;
+      opportunityName: string;
+      opportunityRecordUrl?: string;
+    }
+  | {
+      mode: 'create';
+      opportunityName: string | null;
+    };
+
 export type PendingActionKind = 'followup' | 'opportunity_status';
 
 export type OpportunityStatusActionLifecycleStatus =
@@ -103,6 +118,7 @@ export interface PendingActionPayload {
   inputForm?: FollowupCardFormInput;
   inputError?: string;
   salesContext?: SalesContext;
+  opportunityAssociation?: FollowupOpportunityAssociation;
   opportunityStatusUpdate?: OpportunityStatusActionSnapshot;
   operationKind?: FollowupOperationKind;
   revisionOfActionId?: string;
@@ -251,6 +267,8 @@ export interface AgentExecutionResult {
   customerRecordUrl?: string;
   opportunityRecordId?: string;
   opportunityRecordUrl?: string;
+  opportunityAssociationMode?: FollowupOpportunityAssociation['mode'];
+  opportunityName?: string;
   opportunityStatus?: {
     opportunityName: string;
     previousStatus: OpportunityStatusActionLifecycleStatus;

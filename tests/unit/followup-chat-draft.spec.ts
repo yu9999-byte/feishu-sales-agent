@@ -175,6 +175,12 @@ describe('FollowupChatDraftService', (): void => {
         requiresConfirmation: true,
       },
     });
+    expect(payload.opportunityAssociation).toEqual({
+      mode: 'existing',
+      opportunityRecordId: 'opportunity-1',
+      opportunityName: '试点项目',
+      opportunityRecordUrl: 'https://example.feishu.cn/opportunity-1',
+    });
     expect(payload.taskCandidates).toEqual([
       expect.objectContaining({
         id: '00000000-0000-4000-8000-000000000001:v1:task:0',
@@ -184,6 +190,88 @@ describe('FollowupChatDraftService', (): void => {
     expect(payload.selectedTaskCandidateIds).toEqual([
       '00000000-0000-4000-8000-000000000001:v1:task:0',
     ]);
+  });
+
+  it('keeps the current opportunity decision when the card default is untouched', async (): Promise<void> => {
+    const service = createService();
+    const payload = await service.createPayload({
+      integration,
+      actionId: '00000000-0000-4000-8000-000000000014',
+      actorOpenId: 'ou_owner',
+      sourceMessageId: 'om_keep_opportunity_default',
+      rawText: '北辰制造客户认可试点项目，下一步邮件发送实施计划给张总。',
+      draft,
+      salesContext,
+      now: new Date('2026-09-20T10:00:00+08:00'),
+    });
+
+    const reviewed = service.reviewForm(
+      '00000000-0000-4000-8000-000000000014',
+      payload,
+      { opportunityAssociation: 'keep_current' },
+      new Date('2026-09-20T10:05:00+08:00'),
+    );
+
+    expect(reviewed.payload.opportunityAssociation).toEqual({
+      mode: 'existing',
+      opportunityRecordId: 'opportunity-1',
+      opportunityName: '试点项目',
+      opportunityRecordUrl: 'https://example.feishu.cn/opportunity-1',
+    });
+  });
+
+  it('does not infer an opportunity when the source only describes a customer followup', async (): Promise<void> => {
+    const service = createService();
+    const payload = await service.createPayload({
+      integration,
+      actionId: '00000000-0000-4000-8000-000000000011',
+      actorOpenId: 'ou_owner',
+      sourceMessageId: 'om_no_opportunity',
+      rawText: '拜访北辰制造张总，下一步周五发送资料。',
+      draft: { ...draft, opportunityName: null },
+      now: new Date('2026-09-20T10:00:00+08:00'),
+    });
+
+    expect(payload.opportunityAssociation).toEqual({ mode: 'none' });
+  });
+
+  it('lets an explicit no-opportunity statement override a mistaken extraction', async (): Promise<void> => {
+    const service = createService();
+    const payload = await service.createPayload({
+      integration,
+      actionId: '00000000-0000-4000-8000-000000000013',
+      actorOpenId: 'ou_owner',
+      sourceMessageId: 'om_explicit_no_opportunity',
+      rawText: '客户只是初步了解，目前没有明确采购项目，也不创建商机。',
+      draft: {
+        ...draft,
+        opportunityName: '北辰制造',
+      },
+      salesContext,
+      now: new Date('2026-09-20T10:00:00+08:00'),
+    });
+
+    expect(payload.draft.opportunityName).toBeNull();
+    expect(payload.opportunityAssociation).toEqual({ mode: 'none' });
+  });
+
+  it('requires confirmation to create an explicit unmatched opportunity', async (): Promise<void> => {
+    const service = createService();
+    const payload = await service.createPayload({
+      integration,
+      actionId: '00000000-0000-4000-8000-000000000012',
+      actorOpenId: 'ou_owner',
+      sourceMessageId: 'om_new_opportunity',
+      rawText: '北辰制造提出海外工厂项目，下一步发送调研表。',
+      draft: { ...draft, opportunityName: '海外工厂项目' },
+      salesContext,
+      now: new Date('2026-09-20T10:00:00+08:00'),
+    });
+
+    expect(payload.opportunityAssociation).toEqual({
+      mode: 'create',
+      opportunityName: '海外工厂项目',
+    });
   });
 
   it('creates the entered task even when task history reading is denied', async (): Promise<void> => {

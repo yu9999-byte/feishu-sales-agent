@@ -1,11 +1,17 @@
 import type {
   AgentExecutionResult,
   FollowupDraft,
+  FollowupOpportunityAssociation,
   FollowupTaskCandidate,
   JsonObject,
   JsonValue,
+  SalesContextOpportunity,
 } from '@shared/api.interface';
 import type { FollowupProjectRiskInsight } from '@server/modules/insight/followup-project-risk.service';
+import {
+  availableOpportunities,
+  defaultFollowupOpportunityAssociation,
+} from '@server/modules/sales-behavior/followup-opportunity-association';
 import type { PendingAction } from './agent.types';
 
 const escapeMarkdown = (value: string): string =>
@@ -349,6 +355,50 @@ const createConfirmationCard = (action: PendingAction): JsonObject => {
     return createFollowupInputCard(action);
   }
   const draft: FollowupDraft = action.payload.draft;
+  const opportunityAssociation: FollowupOpportunityAssociation =
+    action.payload.opportunityAssociation ??
+    defaultFollowupOpportunityAssociation(
+      draft,
+      action.payload.salesContext,
+      action.payload.rawText,
+    );
+  const currentOpportunityLabel: string = opportunityAssociation.mode ===
+    'existing'
+    ? `关联已有：${opportunityAssociation.opportunityName}`
+    : opportunityAssociation.mode === 'create'
+      ? `创建新商机：${opportunityAssociation.opportunityName ?? '待填写名称'}`
+      : '暂不关联商机';
+  const opportunityOptions: JsonObject[] = [
+    {
+      text: {
+        tag: 'plain_text',
+        content: `保持当前处理：${currentOpportunityLabel}`.slice(0, 100),
+      },
+      value: 'keep_current',
+    },
+    {
+      text: { tag: 'plain_text', content: '暂不关联商机' },
+      value: 'none',
+    },
+    ...availableOpportunities(draft, action.payload.salesContext).map(
+      (opportunity: SalesContextOpportunity): JsonObject => ({
+        text: {
+          tag: 'plain_text',
+          content: `关联已有：${opportunity.name}`.slice(0, 100),
+        },
+        value: `existing:${opportunity.source.recordId}`,
+      }),
+    ),
+    {
+      text: {
+        tag: 'plain_text',
+        content: draft.opportunityName
+          ? `创建新商机：${draft.opportunityName}`.slice(0, 100)
+          : '创建新商机（需填写名称）',
+      },
+      value: 'create',
+    },
+  ];
   const draftVersion: number = action.payload.draftVersion ?? 1;
   const taskCandidate: FollowupTaskCandidate | undefined =
     (action.payload.taskCandidates ?? [])[0];
@@ -461,7 +511,44 @@ const createConfirmationCard = (action: PendingAction): JsonObject => {
           },
           {
             tag: 'markdown',
-            content: '**二、待办**',
+            content: '**二、商机关联**\n' +
+              '<font color=\'grey\'>客户沟通不等于商机；请确认本次如何关联。</font>',
+          },
+          ...(action.payload.inputError === undefined ? [] : [{
+            tag: 'markdown',
+            content: `<font color='red'>${escapeMarkdown(
+              action.payload.inputError,
+            )}</font>`,
+          }]),
+          {
+            tag: 'select_static',
+            name: 'opportunityAssociation',
+            required: true,
+            placeholder: {
+              tag: 'plain_text',
+              content: '请选择商机关联方式',
+            },
+            initial_option: 'keep_current',
+            options: opportunityOptions,
+            width: 'fill',
+          },
+          {
+            tag: 'input',
+            name: 'opportunityName',
+            label: {
+              tag: 'plain_text',
+              content: '新商机名称（仅选择创建时生效）',
+            },
+            default_value: draft.opportunityName ?? '',
+            max_length: 200,
+            width: 'fill',
+          },
+          {
+            tag: 'hr',
+          },
+          {
+            tag: 'markdown',
+            content: '**三、待办**',
           },
           ...(taskIssue === null ? [] : [{
             tag: 'markdown',
@@ -518,7 +605,8 @@ const createConfirmationCard = (action: PendingAction): JsonObject => {
           },
           {
             tag: 'markdown',
-            content: '**三、提交**\n提交后将一次性保存跟进并创建上述待办。',
+            content: '**四、提交**\n提交后将一次性保存跟进、' +
+              '按上述选择处理商机并创建待办。',
           },
           {
             tag: 'button',
@@ -558,7 +646,7 @@ const createProcessingCard = (): JsonObject =>
               {
                 tag: 'markdown',
                 content:
-                  '**执行中，请等待**\n将依次写入客户、商机、跟进，' +
+                  '**执行中，请等待**\n将保存客户和跟进、按确认选择处理商机，' +
                   '并创建飞书待办。',
               },
             ],
@@ -637,6 +725,24 @@ const createResultCard = (result: AgentExecutionResult): JsonObject => {
     const followupLink: string = result.followupRecordUrl
       ? `[查看跟进记录](${result.followupRecordUrl})`
       : '跟进记录已保存';
+    const opportunityOutcome: string =
+      result.opportunityAssociationMode === 'none'
+        ? '客户和跟进已写入，本次未关联商机。'
+        : result.opportunityAssociationMode === 'existing'
+          ? `客户和跟进已写入，已关联已有商机${
+            result.opportunityName
+              ? `「${escapeMarkdown(result.opportunityName)}」`
+              : ''
+          }。`
+          : result.opportunityAssociationMode === 'create'
+            ? `客户、跟进和新商机${
+              result.opportunityName
+                ? `「${escapeMarkdown(result.opportunityName)}」`
+                : ''
+            }已写入。`
+            : result.opportunityRecordId
+              ? '客户、商机和跟进已写入。'
+              : '客户和跟进已写入，本次未关联商机。';
 
     const successElements: JsonValue[] = [
       {
@@ -652,7 +758,7 @@ const createResultCard = (result: AgentExecutionResult): JsonObject => {
             elements: [
               {
                 tag: 'markdown',
-                content: `**跟进登记成功**\n客户、商机和跟进已写入。` +
+                content: `**跟进登记成功**\n${opportunityOutcome}` +
                   `\n\n${followupLink}\n\n${taskLink}`,
               },
             ],

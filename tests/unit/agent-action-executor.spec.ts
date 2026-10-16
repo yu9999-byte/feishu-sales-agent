@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type {
   AgentExecutionResult,
+  FollowupOpportunityAssociation,
   JsonObject,
 } from '@shared/api.interface';
 import type { AgentRuntimeConfig } from '@server/config/agent.config';
@@ -58,8 +59,12 @@ const integration: TenantIntegration = {
 
 const execute = async (
   selectedTaskCandidateIds: string[] | undefined,
+  opportunityName: string | null = '试点项目',
+  requestedAssociation?: FollowupOpportunityAssociation,
+  authorizedOpportunityRecordId?: string,
 ): Promise<{
   order: string[];
+  records: SalesRecordsGateway;
   tasks: TaskGateway;
   result: AgentExecutionResult;
 }> => {
@@ -103,14 +108,57 @@ const execute = async (
       return { guid: 'task-guid', url: 'https://task.example/task-guid' };
     }),
   } as unknown as TaskGateway;
+  const opportunityAssociation: FollowupOpportunityAssociation =
+    requestedAssociation ?? (opportunityName === null
+      ? { mode: 'none' }
+      : { mode: 'create', opportunityName });
   const payload = {
     version: 1 as const,
     sourceMessageId: 'message-1',
     rawText: '北辰制造客户认可方案。',
+    opportunityAssociation,
+    ...(opportunityAssociation.mode === 'existing'
+      ? {
+          salesContext: {
+            status: 'ready' as const,
+            customer: {
+              name: '北辰制造',
+              contactName: '张总',
+              latestSummary: null,
+              lastFollowupAt: null,
+              source: {
+                recordId: 'rec-customer',
+                recordUrl: null,
+                sourceVersion: null,
+              },
+            },
+            customerCandidates: [],
+            opportunities: [{
+              name: opportunityAssociation.opportunityName,
+              progress: null,
+              expectedAmount: null,
+              nextAction: null,
+              dueAt: null,
+              source: {
+                recordId: authorizedOpportunityRecordId ??
+                  opportunityAssociation.opportunityRecordId,
+                recordUrl:
+                  opportunityAssociation.opportunityRecordUrl ?? null,
+                sourceVersion: null,
+              },
+            }],
+            recentFollowups: [],
+            conflicts: [],
+            tasks: [],
+            warnings: [],
+            readAt: '2026-09-20T10:00:00.000Z',
+          },
+        }
+      : {}),
     draft: {
       customerName: '北辰制造',
       contactName: '张总',
-      opportunityName: '试点项目',
+      opportunityName,
       summary: '客户认可方案',
       customerNeeds: [],
       objections: [],
@@ -134,7 +182,7 @@ const execute = async (
             channel: null,
             participants: [],
             customerName: '北辰制造',
-            opportunityName: '试点项目',
+            opportunityName,
             status: 'ready' as const,
             missingFields: [],
           }],
@@ -142,7 +190,8 @@ const execute = async (
         }),
   };
   const action: PendingAction = await store.createPendingAction({
-    id: `action-${selectedTaskCandidateIds?.length ?? 'legacy'}`,
+    id: `action-${selectedTaskCandidateIds?.length ?? 'legacy'}-` +
+      `${opportunityName ?? 'no-opportunity'}`,
     tenantId: TENANT_ID,
     actorOpenId: 'ou_owner',
     chatId: 'oc_chat',
@@ -162,7 +211,7 @@ const execute = async (
     action,
     'trace-executor',
   );
-  return { order, tasks, result };
+  return { order, records, tasks, result };
 };
 
 describe('AgentActionExecutorService task selection', (): void => {
@@ -185,6 +234,62 @@ describe('AgentActionExecutorService task selection', (): void => {
       'task',
     ]);
     expect(result.tasks.createTask).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not create a placeholder opportunity when the followup has no opportunity', async (): Promise<void> => {
+    const result = await execute(['draft-1:v1:task:0'], null);
+
+    expect(result.order).toEqual(['customer', 'followup', 'task']);
+    expect(result.records.upsertOpportunity).not.toHaveBeenCalled();
+    expect(result.result.opportunityRecordId).toBeUndefined();
+  });
+
+  it('links an authorized existing opportunity without upserting it', async (): Promise<void> => {
+    const result = await execute(
+      ['draft-1:v1:task:0'],
+      '试点项目',
+      {
+        mode: 'existing',
+        opportunityRecordId: 'rec-existing-opportunity',
+        opportunityName: '试点项目',
+        opportunityRecordUrl:
+          'https://base.example/opportunities/rec-existing-opportunity',
+      },
+    );
+
+    expect(result.order).toEqual(['customer', 'followup', 'task']);
+    expect(result.records.upsertOpportunity).not.toHaveBeenCalled();
+    expect(result.records.createFollowup).toHaveBeenCalledWith(
+      integration,
+      expect.any(Object),
+      'rec-customer',
+      'rec-existing-opportunity',
+    );
+    expect(result.result).toMatchObject({
+      opportunityAssociationMode: 'existing',
+      opportunityRecordId: 'rec-existing-opportunity',
+      opportunityName: '试点项目',
+    });
+  });
+
+  it('rejects a forged existing opportunity before any Base write', async (): Promise<void> => {
+    const result = await execute(
+      ['draft-1:v1:task:0'],
+      '试点项目',
+      {
+        mode: 'existing',
+        opportunityRecordId: 'rec-forged-opportunity',
+        opportunityName: '试点项目',
+      },
+      'rec-authorized-opportunity',
+    );
+
+    expect(result.order).toEqual([]);
+    expect(result.records.upsertCustomer).not.toHaveBeenCalled();
+    expect(result.records.upsertOpportunity).not.toHaveBeenCalled();
+    expect(result.records.createFollowup).not.toHaveBeenCalled();
+    expect(result.tasks.createTask).not.toHaveBeenCalled();
+    expect(result.result).toMatchObject({ status: 'failed' });
   });
 
   it('keeps legacy P0 actions without a selection field compatible', async (): Promise<void> => {
@@ -462,7 +567,6 @@ describe('AgentActionExecutorService conditional risk card', (): void => {
     expect(execution.order).toEqual([
       'source-card',
       'customer',
-      'opportunity',
       'followup',
       'task',
       'source-card',
@@ -506,7 +610,6 @@ describe('AgentActionExecutorService conditional risk card', (): void => {
     expect(execution.order).toEqual([
       'source-card',
       'customer',
-      'opportunity',
       'followup',
       'task',
       'source-card',

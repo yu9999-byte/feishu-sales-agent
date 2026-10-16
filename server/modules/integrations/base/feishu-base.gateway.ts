@@ -1170,9 +1170,13 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     action: PendingAction,
     customerRecordId: string,
   ): Promise<SalesRecordResult> {
-    const customerName: string = this.requireCustomerName(action);
-    const opportunityName: string =
-      action.payload.draft.opportunityName ?? `${customerName} - 销售机会`;
+    const opportunityName: string | undefined =
+      action.payload.opportunityAssociation?.mode === 'create'
+        ? action.payload.opportunityAssociation.opportunityName?.trim()
+        : undefined;
+    if (!opportunityName) {
+      throw new Error('Opportunity creation requires a confirmed name');
+    }
     const table = integration.base.opportunities;
     const existing: BaseRecordReference | null =
       await this.findUniqueRecord(integration, table, [
@@ -1326,7 +1330,7 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     integration: TenantIntegration,
     action: PendingAction,
     customerRecordId: string,
-    opportunityRecordId: string,
+    opportunityRecordId: string | null,
   ): Promise<SalesRecordResult> {
     const table = integration.base.followups;
     const existing: BaseRecordReference | null =
@@ -1349,6 +1353,7 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
       action,
       customerRecordId,
       opportunityRecordId,
+      false,
     );
 
     return this.createRecord(
@@ -1363,7 +1368,7 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     integration: TenantIntegration,
     action: PendingAction,
     customerRecordId: string,
-    opportunityRecordId: string,
+    opportunityRecordId: string | null,
     followupRecordId: string,
   ): Promise<SalesRecordResult> {
     const fields: Record<string, BaseCellValue> = this.buildFollowupFields(
@@ -1371,6 +1376,7 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
       action,
       customerRecordId,
       opportunityRecordId,
+      true,
     );
     return this.updateRecord(
       integration,
@@ -1385,7 +1391,8 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     table: TenantIntegration['base']['followups'],
     action: PendingAction,
     customerRecordId: string,
-    opportunityRecordId: string,
+    opportunityRecordId: string | null,
+    clearEmptyOpportunity: boolean,
   ): Record<string, BaseCellValue> {
     const customerName: string = this.requireCustomerName(action);
     const fields: Record<string, BaseCellValue> = {};
@@ -1393,7 +1400,11 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
       `${customerName} · ${action.createdAt.toISOString().slice(0, 10)}`;
     fields[table.fields.sourceMessageId] = action.payload.sourceMessageId;
     fields[table.fields.customerLink] = [customerRecordId];
-    fields[table.fields.opportunityLink] = [opportunityRecordId];
+    if (opportunityRecordId !== null) {
+      fields[table.fields.opportunityLink] = [opportunityRecordId];
+    } else if (clearEmptyOpportunity) {
+      fields[table.fields.opportunityLink] = [];
+    }
     fields[table.fields.rawText] = action.payload.rawText;
     fields[table.fields.summary] =
       action.payload.generatedBody ?? action.payload.draft.summary;
