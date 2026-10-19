@@ -143,6 +143,17 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
     await this.updateProcessingCard(integration, action, traceId);
 
     try {
+      if (action.payload.actionKind === 'task') {
+        await this.store.appendAudit({
+          tenantId: integration.tenantId, traceId,
+          eventType: 'task.execution.authorized.v1', actorOpenId: action.actorOpenId,
+          entityId: action.id, outcome: 'accepted',
+          details: { version: action.payload.draftVersion ?? 1,
+            operation: action.payload.operationKind ?? 'create',
+            originalTaskGuid: action.payload.executionTarget?.taskGuid ?? '',
+          },
+        });
+      }
       result = await this.withTimeout(
         this.executeRemainingSteps(integration, action, result),
       );
@@ -264,6 +275,33 @@ export class AgentActionExecutorService implements OnModuleInit, OnModuleDestroy
     const result: AgentExecutionResult = initialResult;
     if (action.payload.actionKind === 'opportunity_status') {
       return this.executeOpportunityStatusUpdate(integration, action, result);
+    }
+    if (action.payload.actionKind === 'task') {
+      if (action.payload.operationKind === 'update' && !result.taskGuid) {
+        throw new Error('Task update requires the original task ID');
+      }
+      if (action.payload.operationKind === 'update' && result.taskGuid && result.taskAction !== 'updated') {
+        if (!this.tasks.updateTask) throw new Error('Task update is unavailable');
+        const updated: TaskCreationResult = await this.tasks.updateTask(
+          integration, action, `standalone:${action.id}`, result.taskGuid,
+        );
+        result.taskGuid = updated.guid;
+        result.taskUrl = updated.url;
+        result.taskAction = 'updated';
+        await this.persistProgress(integration, action, result);
+        return result;
+      }
+      if (result.taskGuid) return result;
+      const task: TaskCreationResult = await this.tasks.createTask(
+        integration,
+        action,
+        `standalone:${action.id}`,
+      );
+      result.taskGuid = task.guid;
+      result.taskUrl = task.url;
+      result.taskAction = 'created';
+      await this.persistProgress(integration, action, result);
+      return result;
     }
     this.assertMandatoryFollowupTask(action);
     const association: FollowupOpportunityAssociation =

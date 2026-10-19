@@ -259,6 +259,7 @@ class FollowupConfirmationService {
         .map((candidate: FollowupTaskCandidate): string => candidate.id),
     );
     if (
+      selectedIds.length !== 1 ||
       uniqueSelectedIds.size !== selectedIds.length ||
       selectedIds.some((id: string): boolean => !readyIds.has(id))
     ) {

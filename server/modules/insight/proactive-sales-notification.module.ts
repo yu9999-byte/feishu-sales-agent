@@ -1,4 +1,8 @@
 import { Module } from '@nestjs/common';
+import { AgentExecutionModule } from '@server/modules/agent-core/agent-execution.module';
+import { TodayActionCardService } from './today-action-card.service';
+import { TodayActionService } from './today-action.service';
+import { PostgresTodayActionStateStore } from './postgres-today-action-state.store';
 
 import { agentConfigProvider } from '@server/config/agent.providers';
 import { AGENT_CONFIG, type AgentRuntimeConfig } from
@@ -51,6 +55,7 @@ import { TeamReviewService } from './team-review.service';
 
 @Module({
   imports: [
+    AgentExecutionModule,
     AgentControlModule,
     DailyReportModule,
     FeishuApiModule,
@@ -66,6 +71,7 @@ import { TeamReviewService } from './team-review.service';
     ProactiveNotificationReconciliationController,
   ],
   providers: [
+    TodayActionCardService,
     agentConfigProvider,
     PostgresProactiveNotificationStore,
     {
@@ -119,6 +125,8 @@ import { TeamReviewService } from './team-review.service';
         ProactiveNotificationPlannerService,
         ProactiveNotificationDeliveryService,
         PostgresProactiveNotificationStore,
+        TodayActionService,
+        PostgresTodayActionStateStore,
       ],
       useFactory: (
         config: AgentRuntimeConfig,
@@ -132,6 +140,8 @@ import { TeamReviewService } from './team-review.service';
         planner: ProactiveNotificationPlannerService,
         delivery: ProactiveNotificationDeliveryService,
         riskStates: PostgresProactiveNotificationStore,
+        todayActions: TodayActionService,
+        actionStates: PostgresTodayActionStateStore,
       ): ProactiveSalesNotificationService => {
         const activeIntegrations = {
           listActiveIntegrations: async () => {
@@ -153,10 +163,13 @@ import { TeamReviewService } from './team-review.service';
           planner,
           delivery,
           riskStates,
+          todayActions,
+          actionStates,
         );
       },
     },
   ],
+  exports: [TodayActionCardService],
 })
 class ProactiveSalesNotificationModule {}
 

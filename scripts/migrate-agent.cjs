@@ -26,6 +26,8 @@ const MIGRATION_FILES = [
   '020_proactive_sales_notifications.sql',
   '021_proactive_notification_reconciliations.sql',
   '022_feishu_user_credentials.sql',
+  '023_today_action_state.sql',
+  '024_proactive_notification_payload.sql',
 ];
 
 const checksum = (content) => createHash('sha256')
@@ -110,3 +112,4 @@ run().catch((error) => {
   process.stderr.write(`Agent migration failed: ${message}\n`);
   process.exitCode = 1;
 });
+

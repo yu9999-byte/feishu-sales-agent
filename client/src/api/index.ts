@@ -25,6 +25,15 @@ import type {
   StaleOpportunityGovernanceResponse,
   StaleOpportunityReadinessResponse,
   TaskFulfillmentResponse,
+  TodayActionResponse,
+  TodayActionDraftRequest,
+  TodayActionDraftResponse,
+  TodayActionTaskDraftRequest,
+  TodayActionTaskDraftResponse,
+  TodayActionTaskConfirmResponse,
+  TodayActionTaskStatusResponse,
+  TodayActionOperationRequest,
+  TodayActionState,
   TeamOpportunityDecisionResponse,
   TeamReviewResponse,
   WorkspaceResponse,
@@ -115,10 +124,11 @@ const normalizeError = (error: unknown): ProductApiError => {
 
 const getPlatformSession = async (): Promise<PlatformSessionResponse> => {
   try {
-    const response = await axios.get<PlatformSessionResponse>(
-      '/api/platform/session',
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<PlatformSessionResponse>({
+      url: '/api/platform/session',
+      method: 'GET',
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -127,10 +137,11 @@ const getPlatformSession = async (): Promise<PlatformSessionResponse> => {
 
 const getWorkspace = async (): Promise<WorkspaceResponse> => {
   try {
-    const response = await axios.get<WorkspaceResponse>(
-      '/api/platform/workspace',
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<WorkspaceResponse>({
+      url: '/api/platform/workspace',
+      method: 'GET',
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -144,10 +155,11 @@ const getDailySalesReport = async (
     const query: string = reportDate
       ? `?date=${encodeURIComponent(reportDate)}`
       : '';
-    const response = await axios.get<DailySalesReportResponse>(
-      `/api/platform/daily-report${query}`,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<DailySalesReportResponse>({
+      url: `/api/platform/daily-report${query}`,
+      method: 'GET',
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -161,10 +173,11 @@ const getTeamReview = async (
     const query: string = reviewDate
       ? `?date=${encodeURIComponent(reviewDate)}`
       : '';
-    const response = await axios.get<TeamReviewResponse>(
-      `/api/platform/team-review${query}`,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<TeamReviewResponse>({
+      url: `/api/platform/team-review${query}`,
+      method: 'GET',
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -178,10 +191,85 @@ const getTeamOpportunityDecisions = async (
     const query: string = referenceDate
       ? `?date=${encodeURIComponent(referenceDate)}`
       : '';
-    const response = await axios.get<TeamOpportunityDecisionResponse>(
-      `/api/platform/team-opportunity-decisions${query}`,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<TeamOpportunityDecisionResponse>({
+      url: `/api/platform/team-opportunity-decisions${query}`,
+      method: 'GET',
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
+const createTodayFollowupDraft = async (input: TodayActionDraftRequest): Promise<TodayActionDraftResponse> => {
+  try {
+    const response = await axiosForBackend<TodayActionDraftResponse>({
+      url: '/api/platform/today-actions/followup-drafts',
+      method: 'POST',
+      data: input,
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
+
+const createTodayTaskDraft = async (input: TodayActionTaskDraftRequest): Promise<TodayActionTaskDraftResponse> => {
+  try {
+    const response = await axiosForBackend<TodayActionTaskDraftResponse>({
+      url: '/api/platform/today-actions/task-drafts',
+      method: 'POST',
+      data: input,
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
+
+const confirmTodayTaskDraft = async (actionId: string): Promise<TodayActionTaskConfirmResponse> => {
+  try {
+    const response = await axiosForBackend<TodayActionTaskConfirmResponse>({
+      url: `/api/platform/today-actions/task-drafts/${encodeURIComponent(actionId)}/confirm`,
+      method: 'POST',
+      data: { expectedVersion: 1 },
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
+
+const getTodayTaskStatus = async (actionId: string): Promise<TodayActionTaskStatusResponse> => {
+  try {
+    const response = await axiosForBackend<TodayActionTaskStatusResponse>({
+      url: `/api/platform/today-actions/task-drafts/${encodeURIComponent(actionId)}`,
+      method: 'GET',
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
+
+const operateTodayAction = async (input: TodayActionOperationRequest): Promise<TodayActionState> => {
+  try {
+    const response = await axiosForBackend<TodayActionState>({
+      url: '/api/platform/today-actions/operations',
+      method: 'POST',
+      data: input,
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
+const getTodayActions = async (): Promise<TodayActionResponse> => {
+  try {
+    const response = await axiosForBackend<TodayActionResponse>({
+      url: '/api/platform/today-actions',
+      method: 'GET',
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -195,10 +283,11 @@ const getTaskFulfillment = async (
     const query: string = referenceDate
       ? `?date=${encodeURIComponent(referenceDate)}`
       : '';
-    const response = await axios.get<TaskFulfillmentResponse>(
-      `/api/platform/task-fulfillment${query}`,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<TaskFulfillmentResponse>({
+      url: `/api/platform/task-fulfillment${query}`,
+      method: 'GET',
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -212,10 +301,11 @@ const getOpportunityDecisions = async (
     const query: string = referenceDate
       ? `?date=${encodeURIComponent(referenceDate)}`
       : '';
-    const response = await axios.get<OpportunityDecisionResponse>(
-      `/api/platform/opportunity-decisions${query}`,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<OpportunityDecisionResponse>({
+      url: `/api/platform/opportunity-decisions${query}`,
+      method: 'GET',
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -230,10 +320,11 @@ const getCustomerVisitBriefing = async (
     const query: string = referenceDate
       ? `?date=${encodeURIComponent(referenceDate)}`
       : '';
-    const response = await axios.get<CustomerVisitBriefingResponse>(
-      `/api/platform/customer-briefings/${encodeURIComponent(customerRecordId)}${query}`,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<CustomerVisitBriefingResponse>({
+      url: `/api/platform/customer-briefings/${encodeURIComponent(customerRecordId)}${query}`,
+      method: 'GET',
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -248,10 +339,11 @@ const getCustomerCommunicationPreparation = async (
     const query: string = referenceDate
       ? `?date=${encodeURIComponent(referenceDate)}`
       : '';
-    const response = await axios.get<CustomerCommunicationPreparationResponse>(
-      `/api/platform/customer-communications/${encodeURIComponent(customerRecordId)}${query}`,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<CustomerCommunicationPreparationResponse>({
+      url: `/api/platform/customer-communications/${encodeURIComponent(customerRecordId)}${query}`,
+      method: 'GET',
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -260,10 +352,11 @@ const getCustomerCommunicationPreparation = async (
 
 const getStaleOpportunityReadiness = async (): Promise<StaleOpportunityReadinessResponse> => {
   try {
-    const response = await axios.get<StaleOpportunityReadinessResponse>(
-      '/api/platform/stale-opportunity-readiness',
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<StaleOpportunityReadinessResponse>({
+      url: '/api/platform/stale-opportunity-readiness',
+      method: 'GET',
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -280,11 +373,12 @@ const submitStaleOpportunityGovernance = async (
       ...input,
       idempotencyKey: input.idempotencyKey ?? crypto.randomUUID(),
     };
-    const response = await axios.post<StaleOpportunityGovernanceResponse>(
-      '/api/platform/stale-opportunity-readiness/govern',
-      payload,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<StaleOpportunityGovernanceResponse>({
+      url: '/api/platform/stale-opportunity-readiness/govern',
+      method: 'POST',
+      data: payload,
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -295,10 +389,11 @@ const getPlatformSection = async (
   key: PlatformSectionKey,
 ): Promise<PlatformSectionResponse> => {
   try {
-    const response = await axios.get<PlatformSectionResponse>(
-      `/api/platform/section/${key}`,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<PlatformSectionResponse>({
+      url: `/api/platform/section/${key}`,
+      method: 'GET',
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -307,10 +402,11 @@ const getPlatformSection = async (
 
 const getPlaybookCandidates = async (): Promise<PlaybookOptimizationCandidateListResponse> => {
   try {
-    const response = await axios.get<PlaybookOptimizationCandidateListResponse>(
-      '/api/platform/playbook-candidates',
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<PlaybookOptimizationCandidateListResponse>({
+      url: '/api/platform/playbook-candidates',
+      method: 'GET',
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -322,11 +418,12 @@ const reviewPlaybookCandidate = async (
   input: PlaybookOptimizationReviewRequest,
 ): Promise<PlaybookOptimizationReviewResponse> => {
   try {
-    const response = await axios.post<PlaybookOptimizationReviewResponse>(
-      `/api/platform/playbook-candidates/${encodeURIComponent(candidateId)}/review`,
-      input,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<PlaybookOptimizationReviewResponse>({
+      url: `/api/platform/playbook-candidates/${encodeURIComponent(candidateId)}/review`,
+      method: 'POST',
+      data: input,
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -373,11 +470,12 @@ const createFollowupDraft = async (
   input: CreateFollowupDraftRequest,
 ): Promise<FollowupDraftResponse> => {
   try {
-    const response = await axios.post<FollowupDraftResponse>(
-      '/api/platform/followup-inputs',
-      input,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<FollowupDraftResponse>({
+      url: '/api/platform/followup-inputs',
+      method: 'POST',
+      data: input,
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -388,10 +486,11 @@ const getFollowupDraft = async (
   id: string,
 ): Promise<FollowupDraftResponse> => {
   try {
-    const response = await axios.get<FollowupDraftResponse>(
-      `/api/platform/followup-drafts/${encodeURIComponent(id)}`,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<FollowupDraftResponse>({
+      url: `/api/platform/followup-drafts/${encodeURIComponent(id)}`,
+      method: 'GET',
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -403,11 +502,12 @@ const updateFollowupDraft = async (
   input: UpdateFollowupDraftRequest,
 ): Promise<FollowupDraftResponse> => {
   try {
-    const response = await axios.patch<FollowupDraftResponse>(
-      `/api/platform/followup-drafts/${encodeURIComponent(id)}`,
-      input,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<FollowupDraftResponse>({
+      url: `/api/platform/followup-drafts/${encodeURIComponent(id)}`,
+      method: 'PATCH',
+      data: input,
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -419,11 +519,12 @@ const confirmFollowupDraft = async (
   input: ConfirmFollowupDraftRequest,
 ): Promise<AgentExecutionResult> => {
   try {
-    const response = await axios.post<AgentExecutionResult>(
-      `/api/platform/followup-drafts/${encodeURIComponent(id)}/confirm`,
-      input,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<AgentExecutionResult>({
+      url: `/api/platform/followup-drafts/${encodeURIComponent(id)}/confirm`,
+      method: 'POST',
+      data: input,
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -434,10 +535,11 @@ const getFollowupExecution = async (
   id: string,
 ): Promise<AgentExecutionResult | null> => {
   try {
-    const response = await axios.get<AgentExecutionResult | null>(
-      `/api/platform/followup-drafts/${encodeURIComponent(id)}/execution`,
-      { withCredentials: true },
-    );
+    const response = await axiosForBackend<AgentExecutionResult | null>({
+      url: `/api/platform/followup-drafts/${encodeURIComponent(id)}/execution`,
+      method: 'GET',
+      withCredentials: true,
+    });
     return response.data;
   } catch (error: unknown) {
     throw normalizeError(error);
@@ -456,6 +558,12 @@ export {
   getPlaybookCandidates,
   getProactiveNotificationReconciliations,
   getTaskFulfillment,
+  getTodayActions,
+  operateTodayAction,
+  createTodayFollowupDraft,
+    createTodayTaskDraft,
+    confirmTodayTaskDraft,
+    getTodayTaskStatus,
   getTeamOpportunityDecisions,
   getTeamReview,
   getStaleOpportunityReadiness,
@@ -468,3 +576,6 @@ export {
   updateFollowupDraft,
 };
 export type { ProductApiError };
+
+
+

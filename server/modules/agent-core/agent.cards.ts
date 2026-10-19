@@ -13,6 +13,7 @@ import {
   defaultFollowupOpportunityAssociation,
 } from '@server/modules/sales-behavior/followup-opportunity-association';
 import type { PendingAction } from './agent.types';
+import { createTodayTaskCard } from '@server/modules/insight/today-action-task-card';
 
 const escapeMarkdown = (value: string): string =>
   value.replace(/[\\*~><\[\]()#:_]/gu, (character: string): string => {
@@ -348,6 +349,13 @@ const createOpportunityStatusConfirmationCard = (
 };
 
 const createConfirmationCard = (action: PendingAction): JsonObject => {
+  if (action.payload.actionKind === 'task') {
+    return createTodayTaskCard({ actionId: action.id, version: action.payload.draftVersion ?? 1,
+      recipientOpenId: action.actorOpenId, title: action.payload.draft.nextAction ?? '',
+      dueAt: action.payload.draft.dueAt ?? '', channel: action.payload.draft.nextActionChannel ?? '',
+      participants: action.payload.draft.nextActionParticipants ?? [],
+      operation: action.payload.operationKind === 'update' ? 'update' : 'create' });
+  }
   if (action.payload.actionKind === 'opportunity_status') {
     return createOpportunityStatusConfirmationCard(action);
   }
@@ -690,7 +698,34 @@ const createCancelledCard = (): JsonObject =>
     ],
   );
 
-const createResultCard = (result: AgentExecutionResult): JsonObject => {
+const createEditRecoveryNotice = (
+  message: string | undefined,
+): JsonValue[] => message === undefined
+  ? []
+  : [{
+    tag: 'column_set',
+    flex_mode: 'none',
+    columns: [
+      {
+        tag: 'column',
+        width: 'weighted',
+        weight: 1,
+        background_style: 'yellow-50',
+        padding: '12px',
+        elements: [
+          {
+            tag: 'markdown',
+            content: `**编辑表单暂时未打开**\n${escapeMarkdown(message)}`,
+          },
+        ],
+      },
+    ],
+  }];
+
+const createResultCard = (
+  result: AgentExecutionResult,
+  editRecoveryMessage?: string,
+): JsonObject => {
   if (result.status === 'succeeded' && result.opportunityStatus) {
     const statusResult = result.opportunityStatus;
     const recordLink: string = result.opportunityRecordUrl
@@ -710,6 +745,15 @@ const createResultCard = (result: AgentExecutionResult): JsonObject => {
     );
   }
   if (result.status === 'succeeded') {
+    if (result.taskGuid && !result.followupRecordId && !result.customerRecordId && !result.opportunityRecordId) {
+      const taskOutcome: string = result.taskAction === 'updated' ? '更新' : '创建';
+      return createBaseCard(`任务${taskOutcome}成功`, `已完成确认后的独立任务${taskOutcome}`, 'green', '成功', [{
+        tag: 'markdown', content: result.taskUrl
+          ? `任务已${taskOutcome}${createSourceLink(result.taskUrl, '打开飞书任务')}` : `任务已${taskOutcome}`,
+      }, { tag: 'button', text: { tag: 'plain_text', content: '编辑任务' }, type: 'default',
+        behaviors: [{ type: 'callback', value: { action: 'edit', pendingActionId: result.pendingActionId } }],
+      }]);
+    }
     const taskCreated: boolean = Boolean(result.taskGuid);
     const taskLink: string = result.taskAction === 'unchanged'
       ? result.taskUrl
@@ -765,6 +809,7 @@ const createResultCard = (result: AgentExecutionResult): JsonObject => {
           },
         ],
       },
+      ...createEditRecoveryNotice(editRecoveryMessage),
       {
         tag: 'button',
         text: { tag: 'plain_text', content: '编辑跟进' },
@@ -818,6 +863,7 @@ const createResultCard = (result: AgentExecutionResult): JsonObject => {
         },
       ],
     },
+    ...createEditRecoveryNotice(editRecoveryMessage),
   ];
 
   if (retryAllowed) {

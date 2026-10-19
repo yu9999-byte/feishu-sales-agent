@@ -64,6 +64,7 @@ import {
     },
   ],
   exports: [
+    FollowupDraftWorkflowService,
     FollowupChatDraftService,
     MinutesIngestionService,
     DocumentIngestionService,
@@ -72,3 +73,4 @@ import {
 class SalesBehaviorModule {}
 
 export { SalesBehaviorModule };
+

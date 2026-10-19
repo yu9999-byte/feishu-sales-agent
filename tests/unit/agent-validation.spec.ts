@@ -301,6 +301,11 @@ describe('follow-up validation', (): void => {
     })).toThrow();
   });
 
+  it('round-trips standalone task payloads without dropping their kind', (): void => {
+    expect(parsePendingActionPayload({ ...pendingAction.payload, actionKind: 'task' }).actionKind).toBe('task');
+    expect(() => parsePendingActionPayload({ ...pendingAction.payload, actionKind: 'unknown' })).toThrow();
+  });
+
   it('round-trips a progress assessment while accepting legacy payloads', (): void => {
     const payload: PendingAction['payload'] = {
       ...pendingAction.payload,

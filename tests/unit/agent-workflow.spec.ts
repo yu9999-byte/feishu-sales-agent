@@ -14,6 +14,7 @@ import type {
 import { AgentWorkflowService } from '@server/modules/agent-core/agent-workflow.service';
 import { AgentActionExecutorService } from '@server/modules/agent-core/agent-action-executor.service';
 import { createConfirmationCard } from '@server/modules/agent-core/agent.cards';
+import { confirmTodayTaskCard } from '@server/modules/insight/today-action-task-confirmation';
 import { MemoryControlStore } from '@server/modules/agent-core/memory-control.store';
 import type { AgentRuntimeConfig } from '@server/config/agent.config';
 import { FeishuWebhookBridge } from '@server/modules/feishu/feishu-webhook.bridge';
@@ -362,9 +363,11 @@ class FakeMessenger implements FeishuMessenger {
   readonly actions: PendingAction[] = [];
   readonly updates: JsonObject[] = [];
   readonly updateMessageIds: string[] = [];
+  readonly callbackUpdateTokens: string[] = [];
   readonly results: AgentExecutionResult[] = [];
   readonly projectRiskCards: number[] = [];
   failNextUpdate: boolean = false;
+  failNextCallbackUpdate: boolean = false;
   failNextTextUpdate: boolean = false;
   failNextTextSend: boolean = false;
 
@@ -414,6 +417,19 @@ class FakeMessenger implements FeishuMessenger {
     if (this.failNextUpdate) {
       this.failNextUpdate = false;
       throw new Error('Injected card patch failure');
+    }
+    this.updates.push(structuredClone(card));
+  }
+
+  async updateCardByCallbackToken(
+    _integration: TenantIntegration,
+    callbackToken: string,
+    card: JsonObject,
+  ): Promise<void> {
+    this.callbackUpdateTokens.push(callbackToken);
+    if (this.failNextCallbackUpdate) {
+      this.failNextCallbackUpdate = false;
+      throw new Error('Injected callback card patch failure');
     }
     this.updates.push(structuredClone(card));
   }
@@ -598,6 +614,7 @@ interface TestHarness {
   salesKnowledge: FakeSalesKnowledgeQaReader;
   playbookOptimization: FakePlaybookOptimizationObserver;
   workflow: AgentWorkflowService;
+  executor: AgentActionExecutorService;
 }
 
 const createHarness = (
@@ -748,6 +765,7 @@ const createHarness = (
     salesKnowledge,
     playbookOptimization,
     workflow,
+    executor,
   };
 };
 
@@ -2470,6 +2488,19 @@ describe('AgentWorkflowService', (): void => {
     expect(harness.tasks.calls).toBe(0);
   });
 
+  it('prefills the grounded user source when the request refers to the previous turn', async (): Promise<void> => {
+    const harness: TestHarness = createHarness();
+    const source: string = '今天电话联系北辰制造陈经理，下周五评审接口清单。';
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1', intent: 'followup_capture',
+      confidence: 0.98, reply: '生成草案', followupSourceText: source,
+    };
+    await harness.workflow.handleMessage({ ...createMessage('tenant-a', 'om-context-source'), text: '根据刚才内容生成跟进' });
+    expect(harness.messenger.actions[0].payload.inputForm?.communicationContent).toBe(source);
+    expect(harness.records.followupCalls).toBe(0);
+    expect(harness.tasks.calls).toBe(0);
+  });
+
   it.each(['把刚才内容整理成跟进', '那就记录下来', '帮我写一下'])
     ('routes natural followup request %s through the model', async (text: string): Promise<void> => {
       const harness: TestHarness = createHarness();
@@ -3019,6 +3050,17 @@ describe('AgentWorkflowService', (): void => {
     expect(revision.payload.revisionOfActionId).toBe(original.id);
     expect(revision.payload.executionTarget?.followupRecordId)
       .toBe('rec_followup');
+    const beforePersistence: number = harness.messenger.updateMessageIds.length;
+    await new Promise<void>((resolve): void => { setTimeout(resolve, 1_100); });
+    expect(harness.messenger.updateMessageIds.length).toBe(beforePersistence + 1);
+    expect(harness.messenger.updateMessageIds.at(-1)).toBe(completed.cardMessageId);
+
+    const recoveredEdit: JsonObject = await harness.workflow.handleCardAction(
+      createCardAction('tenant-a', original.id, 'edit', 'evt-edit-recover-stale',
+        new Date('2026-09-17T10:03:10+08:00'), completed.cardMessageId),
+    );
+    expect(JSON.stringify(recoveredEdit)).toContain('保存跟进并创建待办');
+    expect(harness.messenger.updateMessageIds.at(-1)).toBe(completed.cardMessageId);
 
     await harness.workflow.handleCardAction(
       createDraftFormAction(revision, 1, 'evt-edit-confirm', {
@@ -3035,6 +3077,92 @@ describe('AgentWorkflowService', (): void => {
     expect(harness.records.followupUpdateCalls).toBe(1);
     expect(harness.tasks.calls).toBe(1);
     expect(harness.tasks.updateCalls).toBe(1);
+  });
+
+  it('rolls card ownership back when the edit form cannot replace the result card', async (): Promise<void> => {
+    const harness: TestHarness = createHarness(
+      completeDraft,
+      createReadySalesContextReader(),
+    );
+    await harness.workflow.handleMessage(createMessage());
+    const original: PendingAction = harness.messenger.actions[0];
+    await harness.workflow.handleCardAction(
+      createCardAction('tenant-a', original.id, 'confirm', 'evt-edit-seed'),
+    );
+    await waitForStatus(
+      harness.store,
+      harness.integrationA.tenantId,
+      original.id,
+      'succeeded',
+    );
+    const completed: PendingAction | null =
+      await harness.store.getPendingAction(
+        harness.integrationA.tenantId,
+        original.id,
+      );
+    if (completed === null || completed.cardMessageId === null) {
+      throw new Error('Expected completed action with card message');
+    }
+
+    harness.messenger.failNextCallbackUpdate = true;
+    const recoveredCard: JsonObject =
+      await harness.workflow.handleCardAction(
+        createCardAction(
+          'tenant-a',
+          original.id,
+          'edit',
+          'evt-edit-patch-failed',
+          new Date('2026-09-17T10:03:00+08:00'),
+          completed.cardMessageId,
+        ),
+      );
+
+    expect(JSON.stringify(recoveredCard)).toContain('编辑表单暂时未打开');
+    expect(JSON.stringify(recoveredCard)).toContain('可再次点击');
+    const restored: PendingAction | null =
+      await harness.store.getPendingActionByCardMessage(
+        harness.integrationA.tenantId,
+        completed.cardMessageId,
+      );
+    expect(restored?.id).toBe(original.id);
+    const failedAudit = harness.store
+      .getAudits(harness.integrationA.tenantId)
+      .find((event): boolean =>
+        event.eventType === 'card.edit_patch_failed',
+      );
+    expect(failedAudit).toMatchObject({
+      outcome: 'failed',
+      details: { rollback: 'succeeded' },
+    });
+    if (!failedAudit?.entityId) {
+      throw new Error('Expected failed revision audit entity');
+    }
+    const cancelledRevision: PendingAction | null =
+      await harness.store.getPendingAction(
+        harness.integrationA.tenantId,
+        failedAudit.entityId,
+      );
+    expect(cancelledRevision?.status).toBe('cancelled');
+    expect(cancelledRevision?.cardMessageId).toBeNull();
+
+    const retryCard: JsonObject = await harness.workflow.handleCardAction(
+      createCardAction(
+        'tenant-a',
+        original.id,
+        'edit',
+        'evt-edit-patch-retry',
+        new Date('2026-09-17T10:04:00+08:00'),
+        completed.cardMessageId,
+      ),
+    );
+    expect(JSON.stringify(retryCard)).toContain('保存跟进并创建待办');
+    const retryRevision: PendingAction | null =
+      await harness.store.getPendingActionByCardMessage(
+        harness.integrationA.tenantId,
+        completed.cardMessageId,
+      );
+    expect(retryRevision?.id).not.toBe(original.id);
+    expect(retryRevision?.status).toBe('pendingConfirmation');
   });
 
   it('clears an existing opportunity link when a revision selects none', async (): Promise<void> => {
@@ -3399,12 +3527,13 @@ describe('AgentWorkflowService', (): void => {
           await waitForStatus(
             harness.store, harness.integrationA.tenantId, revision.id, 'succeeded',
           );
-          await waitForUpdates(harness.messenger, 5);
+          await waitForUpdates(harness.messenger, 6);
           expect(harness.messenger.updateMessageIds).toEqual([
-            'om_card_1', 'om_card_1', 'om_card_1', 'om_card_1',
-            'om_card_1',
+            'om_card_1', 'om_card_1', 'om_card_1', 'om_card_1', 'om_card_1',
           ]);
-          expect(JSON.stringify(harness.messenger.updates[4]))
+          expect(harness.messenger.callbackUpdateTokens)
+            .toEqual(['callback-evt-e2e-edit']);
+          expect(JSON.stringify(harness.messenger.updates[5]))
             .toContain('跟进登记成功');
           const audits: string[] = harness.store
             .getAudits(harness.integrationA.tenantId)
@@ -3477,4 +3606,83 @@ describe('AgentWorkflowService', (): void => {
             .toContain('action.succeeded');
         });
     });
+});
+
+it('refuses a standalone task retry after task assignment permission is revoked', async () => {
+  const harness = createHarness();
+  const pending = await harness.store.createPendingAction({
+    id: 'task-retry-revoked', tenantId: harness.integrationA.tenantId,
+    actorOpenId: 'ou_sales', chatId: 'oc_tenant-a',
+    payload: { version: 1, actionKind: 'task', sourceMessageId: 'task-source',
+      rawText: '联系客户', draft: completeDraft },
+    expiresAt: new Date('2026-09-18T10:00:00+08:00'),
+  });
+  await harness.store.setPendingCardMessage(harness.integrationA.tenantId, pending.id, 'om_card_1');
+  await harness.store.saveExecutionResult(harness.integrationA.tenantId, pending.id, 'failed', {
+    pendingActionId: pending.id, status: 'failed', errorMessage: 'temporary failure',
+  });
+  harness.sessions.activePermissions = ['followup:create-own'];
+  const card = await harness.workflow.handleCardAction(
+    createCardAction('tenant-a', pending.id, 'retry', 'revoked-task-retry'));
+  expect(JSON.stringify(card)).toContain('无权创建任务');
+  const edit = await harness.workflow.handleCardAction(
+    createCardAction('tenant-a', pending.id, 'edit', 'revoked-task-edit'));
+  expect(JSON.stringify(edit)).toContain('无权创建任务');
+  expect((await harness.store.getPendingAction(harness.integrationA.tenantId, pending.id))?.status).toBe('failed');
+  expect(harness.tasks.calls).toBe(0);
+  expect(harness.records.customerCalls).toBe(0);
+});
+
+it('opens a task-only revision pointing to the original task for an authorized owner', async () => {
+  const harness = createHarness();
+  harness.sessions.activePermissions = ['followup:create-own', 'task:assign'];
+  const pending = await harness.store.createPendingAction({
+    id: 'task-edit-authorized', tenantId: harness.integrationA.tenantId,
+    actorOpenId: 'ou_sales', chatId: 'oc_tenant-a',
+    payload: { version: 1, actionKind: 'task', draftVersion: 1, sourceMessageId: 'task-source',
+      rawText: '联系客户', draft: completeDraft },
+    expiresAt: new Date('2026-09-18T10:00:00+08:00'),
+  });
+  await harness.store.setPendingCardMessage(harness.integrationA.tenantId, pending.id, 'om_card_1');
+  await harness.store.saveExecutionResult(harness.integrationA.tenantId, pending.id, 'succeeded', {
+    pendingActionId: pending.id, status: 'succeeded', taskGuid: 'original-task',
+    taskUrl: 'https://applink.feishu.cn/client/todo/detail',
+  });
+  const card = await harness.workflow.handleCardAction(
+    createCardAction('tenant-a', pending.id, 'edit', 'authorized-task-edit'));
+  expect(JSON.stringify(card)).toContain('today_task_confirm');
+  expect(JSON.stringify(card)).not.toContain('customerName');
+  const revision = await harness.store.getPendingActionByCardMessage(harness.integrationA.tenantId, 'om_card_1');
+  expect(revision?.id).not.toBe(pending.id);
+  expect(revision?.payload.actionKind).toBe('task');
+  expect(revision?.payload.operationKind).toBe('update');
+  expect(revision?.payload.executionTarget?.taskGuid).toBe('original-task');
+  expect(harness.tasks.calls).toBe(0);
+  if (!revision) throw new Error('Expected task revision');
+  const update = vi.spyOn(harness.tasks, 'updateTask').mockResolvedValue({
+    guid: 'original-task', url: 'https://applink.feishu.cn/client/todo/detail',
+  });
+  const incoming: IncomingCardAction = {
+    ...createCardAction('tenant-a', revision.id, 'confirm', 'task-revision-confirm'),
+    value: { action: 'today_task_confirm', actionId: revision.id,
+      version: revision.payload.draftVersion ?? 1, recipientOpenId: 'ou_sales' },
+    formValue: { title: '更新后的任务', dueAt: '2026-09-20T09:00:00+08:00',
+      channel: '电话', participants: '张总' },
+  };
+  await expect(confirmTodayTaskCard(harness.store, harness.executor, harness.integrationA, incoming))
+    .resolves.toBe('executing');
+  await confirmTodayTaskCard(harness.store, harness.executor, harness.integrationA, incoming);
+  const finished = await waitForStatus(harness.store, harness.integrationA.tenantId, revision.id, 'succeeded');
+  expect(finished.payload.draft.nextAction).toBe('更新后的任务');
+  expect(finished.result.taskGuid).toBe('original-task');
+  expect(finished.result.taskAction).toBe('updated');
+  expect(update).toHaveBeenCalledOnce();
+  expect(update.mock.calls[0][3]).toBe('original-task');
+  expect(harness.tasks.calls).toBe(0);
+  expect(harness.records.customerCalls).toBe(0);
+  expect(harness.records.opportunityCalls).toBe(0);
+  expect(harness.records.followupCalls).toBe(0);
+  await expect(confirmTodayTaskCard(harness.store, harness.executor, harness.integrationA, incoming))
+    .resolves.toBe('succeeded');
+  expect(update).toHaveBeenCalledOnce();
 });

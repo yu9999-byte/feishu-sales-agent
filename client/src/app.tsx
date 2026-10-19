@@ -1,3 +1,4 @@
+import TodayActionPage from './pages/TodayActionPage/TodayActionPage';
 import React from 'react';
 import { Route, Routes } from 'react-router-dom';
 
@@ -23,6 +24,7 @@ const RoutesComponent: React.FC = () => (
   <Routes>
     <Route element={<Layout />}>
       <Route index element={<HomePage />} />
+      <Route path="today-actions" element={<TodayActionPage />} />
       <Route path="daily-report" element={<DailyReportPage />} />
       <Route path="stale-opportunity-readiness" element={<StaleOpportunityReadinessPage />} />
       <Route path="customers" element={<CustomerPortfolioPage />} />
@@ -55,3 +57,4 @@ const RoutesComponent: React.FC = () => (
 );
 
 export default RoutesComponent;
+

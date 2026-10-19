@@ -42,6 +42,7 @@ import {
   createConfirmationCard,
   createDraftGenerationProcessingCard,
   createProcessingCard,
+  createResultCard,
 } from './agent.cards';
 import { FollowupChatDraftService } from '@server/modules/sales-behavior/followup-chat-draft.service';
 import {
@@ -265,6 +266,22 @@ export class AgentWorkflowService {
       action.cardMessageId === pending.cardMessageId &&
       action.chatId !== null &&
       pending.chatId === action.chatId;
+    if (!cardMatches && cardAction.action === 'edit' && pending &&
+      pending.actorOpenId === action.operatorOpenId &&
+      pending.chatId === action.chatId && action.cardMessageId) {
+      const revision: PendingAction | null = await this.store.getPendingActionByCardMessage(
+        integration.tenantId, action.cardMessageId,
+      );
+      if (revision && revision.actorOpenId === action.operatorOpenId &&
+        revision.chatId === action.chatId &&
+        revision.payload.revisionOfActionId === pending.id &&
+        revision.status === 'pendingConfirmation' &&
+        revision.expiresAt.getTime() > action.receivedAt.getTime()) {
+        this.scheduleRevisionCardPatch(integration, revision);
+        return this.updateCardAndReturn(integration, action.cardMessageId,
+          createConfirmationCard(revision));
+      }
+    }
     if (!cardMatches) {
       await this.store.appendAudit({
         tenantId: integration.tenantId,
@@ -278,6 +295,12 @@ export class AgentWorkflowService {
       return this.createAccessDeniedCard('这张卡片不属于当前用户或租户。');
     }
 
+    if (pending.payload.actionKind === 'task') {
+      const member = await this.sessions.getActiveMember(integration.tenantId, action.operatorOpenId);
+      if (!member) return this.createAccessDeniedCard('无权创建任务。');
+      const session = await this.sessions.getSessionByMembership(integration.tenantId, member.id);
+      if (!session.permissions.includes('task:assign')) return this.createAccessDeniedCard('无权创建任务。');
+    }
     if (cardAction.action === 'cancel') {
       return this.cancelAction(
         integration,
@@ -289,6 +312,7 @@ export class AgentWorkflowService {
     if (cardAction.action === 'edit') {
       return this.editTerminalAction(integration, pending, action);
     }
+
 
     const allowedStatuses: PendingActionStatus[] =
       cardAction.action === 'retry'
@@ -631,6 +655,7 @@ export class AgentWorkflowService {
           return;
         }
         const prefillSource: string | null =
+          decision.followupSourceText ??
           this.followupInputPrefillSource(message.text);
         await this.finishConversationWaiting(
           integration,
@@ -2236,7 +2261,10 @@ export class AgentWorkflowService {
     if (pending.cardMessageId !== action.cardMessageId) {
       return this.createAccessDeniedCard('卡片状态已变化，请使用最新卡片。');
     }
-    if (!this.store.movePendingCardMessage) {
+    if (
+      !this.store.movePendingCardMessage ||
+      !this.store.rollbackPendingCardRevision
+    ) {
       return this.createAccessDeniedCard('当前运行环境暂不支持结果修订。');
     }
 
@@ -2283,10 +2311,119 @@ export class AgentWorkflowService {
         operationKind: 'update',
       },
     });
-    return this.updateCardAndReturn(
-      integration,
-      action.cardMessageId ?? pending.cardMessageId ?? '',
-      createConfirmationCard(revision),
+    const editCard: JsonObject = createConfirmationCard(revision);
+    try {
+      await this.messenger.updateCardByCallbackToken(
+        integration,
+        action.callbackToken,
+        editCard,
+      );
+      // Persist the shared message as well: callback acceptance alone can leave
+      // Feishu displaying the terminal card after ownership moved to a revision.
+      await this.messenger.updateCard(integration, action.cardMessageId!, editCard);
+      this.scheduleRevisionCardPatch(integration, {
+        ...revision, cardMessageId: action.cardMessageId,
+      });
+      await this.store.appendAudit({
+        tenantId: integration.tenantId,
+        traceId: action.eventId,
+        eventType: 'card.edit_patch_succeeded',
+        actorOpenId: action.operatorOpenId,
+        entityId: revision.id,
+        outcome: 'succeeded',
+        details: {
+          revisionOfActionId: pending.id,
+        },
+      });
+      return editCard;
+    } catch (error: unknown) {
+      return this.recoverFailedEditPatch(
+        integration,
+        pending,
+        revision,
+        action,
+        error,
+      );
+    }
+  }
+
+  private scheduleRevisionCardPatch(
+    integration: TenantIntegration,
+    revision: PendingAction,
+  ): void {
+    setTimeout((): void => {
+      void (async (): Promise<void> => {
+        const current: PendingAction | null = await this.store.getPendingAction(integration.tenantId, revision.id);
+        if (!current || current.status !== 'pendingConfirmation' ||
+          !current.cardMessageId || current.cardMessageId !== revision.cardMessageId) return;
+        await this.messenger.updateCard(integration, current.cardMessageId, createConfirmationCard(current));
+      })().catch((error: unknown): void => {
+        this.logger.warn(`Revision card persistence failed: ${redactErrorMessage(this.toError(error))}`);
+      });
+    }, CANCEL_CARD_PATCH_DELAY_MS).unref();
+  }
+
+  private async recoverFailedEditPatch(
+    integration: TenantIntegration,
+    pending: PendingAction,
+    revision: PendingAction,
+    action: IncomingCardAction,
+    error: unknown,
+  ): Promise<JsonObject> {
+    const normalized: Error = this.toError(error);
+    const safeMessage: string = redactErrorMessage(normalized);
+    try {
+      await this.store.rollbackPendingCardRevision?.(
+        integration.tenantId,
+        revision.id,
+        pending.id,
+        action.operatorOpenId,
+      );
+    } catch (rollbackError: unknown) {
+      const rollbackNormalized: Error = this.toError(rollbackError);
+      const rollbackMessage: string = redactErrorMessage(rollbackNormalized);
+      this.logger.error(
+        `Edit card patch and rollback failed for action ${pending.id}: ` +
+          `${safeMessage}; rollback=${rollbackMessage}`,
+        redactErrorStack(rollbackNormalized),
+      );
+      await this.store.appendAudit({
+        tenantId: integration.tenantId,
+        traceId: action.eventId,
+        eventType: 'card.edit_patch_failed',
+        actorOpenId: action.operatorOpenId,
+        entityId: revision.id,
+        outcome: 'failed',
+        details: {
+          errorCode: this.errorCode(error),
+          message: safeMessage,
+          rollback: 'failed',
+          rollbackMessage,
+        },
+      });
+      throw normalized;
+    }
+
+    this.logger.warn(
+      `Edit card patch failed and was rolled back for action ${pending.id}: ` +
+        safeMessage,
+    );
+    await this.store.appendAudit({
+      tenantId: integration.tenantId,
+      traceId: action.eventId,
+      eventType: 'card.edit_patch_failed',
+      actorOpenId: action.operatorOpenId,
+      entityId: revision.id,
+      outcome: 'failed',
+      details: {
+        errorCode: this.errorCode(error),
+        message: safeMessage,
+        rollback: 'succeeded',
+      },
+    });
+    return createResultCard(
+      pending.result,
+      '原跟进和任务没有改变，可再次点击“编辑跟进”重试。',
     );
   }
 
@@ -3068,3 +3205,4 @@ export class AgentWorkflowService {
     return 'UNKNOWN';
   }
 }
+

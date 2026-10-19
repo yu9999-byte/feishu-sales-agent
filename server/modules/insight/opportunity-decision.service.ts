@@ -38,6 +38,7 @@ interface OpportunityDecisionInput {
   timezone: string;
   now?: Date;
   portfolio?: OpportunityPortfolioResult;
+  taskReport?: TaskFulfillmentResponse;
 }
 
 interface DecisionDraft {
@@ -159,7 +160,7 @@ class OpportunityDecisionService {
     }
 
     const taskReport: TaskFulfillmentResponse =
-      await this.taskFulfillment.analyze({
+      input.taskReport ?? await this.taskFulfillment.analyze({
         integration: input.integration,
         actorOpenId: input.actorOpenId,
         referenceDate: input.referenceDate,

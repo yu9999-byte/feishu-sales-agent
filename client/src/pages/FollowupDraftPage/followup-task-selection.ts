@@ -27,7 +27,7 @@ const missingTaskFieldLabels = (
 const taskConfirmationLabel = (selectedCount: number): string =>
   selectedCount > 0
     ? '确认保存并创建所示待办'
-    : '确认保存（不创建待办）';
+    : '请先补全待办';
 
 export {
   defaultSelectedTaskIds,

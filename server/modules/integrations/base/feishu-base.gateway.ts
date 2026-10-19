@@ -1678,8 +1678,9 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
     fields: Record<string, unknown>,
     fieldName: string | undefined,
   ): string | null {
-    if (!fieldName || !Array.isArray(fields[fieldName])) return null;
-    const items: unknown[] = fields[fieldName];
+    if (!fieldName) return null;
+    const value: unknown = fields[fieldName];
+    const items: unknown[] = Array.isArray(value) ? value : [value];
     for (const item of items) {
       if (typeof item !== 'object' || item === null) continue;
       const recordId: unknown =
@@ -1692,7 +1693,8 @@ export class FeishuBaseGateway implements SalesRecordsGateway {
         return recordId;
       }
       const recordIds: unknown =
-        'link_record_ids' in item ? item.link_record_ids : undefined;
+        'link_record_ids' in item ? item.link_record_ids
+          : 'record_ids' in item ? item.record_ids : undefined;
       if (
         Array.isArray(recordIds) &&
         typeof recordIds[0] === 'string' &&

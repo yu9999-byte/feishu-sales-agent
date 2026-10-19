@@ -107,4 +107,35 @@ describe('FeishuMessengerService', (): void => {
       undefined,
     );
   });
+
+  it('updates an interactive card with the callback token', async (): Promise<void> => {
+    const request = vi.fn(async (): Promise<{
+      code: number;
+      msg: string;
+    }> => ({ code: 0, msg: 'ok' }));
+    const clients = {
+      getClient: (): unknown => ({ request }),
+      getRequestOptions: (): undefined => undefined,
+    } as unknown as FeishuClientFactory;
+    const messenger = new FeishuMessengerService(clients);
+    const card: JsonObject = {
+      schema: '2.0',
+      header: { title: { tag: 'plain_text', content: 'edit' } },
+    };
+
+    await messenger.updateCardByCallbackToken(
+      createIntegration(),
+      'callback-token',
+      card,
+    );
+
+    expect(request).toHaveBeenCalledWith(
+      {
+        method: 'POST',
+        url: '/open-apis/interactive/v1/card/update',
+        data: { token: 'callback-token', card },
+      },
+      undefined,
+    );
+  });
 });

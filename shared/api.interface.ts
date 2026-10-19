@@ -1,5 +1,11 @@
 export type JsonPrimitive = string | number | boolean | null;
 
+export interface CustomerPreparationRequest {
+  customerName: string;
+  communicationAt: string | null;
+  purpose: string | null;
+}
+
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
 
 export interface JsonObject {
@@ -65,7 +71,7 @@ export type FollowupOpportunityAssociation =
       opportunityName: string | null;
     };
 
-export type PendingActionKind = 'followup' | 'opportunity_status';
+export type PendingActionKind = 'followup' | 'opportunity_status' | 'task';
 
 export type OpportunityStatusActionLifecycleStatus =
   | 'active'
@@ -1793,4 +1799,106 @@ export interface PlatformApiError {
   message: string;
   traceId: string;
   retryable: boolean;
+}
+
+export type TodayActionKind = 'customer_followup' | 'task' | 'opportunity';
+
+export interface TodayActionItem {
+  id: string;
+  kind: TodayActionKind;
+  sourceId: string;
+  customerRecordId: string | null;
+  title: string;
+  reason: string;
+  evidence: string[];
+  suggestedAction: string;
+  suggestedCompletionDate: string;
+  sourceUrl: string | null;
+}
+
+export interface TodayActionResponse {
+  referenceDate: string;
+  timezone: string;
+  generatedAt: string;
+  status: 'ready' | 'partial' | 'empty' | 'unavailable';
+  items: TodayActionViewItem[];
+  coverage: TodayActionSourceCoverage;
+  warnings: string[];
+}
+
+export interface TodayActionSourceCoverage {
+  tasks: 'complete' | 'partial' | 'unavailable';
+  portfolio: 'complete' | 'partial' | 'unavailable';
+}
+
+
+export type TodayActionOperation = 'generate_followup' | 'create_task' | 'snooze' | 'resolve';
+
+export interface TodayActionOperationRequest {
+  itemId: string;
+  itemVersion: string;
+  operation: TodayActionOperation;
+  idempotencyKey: string;
+  expectedRevision: number;
+  remindAt?: string;
+}
+
+export interface TodayActionState {
+  itemId: string;
+  itemVersion: string;
+  revision: number;
+  status: 'open' | 'snoozed' | 'resolved';
+  remindAt: string | null;
+}
+
+export interface TodayActionViewItem extends TodayActionItem {
+  version: string;
+  state: TodayActionState;
+}
+
+export interface TodayActionDraftRequest {
+  itemId: string;
+  itemVersion: string;
+  idempotencyKey: string;
+  communicationText: string;
+}
+
+export interface TodayActionDraftResponse {
+  draftId: string;
+  requiresConfirmation: true;
+}
+
+export interface TodayActionTaskDraftRequest {
+  itemId: string;
+  itemVersion: string;
+  idempotencyKey: string;
+  title: string;
+  dueAt: string;
+  participants?: string[];
+  channel?: string;
+}
+
+export interface TodayActionTaskDraftResponse {
+  actionId: string;
+  title: string;
+  dueAt: string;
+  requiresConfirmation: true;
+  status: 'pendingConfirmation' | 'failed' | 'partialFailure';
+}
+
+export interface TodayActionTaskConfirmResponse {
+  actionId: string;
+  status: 'executing' | 'succeeded' | 'failed' | 'partialFailure';
+  taskGuid?: string;
+  taskUrl?: string;
+}
+
+export interface TodayActionTaskStatusResponse {
+  actionId: string;
+  title?: string;
+  dueAt?: string;
+  status: 'pendingConfirmation' | 'executing' | 'succeeded' | 'failed' | 'partialFailure' | 'cancelled' | 'expired';
+  taskGuid?: string;
+  taskUrl?: string;
+  errorMessage?: string;
 }

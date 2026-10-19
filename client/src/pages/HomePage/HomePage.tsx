@@ -51,6 +51,7 @@ const HomePage: React.FC = () => {
         </Button>
       </div>
 
+      <Button asChild><Link to="/today-actions">打开今日行动中心<ArrowRight aria-hidden="true" /></Link></Button>
       {loading && (
         <section aria-busy="true" className="space-y-4">
           <Skeleton className="h-24 w-full rounded-xl" />
@@ -151,3 +152,4 @@ const HomePage: React.FC = () => {
 };
 
 export default HomePage;
+

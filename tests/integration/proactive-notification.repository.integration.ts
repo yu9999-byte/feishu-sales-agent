@@ -68,6 +68,30 @@ const createUncertainNotification = async (input: {
 };
 
 describe('Postgres proactive notification ledger', (): void => {
+  it('freezes first message across failed delivery retries and repository restarts', async () => {
+    const message = { tenantId: TENANT_A, recipientMemberId: MEMBER_A, recipientOpenId: 'ou_a',
+      kind: 'task_action' as const, notificationKey: 'frozen-payload', subjectKey: 'today',
+      title: '首次提醒', subtitle: '原始时间', sections: [], payloadFingerprint: 'first' };
+    const input = { ...message, message, now: NOW, claimDurationMs: 60000, maxAttempts: 3 };
+    const first = await store.claim(input);
+    if (first.status !== 'claimed') throw new Error('Expected claim');
+    const state = { tenantId: TENANT_A, recipientMemberId: MEMBER_A, kind: message.kind,
+      notificationKey: message.notificationKey, claimToken: first.claimToken };
+    await store.markDispatchStarted({ ...state, startedAt: NOW });
+    await store.markFailed({ ...state, failedAt: NOW, retryAt: NOW,
+      failureCode: 'REJECTED', failureMessage: 'test' });
+    const retry = await new PostgresProactiveNotificationStore(sql).claim({ ...input,
+      recipientOpenId: 'ou_changed',
+      message: { ...message, recipientOpenId: 'ou_changed', subtitle: '重新生成时间' }, payloadFingerprint: 'second',
+      now: new Date(NOW.getTime() + 1000) });
+    expect(retry.status).toBe('claimed');
+    if (retry.status !== 'claimed') throw new Error('Expected retry');
+    expect(retry.message).toEqual(message);
+    const rows = await sql`SELECT payload_fingerprint,recipient_open_id FROM proactive_sales_notifications
+      WHERE tenant_id=${TENANT_A} AND notification_key='frozen-payload'`;
+    expect(rows[0].payload_fingerprint).toBe('first');
+    expect(rows[0].recipient_open_id).toBe('ou_a');
+  });
   beforeAll(async (): Promise<void> => {
     await sql`DELETE FROM agent_tenants WHERE id IN (
       ${TENANT_A}::uuid, ${TENANT_B}::uuid

@@ -50,7 +50,6 @@ import {
     Mem0MemoryAdapter,
     LangGraphCheckpointerService,
     LangGraphConversationAssistant,
-    FeishuMessengerService,
     FeishuBaseGateway,
     FeishuTaskGateway,
     SalesContextService,

@@ -25,7 +25,6 @@ import {
   updateFollowupDraft,
 } from '../../api';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
@@ -321,7 +320,7 @@ const ProgressAssessmentPanel: React.FC<ProgressAssessmentPanelProps> = ({
       <div className="mt-5 border-t border-border pt-4 text-sm">
         <p className="font-medium">确认后执行</p>
         <p className="mt-1 text-muted-foreground">
-          确认后才会保存本次跟进，并仅创建你勾选的本人任务。
+          确认后保存本次跟进，并同时创建预览中的一条本人待办。
         </p>
       </div>
       {assessment.warnings.length > 0 && (
@@ -455,19 +454,6 @@ const FollowupDraftPage: React.FC = () => {
       .finally((): void => setConfirming(false));
   };
 
-  const setTaskSelected = (candidateId: string, selected: boolean): void => {
-    setSelectedTaskCandidateIds((current: string[]): string[] => {
-      if (selected) {
-        return current.includes(candidateId)
-          ? current
-          : [...current, candidateId];
-      }
-      return current.filter((idValue: string): boolean =>
-        idValue !== candidateId,
-      );
-    });
-  };
-
   if (loadError) return <div role="alert" className="rounded-xl border border-destructive/40 bg-card p-6"><AlertCircle className="text-destructive" /><h1 className="mt-4 text-xl font-semibold">草案暂时无法打开</h1><p className="mt-2 text-sm text-muted-foreground">{loadError.message}</p></div>;
   if (!draft) return <div aria-busy="true" className="space-y-4"><Skeleton className="h-20" /><Skeleton className="h-72" /></div>;
 
@@ -487,7 +473,8 @@ const FollowupDraftPage: React.FC = () => {
     draft.version.draft.customerName && nextAction.trim() && dueAt,
   );
   const mayConfirm = draft.status === 'pendingConfirmation' &&
-    quality.confirmable && requiredReady && !dirty && !saving && !confirming;
+    quality.confirmable && requiredReady && selectedTaskCandidateIds.length === 1 &&
+    !dirty && !saving && !confirming;
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -516,7 +503,7 @@ const FollowupDraftPage: React.FC = () => {
           <section className="mt-7 border-t border-border pt-6">
             <h2 className="text-lg font-semibold">待办预览</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              只会创建你勾选的本人待办；缺少三要素的候选不能勾选。
+              保存跟进时同时创建以下本人待办；请先补全时间、方式和参与人。
             </p>
             {taskCandidates.length === 0 ? (
               <p className="mt-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
@@ -526,9 +513,6 @@ const FollowupDraftPage: React.FC = () => {
               <div className="mt-4 space-y-3">
                 {taskCandidates.map((candidate: FollowupTaskCandidate) => {
                   const ready: boolean = candidate.status === 'ready';
-                  const selected: boolean = selectedTaskCandidateIds.includes(
-                    candidate.id,
-                  );
                   const missingLabels: string[] = missingTaskFieldLabels(
                     candidate.missingFields,
                   );
@@ -537,14 +521,6 @@ const FollowupDraftPage: React.FC = () => {
                       key={candidate.id}
                       className="flex items-start gap-3 rounded-lg border border-border p-4"
                     >
-                      <Checkbox
-                        checked={selected}
-                        disabled={!ready || draft.status !== 'pendingConfirmation'}
-                        onCheckedChange={(checked: boolean | 'indeterminate'): void =>
-                          setTaskSelected(candidate.id, checked === true)
-                        }
-                        aria-label={`选择待办：${candidate.title}`}
-                      />
                       <span className="min-w-0 text-sm">
                         <span className="block break-words font-medium">
                           {candidate.title}

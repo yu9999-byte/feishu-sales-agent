@@ -248,6 +248,44 @@ export class MemoryControlStore implements ControlStore {
     to.updatedAt = now;
   }
 
+  async rollbackPendingCardRevision(
+    tenantId: string,
+    revisionActionId: string,
+    originalActionId: string,
+    actorOpenId: string,
+  ): Promise<void> {
+    const revision: PendingAction = this.requireAction(
+      tenantId,
+      revisionActionId,
+    );
+    const original: PendingAction = this.requireAction(
+      tenantId,
+      originalActionId,
+    );
+    const terminalStatuses: PendingActionStatus[] = [
+      'succeeded',
+      'failed',
+      'partialFailure',
+    ];
+    if (
+      revision.actorOpenId !== actorOpenId ||
+      original.actorOpenId !== actorOpenId ||
+      revision.status !== 'pendingConfirmation' ||
+      revision.cardMessageId === null ||
+      original.cardMessageId !== null ||
+      !terminalStatuses.includes(original.status)
+    ) {
+      throw new Error('Pending action card revision cannot be rolled back');
+    }
+    original.cardMessageId = revision.cardMessageId;
+    revision.cardMessageId = null;
+    revision.status = 'cancelled';
+    revision.result.status = 'cancelled';
+    const now: Date = new Date();
+    revision.updatedAt = now;
+    original.updatedAt = now;
+  }
+
   async getPendingAction(
     tenantId: string,
     actionId: string,
@@ -313,7 +351,8 @@ export class MemoryControlStore implements ControlStore {
     if (!action || action.actorOpenId !== actorOpenId) {
       return null;
     }
-    if (action.expiresAt.getTime() <= now.getTime()) {
+    if (action.expiresAt.getTime() <= now.getTime() &&
+      ['pendingConfirmation', 'failed', 'partialFailure'].includes(action.status)) {
       action.status = 'expired';
       action.result.status = 'expired';
       action.updatedAt = now;
@@ -322,6 +361,7 @@ export class MemoryControlStore implements ControlStore {
     if (!allowedStatuses.includes(action.status)) {
       return null;
     }
+    if (action.expiresAt.getTime() <= now.getTime()) return null;
     if (
       expectedDraftVersion !== undefined &&
       (action.payload.draftVersion ?? 1) !== expectedDraftVersion

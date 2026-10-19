@@ -117,7 +117,7 @@ class FeishuTaskGateway implements TaskGateway {
         user_id_type: 'open_id',
       };
       if (pageToken) params.page_token = pageToken;
-      const response = await client.task.v2.task.search(
+      const response = await retryFeishuRead(() => client.task.v2.task.search(
         {
           data: {
             query,
@@ -129,7 +129,7 @@ class FeishuTaskGateway implements TaskGateway {
           params,
         },
         this.clients.getRequestOptions(integration),
-      );
+      ));
       assertFeishuSuccess(response.code, response.msg, 'read Feishu tasks');
       const pageItems: TaskSearchItem[] = response.data?.items ?? [];
       pageItems.forEach((item: TaskSearchItem): void => {
@@ -158,20 +158,21 @@ class FeishuTaskGateway implements TaskGateway {
       }
     }
 
-    const tasks = await Promise.all(items.map(async (item: TaskSearchItem) => {
-      const detail = await client.task.v2.task.get(
+    const tasks: DailyReportTaskResult['items'] = [];
+    for (const item of items) {
+      const detail = await retryFeishuRead(() => client.task.v2.task.get(
         {
           path: { task_guid: item.id },
           params: { user_id_type: 'open_id' },
         },
         this.clients.getRequestOptions(integration),
-      );
+      ));
       assertFeishuSuccess(detail.code, detail.msg, 'read Feishu task');
       const task = detail.data?.task;
-      if (!task?.guid) return null;
+      if (!task?.guid) continue;
       const dueTimestamp: number = Number(task.due?.timestamp);
       const completedAt: string | null = this.taskTimestamp(task.completed_at);
-      return {
+      tasks.push({
         guid: task.guid,
         title: task.summary ?? item.meta_data?.description ?? '未命名任务',
         status: this.taskStatus(completedAt, task.status),
@@ -180,10 +181,10 @@ class FeishuTaskGateway implements TaskGateway {
           ? new Date(dueTimestamp).toISOString()
           : null,
         url: task.url ?? item.meta_data?.app_link ?? null,
-      };
-    }));
+      });
+    }
     return {
-      items: tasks.filter((task) => task !== null),
+      items: tasks,
       ...(warning ? { warning } : {}),
     };
   }
@@ -201,13 +202,13 @@ class FeishuTaskGateway implements TaskGateway {
     taskGuid: string,
   ): Promise<DailyReportTaskRecord | null> {
     const client = this.clients.getClient(integration);
-    const detail = await client.task.v2.task.get(
+    const detail = await retryFeishuRead(() => client.task.v2.task.get(
       {
         path: { task_guid: taskGuid },
         params: { user_id_type: 'open_id' },
       },
       this.clients.getRequestOptions(integration),
-    );
+    ));
     assertFeishuSuccess(detail.code, detail.msg, 'read Feishu task detail');
     const task = detail.data?.task;
     if (!task?.guid) return null;
@@ -380,3 +381,4 @@ class FeishuTaskGateway implements TaskGateway {
 
 export { FeishuTaskGateway, resolveTaskInput };
 export type { ResolvedTaskInput };
+import { retryFeishuRead } from './feishu-read-retry';

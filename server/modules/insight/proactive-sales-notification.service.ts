@@ -8,6 +8,13 @@ import type {
   OpportunityDecisionResponse,
 } from '@shared/api.interface';
 import type { AgentRuntimeConfig } from '@server/config/agent.config';
+import type { TodayActionService } from './today-action.service';
+import type { PostgresTodayActionStateStore } from './postgres-today-action-state.store';
+import { planDueTodayActionReminders } from './today-action-reminder-planner';
+import { buildTodayActions } from './today-action-planner';
+import { todayActionVersion } from './today-action-version';
+import { planTodayActionDigest } from './today-action-digest';
+import { runTodayActionAcceptance, type TodayActionAcceptanceInput } from './today-action-acceptance';
 import type { TenantIntegration } from '@server/modules/agent-core/agent.types';
 import type { PlatformMember } from
   '@server/modules/identity-access/identity-access.types';
@@ -161,7 +168,16 @@ class ProactiveSalesNotificationService {
     private readonly planner: ProactiveNotificationPlanner,
     private readonly delivery: ProactiveNotificationDeliveryRunner,
     private readonly riskStates: ProactiveRiskStateWriter,
+    private readonly todayActions?: TodayActionService,
+    private readonly actionStates?: PostgresTodayActionStateStore,
   ) {}
+
+  async runAcceptance(input: TodayActionAcceptanceInput) {
+    if (!this.todayActions || !this.actionStates) throw new Error('ACCEPTANCE_UNAVAILABLE');
+    return runTodayActionAcceptance({ settings: this.config.proactiveSalesNotifications,
+      control: this.control, identity: this.identity, sessions: this.sessions,
+      actions: this.todayActions, states: this.actionStates, delivery: this.delivery }, input);
+  }
 
   async run(
     input: ProactiveNotificationRunInput = {},
@@ -262,7 +278,9 @@ class ProactiveSalesNotificationService {
           (scheduledKind: ProactiveNotificationScheduleKind): boolean =>
             enabledKinds.has(scheduledKind),
         );
-      if (scheduledKinds.length === 0) continue;
+      const canRemind: boolean = enabledKinds.has('task_action') &&
+        this.todayActions !== undefined && this.actionStates !== undefined;
+      if (scheduledKinds.length === 0 && !canRemind) continue;
       matchedSchedule = true;
       counters.memberCount += 1;
       const scope: ProactiveNotificationPlanScope = {
@@ -270,9 +288,30 @@ class ProactiveSalesNotificationService {
         recipientMemberId: member.id,
         recipientOpenId: member.feishuOpenId,
         localDate: schedule.localDate,
+        now,
         timezone: session.tenant.timezone,
         webPublicUrl: this.config.proactiveSalesNotifications?.webPublicUrl,
       };
+      if (canRemind && ['customer:read', 'opportunity:read', 'task:read'].every(
+        (permission) => session.permissions.some((granted) => granted === permission))) {
+        try {
+          const operationScope = { tenantId: integration.tenantId, memberId: member.id,
+            actorOpenId: member.feishuOpenId };
+          const due = await this.actionStates!.listDue(operationScope, now);
+          if (due.length > 0) {
+            const report = await this.todayActions!.analyze({ integration,
+              actorOpenId: member.feishuOpenId, referenceDate: scope.localDate, timezone: scope.timezone });
+            const current = await Promise.all(due.map((state) =>
+              this.actionStates!.read(operationScope, state.itemId, state.itemVersion)));
+            for (const message of planDueTodayActionReminders(scope, report.items,
+              current.filter((state): state is NonNullable<typeof state> => state !== null), now)) {
+              await this.dispatch(message, now, counters);
+            }
+          }
+        } catch {
+          warnings.add('today_action_reminder_failed');
+        }
+      }
       for (const kind of scheduledKinds) {
         await this.processKind(
           kind,
@@ -325,6 +364,20 @@ class ProactiveSalesNotificationService {
     now: Date,
     counters: RunCounters,
   ): Promise<void> {
+    if (this.todayActions && this.actionStates) {
+      if (!['customer:read', 'opportunity:read', 'task:read'].every(
+        (permission) => session.permissions.some((granted) => granted === permission))) return;
+      const report = await this.todayActions.analyze({ integration,
+        actorOpenId: session.member.feishuOpenId, referenceDate: scope.localDate,
+        timezone: scope.timezone });
+      const operationScope = { tenantId: integration.tenantId, memberId: session.member.id,
+        actorOpenId: session.member.feishuOpenId };
+      const items = await Promise.all(report.items.map(async (item) => ({ ...item,
+        state: await this.actionStates!.read(operationScope, item.id, item.version) ?? item.state,
+      })));
+      await this.dispatch(planTodayActionDigest(scope, items, report.warnings), now, counters);
+      return;
+    }
     if (
       !session.permissions.includes('review:read-personal') ||
       !session.permissions.includes('task:read')
@@ -337,8 +390,21 @@ class ProactiveSalesNotificationService {
       now,
       readOnly: true,
     });
+    let visibleReport: TaskFulfillmentResponse = report;
+    if (this.actionStates) {
+      const operationScope = { tenantId: integration.tenantId, memberId: session.member.id,
+        actorOpenId: session.member.feishuOpenId };
+      const signals = buildTodayActions({ referenceDate: scope.localDate, timezone: scope.timezone,
+        tasks: report.items, opportunities: [], followups: [] });
+      const suppressed: Set<string> = new Set();
+      for (const item of signals) {
+        const state = await this.actionStates.read(operationScope, item.id, todayActionVersion(item));
+        if (state && state.status !== 'open') suppressed.add(item.sourceId);
+      }
+      visibleReport = { ...report, items: report.items.filter((item) => !suppressed.has(item.guid)) };
+    }
     await this.dispatch(
-      this.planner.planTaskAction(scope, report),
+      this.planner.planTaskAction(scope, visibleReport),
       now,
       counters,
     );

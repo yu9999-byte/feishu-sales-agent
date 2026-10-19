@@ -206,7 +206,7 @@ describe('sales context gateways', (): void => {
             last_modified_time: 1790215200000,
             fields: {
               商机: [{ text: '北辰数字化项目' }],
-              客户关联: [{ record_id: 'customer-portfolio-1' }],
+              客户关联: { link_record_ids: ['customer-portfolio-1'] },
               商机状态: '进行中',
               金额: 500000,
               进展: [{ text: '方案评估中' }],
@@ -225,8 +225,8 @@ describe('sales context gateways', (): void => {
             record_url: 'https://feishu.cn/followup-portfolio-1',
             last_modified_time: 1790215200000,
             fields: {
-              客户关联: [{ record_id: 'customer-portfolio-1' }],
-              商机关联: [{ record_id: 'opportunity-portfolio-1' }],
+              客户关联: [{ record_ids: ['customer-portfolio-1'], table_id: 'customers', type: 'text' }],
+              商机关联: { link_record_ids: ['opportunity-portfolio-1'] },
               摘要: [{ text: '客户要求补充实施计划' }],
               本次沟通发生时间: 1790215200000,
               下一步: [{ text: '提交实施计划' }],

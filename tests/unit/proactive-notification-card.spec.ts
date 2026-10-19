@@ -4,6 +4,35 @@ import { createProactiveNotificationCard } from
   '@server/modules/insight/proactive-notification.card';
 
 describe('proactive notification card', (): void => {
+  it('omits foreign recipient callbacks and caps the number of buttons', (): void => {
+    const value = { action: 'today_action' as const, operation: 'resolve' as const,
+      recipientOpenId: 'open', itemId: 'task:1', itemVersion: 'v1',
+      expectedRevision: 0, idempotencyKey: 'stable' };
+    const message = { tenantId: 'tenant', recipientMemberId: 'member',
+      recipientOpenId: 'open', kind: 'task_action' as const, notificationKey: 'day',
+      subjectKey: 'today', title: '今日行动', subtitle: '提醒', sections: [], payloadFingerprint: 'hash' };
+    const foreign = createProactiveNotificationCard({ ...message,
+      shortcuts: [{ label: 'foreign-button', value: { ...value, recipientOpenId: 'other' } }] });
+    expect(JSON.stringify(foreign)).not.toContain('foreign-button');
+    const bounded = createProactiveNotificationCard({ ...message,
+      shortcuts: Array.from({ length: 12 }, (_, index) => ({ label: `button-${index}`, value })) });
+    expect((JSON.stringify(bounded).match(/"type":"callback"/gu) ?? []).length).toBe(8);
+    const otherKind = createProactiveNotificationCard({ ...message, kind: 'daily_report',
+      shortcuts: [{ label: 'foreign-kind', value }] });
+    expect(JSON.stringify(otherKind)).not.toContain('foreign-kind');
+  });
+  it('renders bounded recipient-bound callback shortcuts', (): void => {
+    const value = { action: 'today_action' as const, operation: 'resolve' as const,
+      recipientOpenId: 'open', itemId: 'task:1', itemVersion: 'v1',
+      expectedRevision: 0, idempotencyKey: 'stable' };
+    const card = createProactiveNotificationCard({ tenantId: 'tenant', recipientMemberId: 'member',
+      recipientOpenId: 'open', kind: 'task_action', notificationKey: 'day', subjectKey: 'today',
+      title: '今日行动', subtitle: '提醒', sections: [], payloadFingerprint: 'hash',
+      shortcuts: [{ label: '标记已处理', value }],
+    });
+    expect(JSON.stringify(card)).toContain('"type":"callback"');
+    expect(JSON.stringify(card)).toContain('stable');
+  });
   it('renders Card 2.0 with bounded sections and a trusted HTTPS link', (): void => {
     const card = createProactiveNotificationCard({
       tenantId: 'tenant', recipientMemberId: 'member',

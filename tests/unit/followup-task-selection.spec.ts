@@ -41,6 +41,6 @@ describe('follow-up task selection view model', (): void => {
 
   it('makes the one-confirmation consequence explicit', (): void => {
     expect(taskConfirmationLabel(1)).toBe('确认保存并创建所示待办');
-    expect(taskConfirmationLabel(0)).toBe('确认保存（不创建待办）');
+    expect(taskConfirmationLabel(0)).toBe('请先补全待办');
   });
 });

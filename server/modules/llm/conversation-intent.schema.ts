@@ -9,6 +9,7 @@ const conversationDecisionSchema = z.object({
     'business_query',
     'followup_capture',
     'followup_analyze',
+    'customer_preparation',
     'task_operation',
     'opportunity_operation',
     'project_diagnosis',

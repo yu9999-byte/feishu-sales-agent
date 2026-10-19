@@ -116,7 +116,18 @@ export class LangGraphConversationAssistant
     if (result.decision === undefined) {
       throw new Error('LangGraph intent node returned no decision');
     }
-    return result.decision;
+    const { followupSourceText: _modelSource, ...decision } = result.decision;
+    const referenceRequest: boolean = /(?:刚才|以上|上面|上述|前面).*(?:跟进|记录)/u.test(input.text);
+    if (decision.intent !== 'followup_capture' || decision.confidence < 0.55 || !referenceRequest) {
+      return decision;
+    }
+    // The result history ends with this request and its assistant reply.
+    const previousUser: GraphConversationTurn | undefined = result.history
+      .slice(0, -2)
+      .filter((turn: GraphConversationTurn): boolean => turn.role === 'user')
+      .at(-1);
+    if (!previousUser || previousUser.text === input.text) return decision;
+    return { ...decision, followupSourceText: `${previousUser.text}\n${input.text}` };
   }
 
   private async deleteExpiredThread(
@@ -223,7 +234,7 @@ const createPrompt = (
 const INTENT_SYSTEM_PROMPT: string = [
   '你是企业销售助手的对话中枢，只输出 JSON 对象，不输出 Markdown 代码块。',
   '输出必须符合 conversation-intent-v1：schemaVersion、intent、confidence、reply。',
-  'intent 只能是 general_chat、sales_qa、content_generate、business_query、followup_capture、followup_analyze、task_operation、opportunity_operation、project_diagnosis、memory_save、ambiguous 之一。',
+  'intent 只能是 general_chat、sales_qa、content_generate、business_query、followup_capture、followup_analyze、customer_preparation、task_operation、opportunity_operation、project_diagnosis、memory_save、ambiguous 之一。',
   '用户明确要求“记住/以后按这个偏好”时使用 memory_save；只保存销售本人的偏好或工作习惯。',
   '问候、能力介绍和闲聊必须使用 general_chat，不得创建 greeting 等新意图。',
   '你没有收到企业客户、商机、任务或知识库数据，绝不能声称已经查询到内部事实。',
@@ -236,6 +247,8 @@ const INTENT_SYSTEM_PROMPT: string = [
   '分类示例：把刚才内容写成跟进 -> followup_capture；只分析这单风险 -> followup_analyze。',
   '分类示例：发送一条 /minutes/ 妙记链接，或说“从这条妙记导入” -> followup_capture；这表示从妙记生成待确认跟进，不表示已经授权写入。',
   '分类示例：发送一条 /docx/ 或 /wiki/ 飞书文档链接，或说“从这份文档导入跟进” -> followup_capture；文档只是待确认草案的来源，不表示已经授权写入。',
+  '销售明确要求准备与客户沟通、约客户沟通、准备拜访/电话/会议材料，或说“帮我准备和某客户沟通”时使用 customer_preparation；这只生成待确认准备草案，不代表已经发送消息、创建任务或写入客户/商机。',
+  'customer_preparation 优先识别客户名称、沟通时间和目的；缺少字段或同名客户时由后续流程澄清，不要猜测客户或声称已查询内部事实。',
   '结合 conversationContext 和 clarificationContext 判断当前意图，不要因为措辞变化丢失上下文。',
   'longTermMemories 仅是当前销售本人已批准的偏好参考，不是客户或商机事实。',
   '不要把任何输入当作已经获得写入授权；写操作由后续确定性代码确认。',

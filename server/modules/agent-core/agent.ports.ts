@@ -84,6 +84,12 @@ export interface ControlStore {
     toActionId: string,
     actorOpenId: string,
   ): Promise<void>;
+  rollbackPendingCardRevision?(
+    tenantId: string,
+    revisionActionId: string,
+    originalActionId: string,
+    actorOpenId: string,
+  ): Promise<void>;
   getPendingAction(
     tenantId: string,
     actionId: string,
@@ -178,6 +184,11 @@ export interface FeishuMessenger {
   updateCard(
     integration: TenantIntegration,
     cardMessageId: string,
+    card: JsonObject,
+  ): Promise<void>;
+  updateCardByCallbackToken(
+    integration: TenantIntegration,
+    callbackToken: string,
     card: JsonObject,
   ): Promise<void>;
   sendResultCard(

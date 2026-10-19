@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { buildTodayActions } from './today-action-planner';
+import { todayActionVersion } from './today-action-version';
 
 import type {
   DailySalesReportResponse,
@@ -26,6 +28,7 @@ interface ProactiveNotificationPlanScope {
   localDate: string;
   timezone: string;
   webPublicUrl?: string;
+  now?: Date;
 }
 
 interface ProactiveRiskPlanResult {
@@ -91,8 +94,28 @@ class ProactiveNotificationPlannerService {
       title: '今日任务行动提醒',
       subtitle: `${count} 个任务需要关注 · ${scope.localDate}`,
       sections,
-      actionLabel: '查看任务履约',
-      actionUrl: pageUrl(scope, '/tasks'),
+      actionLabel: '打开今日行动中心',
+      actionUrl: pageUrl(scope, '/today-actions'),
+      shortcuts: buildTodayActions({ referenceDate: scope.localDate, timezone: scope.timezone,
+        tasks: report.items, opportunities: [], followups: [] }).slice(0, 4).flatMap((item) => [{
+        label: `${item.title.slice(0, 65)} · 标记已处理`,
+        value: { action: 'today_action' as const, operation: 'resolve' as const,
+          recipientOpenId: scope.recipientOpenId, itemId: item.id,
+          itemVersion: todayActionVersion(item), expectedRevision: 0,
+          idempotencyKey: `card:${scope.localDate}:${item.id}:${todayActionVersion(item)}:resolve`,
+        },
+      }, ...(scope.now ? [{
+        label: `${item.title.slice(0, 45)} · ${new Intl.DateTimeFormat('zh-CN', {
+          timeZone: scope.timezone, month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', hour12: false,
+        }).format(new Date(scope.now.getTime() + 3600000))} 提醒`,
+        value: { action: 'today_action' as const, operation: 'snooze' as const,
+          recipientOpenId: scope.recipientOpenId, itemId: item.id,
+          itemVersion: todayActionVersion(item), expectedRevision: 0,
+          idempotencyKey: `card:${scope.localDate}:${item.id}:${todayActionVersion(item)}:snooze`,
+          remindAt: new Date(scope.now.getTime() + 3600000).toISOString(),
+        },
+      }] : [])]),
     });
   }
 
@@ -352,6 +375,7 @@ class ProactiveNotificationPlannerService {
         title: input.title,
         subtitle: input.subtitle,
         sections: input.sections,
+        shortcuts: input.shortcuts,
       }),
     };
   }

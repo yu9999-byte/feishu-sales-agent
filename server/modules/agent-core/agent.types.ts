@@ -508,6 +508,7 @@ export type ConversationIntent =
   | 'business_query'
   | 'followup_capture'
   | 'followup_analyze'
+  | 'customer_preparation'
   | 'task_operation'
   | 'opportunity_operation'
   | 'project_diagnosis'
@@ -530,6 +531,8 @@ export interface ConversationDecision {
   intent: ConversationIntent;
   confidence: number;
   reply: string;
+  /** User-authored short-term source, grounded by the conversation adapter. */
+  followupSourceText?: string;
 }
 
 export interface SalesRecordResult {

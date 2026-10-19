@@ -36,6 +36,17 @@ const store = (): ProactiveNotificationStore => ({
 });
 
 describe('ProactiveNotificationDeliveryService', (): void => {
+  it('sends the durable first payload returned by a retry claim', async () => {
+    const original = message();
+    const persistence: ProactiveNotificationStore = { ...store(),
+      claim: vi.fn(async () => ({ status: 'claimed' as const, claimToken: 'claim',
+        attemptCount: 2, message: original })) };
+    const sender = { send: vi.fn(async () => ({ messageId: 'om_retry' })) };
+    await new ProactiveNotificationDeliveryService(persistence, sender).deliver({
+      enabled: true, message: { ...original, subtitle: 'regenerated' }, now: NOW,
+    });
+    expect(sender.send).toHaveBeenCalledWith(original);
+  });
   it('does not claim or send while real delivery is disabled', async (): Promise<void> => {
     const persistence: ProactiveNotificationStore = store();
     const sender = { send: vi.fn() };

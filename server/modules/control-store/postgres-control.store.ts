@@ -450,6 +450,61 @@ export class PostgresControlStore
     }
   }
 
+  async rollbackPendingCardRevision(
+    tenantId: string,
+    revisionActionId: string,
+    originalActionId: string,
+    actorOpenId: string,
+  ): Promise<void> {
+    const rows: IdRow[] = await this.sql<IdRow[]>`
+      WITH source AS (
+        SELECT card_message_id
+        FROM pending_actions
+        WHERE tenant_id = ${tenantId}
+          AND id = ${revisionActionId}
+          AND actor_open_id = ${actorOpenId}
+          AND status = 'pendingConfirmation'
+          AND card_message_id IS NOT NULL
+      ), cancelled AS (
+        UPDATE pending_actions
+        SET
+          card_message_id = NULL,
+          status = 'cancelled',
+          result = jsonb_set(
+            CASE
+              WHEN jsonb_typeof(result) = 'string'
+                THEN (result #>> '{}')::jsonb
+              ELSE result
+            END,
+            '{status}',
+            '"cancelled"'::jsonb,
+            true
+          ),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE tenant_id = ${tenantId}
+          AND id = ${revisionActionId}
+          AND actor_open_id = ${actorOpenId}
+          AND status = 'pendingConfirmation'
+          AND card_message_id IS NOT NULL
+        RETURNING id
+      )
+      UPDATE pending_actions AS original
+      SET
+        card_message_id = (SELECT source.card_message_id FROM source),
+        updated_at = CURRENT_TIMESTAMP
+      FROM cancelled
+      WHERE original.tenant_id = ${tenantId}
+        AND original.id = ${originalActionId}
+        AND original.actor_open_id = ${actorOpenId}
+        AND original.status IN ('succeeded', 'failed', 'partialFailure')
+        AND original.card_message_id IS NULL
+      RETURNING original.id
+    `;
+    if (rows.length !== 1) {
+      throw new Error('Pending action card revision could not be rolled back');
+    }
+  }
+
   async getPendingAction(
     tenantId: string,
     actionId: string,
@@ -941,7 +996,7 @@ export class PostgresControlStore
         AND id = ${actionId}
         AND actor_open_id = ${actorOpenId}
         AND expires_at <= ${now}
-        AND status IN ('pendingConfirmation', 'failed', 'partialFailure', 'executing')
+        AND status IN ('pendingConfirmation', 'failed', 'partialFailure')
     `;
   }
 

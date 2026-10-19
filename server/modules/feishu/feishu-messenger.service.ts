@@ -136,6 +136,31 @@ export class FeishuMessengerService implements FeishuMessenger {
     );
   }
 
+  async updateCardByCallbackToken(
+    integration: TenantIntegration,
+    callbackToken: string,
+    card: JsonObject,
+  ): Promise<void> {
+    const client = this.clients.getClient(integration);
+    const response: CardUpdateResponse =
+      await client.request<CardUpdateResponse>(
+        {
+          method: 'POST',
+          url: '/open-apis/interactive/v1/card/update',
+          data: {
+            token: callbackToken,
+            card,
+          },
+        },
+        this.clients.getRequestOptions(integration),
+      );
+    assertFeishuSuccess(
+      response.code,
+      response.msg,
+      'update interactive card by callback token',
+    );
+  }
+
   async sendResultCard(
     integration: TenantIntegration,
     chatId: string,

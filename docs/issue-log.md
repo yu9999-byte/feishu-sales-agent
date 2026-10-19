@@ -6,6 +6,23 @@
 [项目主计划](project-master-plan.md)，完成度证据见
 [需求追踪矩阵](specs/05-requirements-traceability.md)。
 
+## 2026-10-16 成功卡“编辑跟进”无界面反馈且后台进入死状态（代码已修复）
+
+- 编号：`ISS-UI-006`。
+- 复现：在真实飞书单聊点击 `UI最终-EXISTING-R4-20261016` 成功卡的“编辑跟进”；界面仍为
+  原成功卡，没有预填表单或失败提示。
+- 证据：控制库已记录 `card.edit_started`；原终态动作失去 `card_message_id`，失败修订动作却
+  持有卡片并停在 `pendingConfirmation`。因此用户看到旧卡，后台却已迁移到不可见动作。
+- 根因：旧实现先迁移卡片归属，再用普通消息 patch 尝试换卡；失败路径没有回滚、取消修订、
+  失败审计或可见反馈。互动卡片回调已经提供专用 callback token，却未用于即时换卡。
+- 修复：改用 `/open-apis/interactive/v1/card/update`；失败时原子恢复原动作归属、取消修订，
+  记录 `card.edit_patch_failed` 并返回保留原结果、Base/Task 链接和编辑按钮的可重试卡；成功时
+  记录 `card.edit_patch_succeeded`。普通异步终态更新继续使用消息 patch。
+- 证据：定向 `114/114`、全量单元 `734/734`、PostgreSQL
+  `33 passed / 3 controlled skips`，三套 TypeScript、ESLint、Agent/Web build 和差异检查通过。
+- 状态：`Resolved in code / automated green / UI retest pending`。历史坏状态不会自动修复；需在
+  动作确认后恢复该测试卡或生成新成功卡，再验证同一卡变表单、原跟进被修订且不新增第二条。
+
 ## 2026-10-16 商机关联确认正确但执行后回退为不关联（已解决）
 
 - 复现：真实确认卡显示“保持当前处理：关联已有：产线看板试点（测试）”，点击确认后成功卡却
@@ -41,6 +58,10 @@
 - 状态：`Resolved in code / automated green / real OAuth pending`。
 - 下一动作：重启 Agent 后重新发起一次授权；确认 state 已消费、加密凭据与 Web Session 各自
   落库，再把本问题标记为真实解决。
+- 2026-10-16 UI 验收复核：脱敏控制库查询仍未找到当前本人 `feishu_user_credentials`，所以真实
+  OAuth 尚未完成，状态不能升级。当前租户 3 个白名单 Docx 已逐一从飞书 UI 打开并确认本人可读，
+  文档样本不是阻塞；唯一共同解锁仍是稳定 HTTPS 回调入口和本人重新授权。妙记与 Wiki 场景还
+  分别需要一条本人可读妙记和 Wiki→Docx 样本。
 
 ## 2026-10-13 文档录入误拒无标题正文、混合来源提示错误（已解决）
 
@@ -682,6 +703,39 @@
 
 更新规则：发现问题时先补复现证据；修复后记录对应测试或运行证据；没有真实 UI 证据时不得把
 `Open` 改为 `Resolved`，也不得把 `Automated Green / UI pending` 写成 `UI Verified`。
+
+## 2026-10-16 全量 UI 验收：历史 Web 查看链接失效
+
+- 问题：飞书历史日报卡的“查看完整日报”把用户带到已经失效的 Tunnelmole 临时域名，页面显示
+  `No matching tunnelmole domain`。飞书卡片本身仍可阅读，当前跟进成功卡的 Base/Task 原生
+  链接已分别通过真实 UI 回读。
+- 复现：在本人“销售agent”单聊打开 2026-10-12 日报卡的“查看完整日报”；目标为
+  `djorw5-ip-183-23-144-230.tunnelmole.net/daily-report?date=2026-10-12`。
+- 证据：
+  `docs/evidence/ui-acceptance-2026-10-16/expired-daily-report-link.png`；当前正确 Task 详情和 Base
+  记录证据分别为 `task-detail-current.png` 与 `base-followup-record-current.png`。
+- 尝试：`.env.local` 当前使用的已备案 Serveo 域名返回 `502`；恢复相同子域被 Serveo 拒绝，
+  要求先注册 SSH 公钥。随机分配的新域名会要求修改飞书 OAuth 回调，与本轮边界冲突，隧道已
+  关闭，没有修改应用配置。
+- 状态：`ISS-UI-004 / Open / blocked on stable public origin`。
+- 解锁：提供长期有效且已加入飞书 OAuth 回调白名单的 HTTPS 域名，或另行明确授权修改回调
+  地址后再做临时域名验收。历史卡片已固化的旧 URL 无法自动恢复，只能保证未来卡片使用稳定
+  入口。
+
+## 2026-10-16 全量 UI 验收：未知页面返回原始 JSON 404
+
+- 问题：浏览器直接打开未知 Web 页面 `/ui-uat-404` 时返回 NestJS JSON 404，前端已有的
+  “页面不存在”界面无法加载。
+- 根因：独立 Agent 只用 `express.static` 和显式页面控制器，没有安全的 SPA fallback。第一次
+  实现注册在 `app.init()` 之后，又被 Nest 内置 404 handler 提前截断，单测 Green 但真实 UI
+  仍失败。
+- 处理：按 `43-agent-web-spa-fallback-sdd.md` 和 TDD 新增严格 fallback，并移动到静态资源
+  之后、Nest 初始化之前；排除全部服务端前缀、静态资源、非 GET 和非 HTML 请求。
+- 证据：Red 因模块缺失失败；Green 定向 `1 file / 11 tests`、服务端/测试 TypeScript、相关
+  ESLint、Agent/Web 构建通过。真实 UI 显示“页面不存在 / 返回工作台”，未知
+  `/api/ui-uat-404` 仍返回 JSON 404；截图为
+  `docs/evidence/ui-acceptance-2026-10-16/web-not-found-fixed.png`。
+- 状态：`ISS-UI-005 / Resolved / automated green / UI Verified`。
 
 ## 2026-10-13 通用主动通知缺少 unknown 对账产品入口
 

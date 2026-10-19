@@ -65,6 +65,18 @@ const draftRecord = (confirmable = true): FollowupDraftRecord => ({
 });
 
 describe('FollowupConfirmationService', (): void => {
+  it('rejects an empty task selection before confirming or scheduling', async (): Promise<void> => {
+    const repository = { getDraft: vi.fn().mockResolvedValue(draftRecord()), markConfirmed: vi.fn() };
+    const executor = { schedule: vi.fn() };
+    const service = new FollowupConfirmationService(new MemoryControlStore([integration]),
+      repository as unknown as FollowupDraftRepository, executor as unknown as AgentActionExecutorService);
+    await expect(service.confirm({ tenantId: TENANT_ID, ownerMemberId: MEMBER_ID,
+      ownerOpenId: 'ou_owner', draftId: DRAFT_ID, expectedVersion: 1,
+      selectedTaskCandidateIds: [], traceId: 'empty-selection', now: new Date('2026-09-19T02:00:00Z'),
+    })).rejects.toMatchObject({ code: 'TASK_SELECTION_INVALID' });
+    expect(repository.markConfirmed).not.toHaveBeenCalled();
+    expect(executor.schedule).not.toHaveBeenCalled();
+  });
   it('schedules an exact confirmable version once and immediately returns executing', async (): Promise<void> => {
     const control = new MemoryControlStore([integration]);
     let record = draftRecord();

@@ -106,7 +106,7 @@ const progressAssessmentSchema = z.object({
 
 const confirmationCardActionSchema = z.object({
   action: z.enum(['confirm', 'cancel', 'retry', 'edit']),
-  pendingActionId: z.string().uuid(),
+  pendingActionId: z.string().min(1).max(128).regex(/^[a-zA-Z0-9-]+$/u),
 });
 
 const pendingActionStatusSchema = z.enum([
@@ -254,7 +254,7 @@ const parseProgressAssessment = (
 
 const pendingActionPayloadSchema = z.object({
   version: z.literal(1),
-  actionKind: z.enum(['followup', 'opportunity_status']).optional(),
+  actionKind: z.enum(['followup', 'opportunity_status', 'task']).optional(),
   interactionStage: z.enum(['input', 'generating', 'draft']).optional(),
   sourceMessageId: z.string().trim().min(1),
   rawText: z.string(),

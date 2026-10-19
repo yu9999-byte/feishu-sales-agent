@@ -9,6 +9,7 @@ import type {
   ProactiveNotificationClaimResult,
   ProactiveNotificationStateInput,
   ProactiveNotificationStore,
+  ProactiveNotificationMessage,
 } from './proactive-notification-delivery.service';
 import type {
   ProactiveNotificationReconcileInput,
@@ -18,6 +19,7 @@ import type {
 } from './proactive-notification-reconciliation.service';
 
 interface NotificationRow {
+  message_payload?: ProactiveNotificationMessage | null;
   status: 'claimed' | 'dispatching' | 'sent' | 'failed' | 'uncertain';
   claim_token: string;
   claim_expires_at: Date | string;
@@ -96,6 +98,47 @@ ProactiveNotificationReconciliationStore {
     private readonly sql: Sql,
   ) {}
 
+  async ownsSentCard(input: {
+    tenantId: string;
+    memberId: string;
+    actorOpenId: string;
+    messageId: string;
+    callback?: unknown;
+  }): Promise<boolean> {
+    const rows = await this.sql`
+      SELECT 1 FROM proactive_sales_notifications n
+      JOIN tenant_members m ON m.tenant_id=n.tenant_id
+        AND m.id=n.recipient_member_id
+      WHERE n.tenant_id=${input.tenantId}::uuid
+        AND n.recipient_member_id=${input.memberId}::uuid
+        AND n.recipient_open_id=${input.actorOpenId}
+        AND m.feishu_open_id=${input.actorOpenId} AND m.status='active'
+        AND n.message_id=${input.messageId} AND n.status='sent'
+        AND n.kind='task_action'
+        AND (${input.callback === undefined} OR EXISTS (
+          SELECT 1 FROM jsonb_array_elements(
+            COALESCE(n.message_payload->'shortcuts', '[]'::jsonb)
+          ) shortcut WHERE shortcut->'value'=${JSON.stringify(input.callback ?? null)}::text::jsonb
+        ))
+      LIMIT 1`;
+    return rows.length > 0;
+  }
+
+  async readSentCard(input: {
+    tenantId: string; memberId: string; actorOpenId: string; messageId: string;
+  }): Promise<ProactiveNotificationMessage | null> {
+    const rows = await this.sql<{ message_payload: ProactiveNotificationMessage | null }[]>`
+      SELECT n.message_payload FROM proactive_sales_notifications n
+      JOIN tenant_members m ON m.tenant_id=n.tenant_id AND m.id=n.recipient_member_id
+      WHERE n.tenant_id=${input.tenantId}::uuid
+        AND n.recipient_member_id=${input.memberId}::uuid
+        AND n.recipient_open_id=${input.actorOpenId}
+        AND m.feishu_open_id=${input.actorOpenId} AND m.status='active'
+        AND n.message_id=${input.messageId} AND n.status='sent'
+        AND n.kind='task_action' LIMIT 1`;
+    return rows[0]?.message_payload ?? null;
+  }
+
   async claim(
     input: ProactiveNotificationClaimInput,
   ): Promise<ProactiveNotificationClaimResult> {
@@ -112,6 +155,7 @@ ProactiveNotificationReconciliationStore {
         notification_key,
         subject_key,
         payload_fingerprint,
+        message_payload,
         status,
         claim_token,
         claim_expires_at,
@@ -125,6 +169,7 @@ ProactiveNotificationReconciliationStore {
         ${input.notificationKey},
         ${input.subjectKey},
         ${input.payloadFingerprint},
+        ${input.message ? JSON.stringify(input.message) : null}::text::jsonb,
         'claimed',
         ${claimToken}::uuid,
         ${claimExpiresAt},
@@ -137,9 +182,13 @@ ProactiveNotificationReconciliationStore {
         kind,
         notification_key
       ) DO UPDATE SET
-        recipient_open_id = EXCLUDED.recipient_open_id,
-        subject_key = EXCLUDED.subject_key,
-        payload_fingerprint = EXCLUDED.payload_fingerprint,
+        recipient_open_id = CASE WHEN proactive_sales_notifications.message_payload IS NULL
+          THEN EXCLUDED.recipient_open_id ELSE proactive_sales_notifications.recipient_open_id END,
+        subject_key = CASE WHEN proactive_sales_notifications.message_payload IS NULL
+          THEN EXCLUDED.subject_key ELSE proactive_sales_notifications.subject_key END,
+        payload_fingerprint = CASE WHEN proactive_sales_notifications.message_payload IS NULL
+          THEN EXCLUDED.payload_fingerprint ELSE proactive_sales_notifications.payload_fingerprint END,
+        message_payload = COALESCE(proactive_sales_notifications.message_payload, EXCLUDED.message_payload),
         status = 'claimed',
         claim_token = EXCLUDED.claim_token,
         claim_expires_at = EXCLUDED.claim_expires_at,
@@ -161,6 +210,7 @@ ProactiveNotificationReconciliationStore {
         AND proactive_sales_notifications.retry_after <= ${input.now}
       )
       RETURNING
+        message_payload,
         status,
         claim_token,
         claim_expires_at,
@@ -174,6 +224,7 @@ ProactiveNotificationReconciliationStore {
         status: 'claimed',
         claimToken: claimed.claim_token,
         attemptCount: claimed.attempt_count,
+        ...(claimed.message_payload ? { message: claimed.message_payload } : {}),
       };
     }
     const existing: NotificationRow | undefined =

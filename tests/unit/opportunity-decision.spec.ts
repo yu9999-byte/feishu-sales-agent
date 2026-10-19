@@ -214,6 +214,14 @@ const setup = (
 };
 
 describe('OpportunityDecisionService', (): void => {
+  it('reuses an authenticated aggregate task snapshot without a second read', async (): Promise<void> => {
+    const { service, analyzeTasks } = setup();
+    await service.analyze({ integration, actorOpenId: 'ou_sales_a',
+      referenceDate: '2026-10-06', timezone: 'Asia/Shanghai',
+      portfolio: portfolio(), taskReport: taskReport(),
+    });
+    expect(analyzeTasks).not.toHaveBeenCalled();
+  });
   it('ranks active opportunities by explicit risks and excludes closed ones', async (): Promise<void> => {
     const { service, analyzeTasks } = setup();
     const result: OpportunityDecisionResponse = await service.analyze({

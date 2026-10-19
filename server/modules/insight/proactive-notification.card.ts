@@ -65,6 +65,16 @@ const createProactiveNotificationCard = (
     .map((section: ProactiveNotificationSection): JsonValue =>
       sectionElement(section, template));
   const url: string | null = trustedUrl(message.actionUrl);
+  for (const shortcut of (message.shortcuts ?? []).slice(0, 8)) {
+    if (message.kind !== 'task_action' ||
+      shortcut.value.recipientOpenId !== message.recipientOpenId) continue;
+    elements.push({
+      tag: 'button',
+      text: { tag: 'plain_text', content: shortcut.label.slice(0, 100) },
+      type: 'default',
+      behaviors: [{ type: 'callback', value: { ...shortcut.value } }],
+    });
+  }
   if (url !== null && message.actionLabel) {
     elements.push({
       tag: 'button',
@@ -79,7 +89,7 @@ const createProactiveNotificationCard = (
   }
   elements.push({
     tag: 'markdown',
-    content: '<font color=\'grey\'>以上为只读提醒；涉及业务变更时仍需人工确认。</font>',
+    content: '<font color=\'grey\'>生成跟进和创建任务仍需人工确认。</font>',
     text_size: 'notation',
   });
   return {

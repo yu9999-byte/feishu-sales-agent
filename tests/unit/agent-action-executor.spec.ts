@@ -215,6 +215,78 @@ const execute = async (
 };
 
 describe('AgentActionExecutorService task selection', (): void => {
+  it('executes a standalone task action without customer, opportunity, or followup writes', async (): Promise<void> => {
+    const store = new MemoryControlStore([integration]);
+    const messenger = { updateCard: vi.fn() } as unknown as FeishuMessenger;
+    const records = {
+      upsertCustomer: vi.fn(), upsertOpportunity: vi.fn(), createFollowup: vi.fn(),
+    } as unknown as SalesRecordsGateway;
+    const tasks = {
+      createTask: vi.fn(async (): Promise<TaskCreationResult> => ({
+        guid: 'standalone-task', url: 'https://task.example/standalone-task',
+      })),
+    } as unknown as TaskGateway;
+    const action = await store.createPendingAction({
+      id: 'standalone-task-action', tenantId: TENANT_ID, actorOpenId: 'ou_owner', chatId: 'oc_chat',
+      payload: {
+        version: 1, actionKind: 'task', sourceMessageId: 'today-action:task:1:v1',
+        rawText: '发送报价',
+        draft: { customerName: null, contactName: null, opportunityName: null,
+          summary: '任务来源：今日行动', customerNeeds: [], objections: [], risks: [], progress: null,
+          expectedAmount: null, nextAction: '发送报价', dueAt: '2026-09-20T18:00:00+08:00',
+          evidenceQuotes: [], nextActionParticipants: [], nextActionChannel: null },
+      },
+      expiresAt: new Date('2026-09-21T18:00:00+08:00'),
+    });
+    const executor = new AgentActionExecutorService(store, messenger, records, tasks,
+      new FollowupProjectRiskService());
+    const result = await executor.executeImmediately(integration, action, 'trace-standalone-task');
+    expect(result).toMatchObject({ status: 'succeeded', taskGuid: 'standalone-task' });
+    expect(store.getAudits(TENANT_ID)).toContainEqual(expect.objectContaining({
+      eventType: 'task.execution.authorized.v1', actorOpenId: 'ou_owner',
+      entityId: action.id, traceId: 'trace-standalone-task',
+      details: expect.objectContaining({ version: 1, operation: 'create' }),
+    }));
+    expect(tasks.createTask).toHaveBeenCalledTimes(1);
+    await executor.executeImmediately(integration, { ...action, result }, 'trace-task-recovery');
+    expect(tasks.createTask).toHaveBeenCalledTimes(1);
+    expect(records.upsertCustomer).not.toHaveBeenCalled();
+    const updateTask = vi.fn(async (): Promise<TaskCreationResult> => ({
+      guid: 'standalone-task', url: 'https://task.example/standalone-task',
+    }));
+    tasks.updateTask = updateTask;
+    const revised = await store.createPendingAction({ id: 'task-revision', tenantId: TENANT_ID,
+      actorOpenId: action.actorOpenId, chatId: action.chatId, expiresAt: action.expiresAt,
+      payload: { ...action.payload, operationKind: 'update',
+        executionTarget: { taskGuid: 'standalone-task' } } });
+    const updated = await executor.executeImmediately(integration, revised, 'trace-task-update');
+    expect(updated.taskAction).toBe('updated');
+    expect(updateTask).toHaveBeenCalledTimes(1);
+    expect(tasks.createTask).toHaveBeenCalledTimes(1);
+    const missingTarget = await store.createPendingAction({ id: 'task-revision-missing-target', tenantId: TENANT_ID,
+      actorOpenId: action.actorOpenId, chatId: action.chatId, expiresAt: action.expiresAt,
+      payload: { ...action.payload, operationKind: 'update' } });
+    const rejected = await executor.executeImmediately(integration, missingTarget, 'trace-task-missing-target');
+    expect(rejected.status).toBe('failed');
+    expect(tasks.createTask).toHaveBeenCalledTimes(1);
+    expect(updateTask).toHaveBeenCalledTimes(1);
+    expect(records.upsertOpportunity).not.toHaveBeenCalled();
+    expect(records.createFollowup).not.toHaveBeenCalled();
+    const auditBlocked = await store.createPendingAction({ id: 'task-audit-blocked', tenantId: TENANT_ID,
+      actorOpenId: action.actorOpenId, chatId: action.chatId, expiresAt: action.expiresAt,
+      payload: action.payload });
+    vi.spyOn(store, 'appendAudit').mockRejectedValueOnce(new Error('audit unavailable'));
+    const blocked = await executor.executeImmediately(integration, auditBlocked, 'trace-audit-blocked');
+    expect(blocked.status).toBe('failed');
+    expect(tasks.createTask).toHaveBeenCalledTimes(1);
+    expect(updateTask).toHaveBeenCalledTimes(1);
+    const recovered = await store.acquirePendingAction(TENANT_ID, auditBlocked.id, action.actorOpenId,
+      ['failed'], new Date('2026-09-19T00:00:00Z'));
+    if (!recovered) throw new Error('Expected recoverable task');
+    expect((await executor.executeImmediately(integration, recovered, 'trace-audit-recovery')).status).toBe('succeeded');
+    expect(tasks.createTask).toHaveBeenCalledTimes(2);
+  });
+
   it('rejects an empty task selection before any business write', async (): Promise<void> => {
     const result = await execute([]);
     expect(result.order).toEqual([]);

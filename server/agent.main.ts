@@ -10,6 +10,8 @@ import {
   AGENT_CONFIG,
   type AgentRuntimeConfig,
 } from './config/agent.config';
+import { createAgentWebSpaFallback } from
+  './config/agent-web-spa-fallback';
 
 loadEnvironment({
   path: ['.env.local', '.env'],
@@ -23,8 +25,11 @@ const bootstrap = async (): Promise<void> => {
   const config: AgentRuntimeConfig = app.get(AGENT_CONFIG);
   const logger: Logger = new Logger('SalesAgentBootstrap');
 
-  app.use(express.static(join(process.cwd(), 'dist/agent-web')));
+  const webRoot: string = join(process.cwd(), 'dist/agent-web');
+  app.use(express.static(webRoot));
+  app.use(createAgentWebSpaFallback(join(webRoot, 'agent.html')));
   app.enableShutdownHooks();
+  await app.init();
   await app.listen(config.port, config.host);
   logger.log(`Sales Agent listening on ${config.host}:${config.port}`);
   logger.log('Feishu event endpoint: /webhooks/feishu/events');

@@ -4,11 +4,13 @@ import {
   Inject,
   Injectable,
   Logger,
+  Optional,
   type OnModuleDestroy,
   type OnModuleInit,
 } from '@nestjs/common';
 import * as lark from '@larksuiteoapi/node-sdk';
 import { z } from 'zod';
+import { TodayActionCardService } from '@server/modules/insight/today-action-card.service';
 
 import type { Request, Response } from 'express';
 import type { JsonObject } from '@shared/api.interface';
@@ -113,6 +115,7 @@ class FeishuWebhookBridge implements OnModuleInit, OnModuleDestroy {
     @Inject(AGENT_CONFIG)
     private readonly config: AgentRuntimeConfig,
     private readonly taskEventIngestion: TaskEventIngestionService,
+    @Optional() private readonly todayActionCards?: TodayActionCardService,
   ) {
     this.sdkLogger = this.createSdkLogger();
     this.eventDispatcher =
@@ -215,7 +218,9 @@ class FeishuWebhookBridge implements OnModuleInit, OnModuleDestroy {
       }).register({
         'card.action.trigger': async (data: unknown): Promise<unknown> => {
           const incoming: IncomingCardAction = this.mapCardAction(data);
-          return this.workflow.handleCardAction(incoming);
+          return ['today_action', 'today_task_confirm'].includes(String(incoming.value.action)) && this.todayActionCards
+            ? this.todayActionCards.handle(incoming)
+            : this.workflow.handleCardAction(incoming);
         },
       });
     const cardActionHandler: lark.CardActionHandler =
@@ -228,7 +233,9 @@ class FeishuWebhookBridge implements OnModuleInit, OnModuleDestroy {
         },
         async (data: unknown): Promise<unknown> => {
           const incoming: IncomingCardAction = this.mapCardAction(data);
-          return this.workflow.handleCardAction(incoming);
+          return ['today_action', 'today_task_confirm'].includes(String(incoming.value.action)) && this.todayActionCards
+            ? this.todayActionCards.handle(incoming)
+            : this.workflow.handleCardAction(incoming);
         },
       );
 
@@ -490,3 +497,4 @@ class FeishuWebhookBridge implements OnModuleInit, OnModuleDestroy {
 }
 
 export { decodeCardCallbackObject, FeishuWebhookBridge };
+

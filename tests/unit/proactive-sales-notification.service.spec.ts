@@ -234,3 +234,59 @@ describe('ProactiveSalesNotificationService', (): void => {
     expect(deps.tasks.analyze).not.toHaveBeenCalled();
   });
 });
+
+it('runs due reminders outside daily windows with delivery disabled and rereads resolved state', async () => {
+  const deps = dependencies();
+  const settings = config(true, false);
+  settings.proactiveSalesNotifications!.enabledKinds = ['task_action'];
+  const due = { itemId: 'task:1', itemVersion: 'v1', revision: 1,
+    status: 'snoozed' as const, remindAt: '2026-10-12T02:00:00Z' };
+  const states = { listDue: vi.fn().mockResolvedValue([due]),
+    read: vi.fn().mockResolvedValue({ ...due, status: 'resolved' }) };
+  const actions = { analyze: vi.fn().mockResolvedValue({ items: [] }) };
+  deps.sessions.getSessionByMembership.mockResolvedValue({
+    ...(await deps.sessions.getSessionByMembership()),
+    permissions: ['customer:read', 'opportunity:read', 'task:read'],
+  });
+  const service = new ProactiveSalesNotificationService(settings,
+    deps.control, deps.identity, deps.sessions, deps.tasks, deps.opportunities,
+    deps.dailyReports, deps.teamReviews, deps.planner, deps.delivery, deps.riskStates,
+    actions as unknown as import('@server/modules/insight/today-action.service').TodayActionService,
+    states as unknown as import('@server/modules/insight/postgres-today-action-state.store').PostgresTodayActionStateStore);
+  await service.run({ now: new Date('2026-10-12T03:17:00Z') });
+  expect(states.listDue).toHaveBeenCalledOnce();
+  expect(states.read).toHaveBeenCalledOnce();
+  expect(actions.analyze).toHaveBeenCalledOnce();
+  expect(deps.delivery.deliver).not.toHaveBeenCalled();
+  expect(deps.tasks.analyze).not.toHaveBeenCalled();
+});
+
+it('uses the complete action report and persisted state for the daily digest', async () => {
+  const deps = dependencies();
+  const settings = config(true, true);
+  settings.proactiveSalesNotifications!.enabledKinds = ['task_action'];
+  const state = { itemId: 'customer:1', itemVersion: 'v1', revision: 0,
+    status: 'open' as const, remindAt: null };
+  const item = { id: 'customer:1', version: 'v1', kind: 'customer_followup', sourceId: 'source',
+    customerRecordId: 'customer', title: '客户跟进', reason: '客户承诺今日沟通', evidence: ['约定记录'],
+    suggestedAction: '联系客户', suggestedCompletionDate: '2026-10-12', sourceUrl: null, state };
+  const actions = { analyze: vi.fn().mockResolvedValue({ items: [item], warnings: [] }) };
+  const states = { listDue: vi.fn().mockResolvedValue([]), read: vi.fn().mockResolvedValue(null) };
+  deps.sessions.getSessionByMembership.mockResolvedValue({
+    ...(await deps.sessions.getSessionByMembership()),
+    permissions: ['customer:read', 'opportunity:read', 'task:read'],
+  });
+  deps.delivery.deliver.mockResolvedValue({ status: 'sent', reason: 'delivered', messageId: 'card' });
+  const service = new ProactiveSalesNotificationService(settings,
+    deps.control, deps.identity, deps.sessions, deps.tasks, deps.opportunities,
+    deps.dailyReports, deps.teamReviews, deps.planner, deps.delivery, deps.riskStates,
+    actions as unknown as import('@server/modules/insight/today-action.service').TodayActionService,
+    states as unknown as import('@server/modules/insight/postgres-today-action-state.store').PostgresTodayActionStateStore);
+  await service.run({ now: new Date('2026-10-12T01:05:00Z') });
+  expect(JSON.stringify(deps.delivery.deliver.mock.calls)).toContain('客户承诺今日沟通');
+  expect(deps.tasks.analyze).not.toHaveBeenCalled();
+  deps.delivery.deliver.mockClear();
+  states.read.mockResolvedValue({ ...state, status: 'resolved' });
+  await service.run({ now: new Date('2026-10-12T01:05:00Z') });
+  expect(deps.delivery.deliver).not.toHaveBeenCalled();
+});

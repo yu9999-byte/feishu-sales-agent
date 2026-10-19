@@ -1,3 +1,5 @@
+import type { TodayActionCardAction } from './today-action-card-contract';
+
 interface ProactiveNotificationSection {
   title: string;
   lines: string[];
@@ -22,6 +24,7 @@ interface ProactiveNotificationMessage {
   sections: ProactiveNotificationSection[];
   actionLabel?: string;
   actionUrl?: string;
+  shortcuts?: Array<{ label: string; value: TodayActionCardAction }>;
   payloadFingerprint: string;
 }
 
@@ -34,12 +37,13 @@ interface ProactiveNotificationClaimInput {
   subjectKey: string;
   payloadFingerprint: string;
   now: Date;
+  message?: ProactiveNotificationMessage;
   claimDurationMs: number;
   maxAttempts: number;
 }
 
 type ProactiveNotificationClaimResult =
-  | { status: 'claimed'; claimToken: string; attemptCount: number }
+  | { status: 'claimed'; claimToken: string; attemptCount: number; message?: ProactiveNotificationMessage }
   | { status: 'in_flight' | 'already_sent' | 'delivery_unknown' }
   | { status: 'retry_scheduled' | 'attempts_exhausted'; retryAt?: Date };
 
@@ -140,6 +144,7 @@ class ProactiveNotificationDeliveryService {
       notificationKey: input.message.notificationKey,
       subjectKey: input.message.subjectKey,
       payloadFingerprint: input.message.payloadFingerprint,
+      message: input.message,
       now,
       claimDurationMs: CLAIM_DURATION_MS,
       maxAttempts: MAX_ATTEMPTS,
@@ -171,7 +176,7 @@ class ProactiveNotificationDeliveryService {
 
     try {
       const result: { messageId: string } =
-        await this.sender.send(input.message);
+        await this.sender.send(claim.message ?? input.message);
       const marked: boolean = await this.store.markSent({
         ...state,
         messageId: result.messageId,

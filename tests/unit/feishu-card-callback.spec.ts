@@ -5,6 +5,7 @@ import type { AgentRuntimeConfig } from '@server/config/agent.config';
 import type { AgentWorkflowService } from '@server/modules/agent-core/agent-workflow.service';
 import type { TaskEventIngestionService } from
   '@server/modules/agent-core/task-event-ingestion.service';
+import type { TodayActionCardService } from '@server/modules/insight/today-action-card.service';
 import {
   decodeCardCallbackObject,
   FeishuWebhookBridge,
@@ -76,6 +77,7 @@ describe('Feishu long connection', (): void => {
         workflow,
         runtimeConfig,
         taskEventIngestion,
+        { handle: vi.fn(async () => cardResponse) } as unknown as TodayActionCardService,
       );
 
       await bridge.onModuleInit();
@@ -130,6 +132,15 @@ describe('Feishu long connection', (): void => {
         operatorOpenId: 'user-1',
       }));
       expect(result).toEqual(cardResponse);
+
+      handleCardAction.mockClear();
+      await dispatcher.invoke({ schema: '2.0', header: {
+        event_type: 'card.action.trigger', tenant_key: 'tenant-1', event_id: 'today-event',
+      }, event: { token: 'callback-token', operator: { open_id: 'user-1' },
+        context: { open_message_id: 'card-1', open_chat_id: 'chat-1' },
+        action: { tag: 'button', value: { action: 'today_action' } },
+      } }, { needCheck: false });
+      expect(handleCardAction).not.toHaveBeenCalled();
 
       await dispatcher.invoke({
         schema: '2.0',

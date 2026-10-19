@@ -82,6 +82,21 @@ const createInput = (
 });
 
 describe('LangGraphConversationAssistant', (): void => {
+  it('grounds a reference request in the previous user turn only in the same thread', async (): Promise<void> => {
+    const model: StubIntentModel = new StubIntentModel();
+    const checkpointer: TestCheckpointer = new TestCheckpointer();
+    const assistant: LangGraphConversationAssistant = new LangGraphConversationAssistant(model, checkpointer);
+    const context: ConversationInput['context'] = { tenantId: 'tenant-a', actorOpenId: 'ou-a', chatId: 'oc-a' };
+    const source: string = '今天电话联系测试客户陈经理，下周五评审接口清单。';
+    await assistant.respond(createInput(context, source));
+    vi.spyOn(model, 'invoke').mockResolvedValue({ schemaVersion: 'conversation-intent-v1', intent: 'followup_capture', confidence: 0.98, reply: '生成草案' });
+    const request: string = '根据刚才内容生成跟进，关联新商机，并创建本人待办。';
+    expect(await assistant.respond(createInput({ ...context, sourceMessageId: 'm2' }, request)))
+      .toMatchObject({ followupSourceText: `${source}\n${request}` });
+    expect(await assistant.respond(createInput({ ...context, chatId: 'oc-other' }, request)))
+      .not.toHaveProperty('followupSourceText');
+  });
+
   it('rejects missing tenant, actor, or chat boundaries', async (): Promise<void> => {
     const model: StubIntentModel = new StubIntentModel();
     const checkpointer: TestCheckpointer = new TestCheckpointer();
@@ -120,6 +135,8 @@ describe('LangGraphConversationAssistant', (): void => {
       .toContain('客户说预算下周批 -> ambiguous');
     expect(model.prompts[0])
       .toContain('怎样追问客户预算 -> sales_qa');
+    expect(model.prompts[0])
+      .toContain('帮我准备和某客户沟通”时使用 customer_preparation');
 
     const checkpoint = await checkpointer.saver.getTuple({
       configurable: {
@@ -127,6 +144,30 @@ describe('LangGraphConversationAssistant', (): void => {
       },
     });
     expect(checkpoint).toBeDefined();
+  });
+
+  it('accepts the customer preparation intent without changing thread boundaries', async (): Promise<void> => {
+    const model: StubIntentModel = new StubIntentModel();
+    const checkpointer: TestCheckpointer = new TestCheckpointer();
+    vi.spyOn(model, 'invoke').mockResolvedValue({
+      schemaVersion: 'conversation-intent-v1',
+      intent: 'customer_preparation',
+      confidence: 0.96,
+      reply: '我先为你准备沟通草案。',
+    });
+    const assistant: LangGraphConversationAssistant =
+      new LangGraphConversationAssistant(model, checkpointer);
+
+    const decision: ConversationDecision = await assistant.respond(
+      createInput({
+        tenantId: 'tenant-a',
+        actorOpenId: 'ou-sales-a',
+        chatId: 'oc-chat-a',
+      }, '帮我准备和华南科技沟通'),
+    );
+
+    expect(decision.intent).toBe('customer_preparation');
+    expect(decision.reply).toContain('沟通草案');
   });
 
   it('adds ACL-scoped Mem0 preferences to the intent prompt', async (): Promise<void> => {

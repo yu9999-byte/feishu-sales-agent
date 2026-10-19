@@ -120,12 +120,23 @@ const opportunityReport = (
 });
 
 describe('ProactiveNotificationPlannerService', (): void => {
+  it('fixes snooze time at planning and retains stable callback keys', (): void => {
+    const planner = new ProactiveNotificationPlannerService();
+    const timedScope = { ...scope, now: new Date('2026-10-12T01:00:00Z') };
+    const first = planner.planTaskAction(timedScope, taskReport());
+    const second = planner.planTaskAction(timedScope, taskReport());
+    const snooze = first?.shortcuts?.find((shortcut) => shortcut.value.operation === 'snooze');
+    expect(snooze?.value.remindAt).toBe('2026-10-12T02:00:00.000Z');
+    expect(first?.shortcuts).toEqual(second?.shortcuts);
+    expect(first?.shortcuts?.length).toBeLessThanOrEqual(8);
+  });
   it('merges overdue, due today and due tomorrow into one task card', (): void => {
     const planner = new ProactiveNotificationPlannerService();
     const planned = planner.planTaskAction(scope, taskReport());
 
     expect(planned).not.toBeNull();
     expect(planned?.kind).toBe('task_action');
+    expect(planned?.shortcuts?.some((shortcut) => shortcut.value.operation === 'resolve')).toBe(true);
     expect(planned?.sections.map((section) => section.title)).toEqual([
       '已逾期 · 1', '今日到期 · 1', '明日到期 · 1',
     ]);

@@ -7,6 +7,7 @@ export default defineConfig({
     alias: {
       '@server': resolve(process.cwd(), 'server'),
       '@shared': resolve(process.cwd(), 'shared'),
+      '@': resolve(process.cwd(), 'client/src'),
     },
   },
   test: {
