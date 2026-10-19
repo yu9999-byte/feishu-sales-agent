@@ -26,6 +26,8 @@ import { CustomerCommunicationPreparationService } from
   './customer-communication-preparation.service';
 import { CustomerPreparationAccessService } from
   './customer-preparation-access.service';
+import { CustomerPreparationOrchestratorService } from
+  './customer-preparation-orchestrator.service';
 import { OpportunityDecisionController } from
   './opportunity-decision.controller';
 import { OpportunityDecisionService } from './opportunity-decision.service';
@@ -54,6 +56,7 @@ import { TaskFulfillmentModule } from './task-fulfillment.module';
     CustomerVisitBriefingService,
     CustomerCommunicationPreparationService,
     CustomerPreparationAccessService,
+    CustomerPreparationOrchestratorService,
     {
       provide: OPPORTUNITY_DECISION_READER,
       useExisting: OpportunityDecisionService,
@@ -64,6 +67,7 @@ import { TaskFulfillmentModule } from './task-fulfillment.module';
     TodayActionService,
     OpportunityDecisionService,
     CustomerPreparationAccessService,
+    CustomerPreparationOrchestratorService,
     OPPORTUNITY_DECISION_READER,
   ],
 })
