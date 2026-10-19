@@ -376,6 +376,41 @@ export class AgentWorkflowService {
     message: IncomingMessage,
     context: ConversationContext,
   ): Promise<void> {
+    const preparationSession: AgentSession | null =
+      await this.store.getOpenPreparationSession(
+        integration.tenantId,
+        message.senderOpenId,
+      );
+    if (preparationSession?.chatId === message.chatId) {
+      if (this.isFollowupCancelCommand(message.text)) {
+        await this.store.closeSession(
+          integration.tenantId,
+          message.senderOpenId,
+        );
+        await this.messenger.sendText(
+          integration,
+          message.chatId,
+          '已取消本次客户沟通准备，尚未发送消息或写入业务数据。',
+          `${message.messageId}-cancel-preparation`,
+        );
+        return;
+      }
+      await this.store.savePreparationClarificationSession({
+        tenantId: integration.tenantId,
+        actorOpenId: message.senderOpenId,
+        chatId: message.chatId,
+        sourceMessageId: preparationSession.sourceMessageId,
+        rawText: `${preparationSession.rawText}\n${message.text}`,
+        expiresAt: new Date(message.receivedAt.getTime() + SESSION_TTL_MS),
+      });
+      await this.messenger.sendText(
+        integration,
+        message.chatId,
+        '已补充准备条件。我会继续核对客户、沟通时间和目的；确认后再生成完整准备包。',
+        `${message.messageId}-preparation-clarification`,
+      );
+      return;
+    }
     const storedSession: AgentSession | null =
       await this.store.getOpenSession(
         integration.tenantId,
@@ -669,6 +704,28 @@ export class AgentWorkflowService {
           integration,
           message,
           prefillSource ?? undefined,
+        );
+        return;
+      }
+      if (
+        decision.intent === 'customer_preparation' &&
+        decision.confidence >= 0.55
+      ) {
+        await this.store.savePreparationClarificationSession({
+          tenantId: integration.tenantId,
+          actorOpenId: message.senderOpenId,
+          chatId: message.chatId,
+          sourceMessageId: message.messageId,
+          rawText: message.text,
+          expiresAt: new Date(
+            message.receivedAt.getTime() + SESSION_TTL_MS,
+          ),
+        });
+        await this.finishConversationWaiting(
+          integration,
+          message,
+          waitingMessageId,
+          '已识别为客户沟通准备。请补充客户名称、沟通时间和沟通目的；暂不会发送消息或写入业务数据。',
         );
         return;
       }
