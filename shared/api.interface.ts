@@ -42,6 +42,7 @@ export interface FollowupDraft {
 
 export type AgentSessionState =
   | 'collecting'
+  | 'preparation_clarifying'
   | 'pendingConfirmation'
   | 'closed';
 

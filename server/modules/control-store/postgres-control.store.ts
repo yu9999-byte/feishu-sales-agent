@@ -20,6 +20,7 @@ import type {
   PendingAction,
   SaveCollectingSessionInput,
   SaveIntentClarificationSessionInput,
+  SavePreparationClarificationSessionInput,
   TaskStatusEvent,
   TaskStatusEventResult,
   TenantIntegration,
@@ -329,6 +330,45 @@ export class PostgresControlStore
         expires_at,
         created_at,
         updated_at
+    `;
+    return this.requireSessionRow(rows);
+  }
+
+  async getOpenPreparationSession(
+    tenantId: string,
+    actorOpenId: string,
+  ): Promise<AgentSession | null> {
+    const rows: SessionRow[] = await this.sql<SessionRow[]>`
+      SELECT id, tenant_id, actor_open_id, chat_id, state,
+        source_message_id, raw_text, draft, expires_at, created_at, updated_at
+      FROM agent_sessions
+      WHERE tenant_id = ${tenantId} AND actor_open_id = ${actorOpenId}
+        AND state = 'preparation_clarifying' AND expires_at > CURRENT_TIMESTAMP
+      LIMIT 1
+    `;
+    const row: SessionRow | undefined = rows[0];
+    return row ? this.mapSession(row) : null;
+  }
+
+  async savePreparationClarificationSession(
+    input: SavePreparationClarificationSessionInput,
+  ): Promise<AgentSession> {
+    const rows: SessionRow[] = await this.sql<SessionRow[]>`
+      INSERT INTO agent_sessions (
+        tenant_id, actor_open_id, chat_id, state, source_message_id,
+        raw_text, draft, expires_at
+      ) VALUES (
+        ${input.tenantId}, ${input.actorOpenId}, ${input.chatId},
+        'preparation_clarifying', ${input.sourceMessageId}, ${input.rawText},
+        NULL, ${input.expiresAt}
+      )
+      ON CONFLICT (tenant_id, actor_open_id) DO UPDATE SET
+        chat_id = EXCLUDED.chat_id, state = 'preparation_clarifying',
+        source_message_id = EXCLUDED.source_message_id,
+        raw_text = EXCLUDED.raw_text, draft = NULL,
+        expires_at = EXCLUDED.expires_at, updated_at = CURRENT_TIMESTAMP
+      RETURNING id, tenant_id, actor_open_id, chat_id, state,
+        source_message_id, raw_text, draft, expires_at, created_at, updated_at
     `;
     return this.requireSessionRow(rows);
   }

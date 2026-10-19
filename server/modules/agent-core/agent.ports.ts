@@ -20,6 +20,7 @@ import type {
   SalesRecordResult,
   SaveCollectingSessionInput,
   SaveIntentClarificationSessionInput,
+  SavePreparationClarificationSessionInput,
   SalesContextBaseResult,
   SalesContextHints,
   SalesContextTaskResult,
@@ -68,6 +69,13 @@ export interface ControlStore {
   ): Promise<AgentSession>;
   saveIntentClarificationSession(
     input: SaveIntentClarificationSessionInput,
+  ): Promise<AgentSession>;
+  getOpenPreparationSession(
+    tenantId: string,
+    actorOpenId: string,
+  ): Promise<AgentSession | null>;
+  savePreparationClarificationSession(
+    input: SavePreparationClarificationSessionInput,
   ): Promise<AgentSession>;
   closeSession(tenantId: string, actorOpenId: string): Promise<void>;
   createPendingAction(

@@ -201,6 +201,15 @@ export interface SaveIntentClarificationSessionInput {
   expiresAt: Date;
 }
 
+export interface SavePreparationClarificationSessionInput {
+  tenantId: string;
+  actorOpenId: string;
+  chatId: string;
+  sourceMessageId: string;
+  rawText: string;
+  expiresAt: Date;
+}
+
 export interface CreatePendingActionInput {
   id: string;
   tenantId: string;

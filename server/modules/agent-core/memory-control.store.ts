@@ -10,6 +10,7 @@ import type {
   PendingAction,
   SaveCollectingSessionInput,
   SaveIntentClarificationSessionInput,
+  SavePreparationClarificationSessionInput,
   TenantIntegration,
   TaskStatusEvent,
   TaskStatusEventResult,
@@ -157,6 +158,44 @@ export class MemoryControlStore implements ControlStore {
       actorOpenId: input.actorOpenId,
       chatId: input.chatId,
       state: 'collecting',
+      sourceMessageId: input.sourceMessageId,
+      rawText: input.rawText,
+      draft: null,
+      expiresAt: new Date(input.expiresAt),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    this.sessions.set(key, session);
+    return clone(session);
+  }
+
+  async getOpenPreparationSession(
+    tenantId: string,
+    actorOpenId: string,
+  ): Promise<AgentSession | null> {
+    const key: string = this.sessionKey(tenantId, actorOpenId);
+    const session: AgentSession | undefined = this.sessions.get(key);
+    if (!session || session.state !== 'preparation_clarifying') return null;
+    if (session.expiresAt.getTime() <= Date.now()) {
+      session.state = 'closed';
+      session.updatedAt = new Date();
+      return null;
+    }
+    return clone(session);
+  }
+
+  async savePreparationClarificationSession(
+    input: SavePreparationClarificationSessionInput,
+  ): Promise<AgentSession> {
+    const key: string = this.sessionKey(input.tenantId, input.actorOpenId);
+    const existing: AgentSession | undefined = this.sessions.get(key);
+    const now: Date = new Date();
+    const session: AgentSession = {
+      id: existing?.id ?? crypto.randomUUID(),
+      tenantId: input.tenantId,
+      actorOpenId: input.actorOpenId,
+      chatId: input.chatId,
+      state: 'preparation_clarifying',
       sourceMessageId: input.sourceMessageId,
       rawText: input.rawText,
       draft: null,
