@@ -10,6 +10,7 @@ import type {
   TrustedWebIdentity,
 } from '@server/modules/identity-access/identity-access.ports';
 import type {
+  AuthorizationAuditInput,
   PlatformMember,
   ReportingRelation,
   ResourceGrant,
@@ -39,6 +40,12 @@ const identity: TrustedWebIdentity = {
 };
 
 class FakeIdentityAccessRepository implements IdentityAccessRepository {
+  readonly authorizationAudits: AuthorizationAuditInput[] = [];
+
+  async appendAuthorizationAudit(input: AuthorizationAuditInput): Promise<void> {
+    this.authorizationAudits.push(structuredClone(input));
+  }
+
   constructor(
     private readonly member: PlatformMember | null,
     private readonly roleAssignments: RoleAssignment[],

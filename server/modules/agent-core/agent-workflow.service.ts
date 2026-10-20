@@ -5,6 +5,7 @@ import {
   Optional,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { preparationResultNotification } from './preparation-result-notification';
 
 import type {
   ConfirmationCardAction,
@@ -27,6 +28,7 @@ import {
   SALES_RECORDS_GATEWAY,
   SALES_CONTEXT_READER,
 } from './agent.ports';
+import { LANGCHAIN_INTENT_MODEL } from '@server/modules/llm/langchain-intent.model';
 import type {
   ControlStore,
   ConversationAssistant,
@@ -103,6 +105,21 @@ import {
 } from '@server/modules/knowledge/playbook-optimization.ports';
 import { FeishuWebAuthService } from
   '@server/modules/web-auth/feishu-web-auth.service';
+import type { PreparationConditions } from '@server/modules/insight/customer-preparation-context';
+import {
+  mergePreparationConditions,
+  type PreparationContext,
+} from '@server/modules/insight/customer-preparation-context';
+import { CustomerPreparationOrchestratorService } from
+  '@server/modules/insight/customer-preparation-orchestrator.service';
+interface PreparationConditionExtractor {
+  extractPreparation(input: {
+    text: string;
+    timezone: string;
+    now: Date;
+    previous: PreparationConditions | null;
+  }): Promise<PreparationConditions>;
+}
 
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const ACTION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -156,6 +173,11 @@ export class AgentWorkflowService {
     private readonly webAuth?: FeishuWebAuthService,
     @Optional()
     private readonly documentIngestion?: DocumentIngestionService,
+    @Optional()
+    @Inject(LANGCHAIN_INTENT_MODEL)
+    private readonly preparationModel?: PreparationConditionExtractor,
+    @Optional()
+    private readonly preparationOrchestrator?: CustomerPreparationOrchestratorService,
   ) {}
 
   async handleMessage(message: IncomingMessage): Promise<void> {
@@ -375,17 +397,20 @@ export class AgentWorkflowService {
     integration: TenantIntegration,
     message: IncomingMessage,
     context: ConversationContext,
+    classifiedDecision?: ConversationDecision,
   ): Promise<void> {
     const preparationSession: AgentSession | null =
       await this.store.getOpenPreparationSession(
         integration.tenantId,
         message.senderOpenId,
+        message.chatId,
       );
     if (preparationSession?.chatId === message.chatId) {
       if (this.isFollowupCancelCommand(message.text)) {
-        await this.store.closeSession(
+        await this.store.closePreparationSession(
           integration.tenantId,
           message.senderOpenId,
+          message.chatId,
         );
         await this.messenger.sendText(
           integration,
@@ -395,20 +420,61 @@ export class AgentWorkflowService {
         );
         return;
       }
-      await this.store.savePreparationClarificationSession({
-        tenantId: integration.tenantId,
-        actorOpenId: message.senderOpenId,
-        chatId: message.chatId,
-        sourceMessageId: preparationSession.sourceMessageId,
-        rawText: `${preparationSession.rawText}\n${message.text}`,
-        expiresAt: new Date(message.receivedAt.getTime() + SESSION_TTL_MS),
-      });
-      await this.messenger.sendText(
-        integration,
+
+      const preparationContext: ConversationContext = {
+        ...context,
+        activeWorkflow: 'customer_preparation',
+        activeSourceText: preparationSession.rawText,
+      };
+      let decision: ConversationDecision;
+      try {
+        decision = await this.conversation.respond({
+          text: message.text,
+          timezone: 'Asia/Shanghai',
+          now: message.receivedAt,
+          context: preparationContext,
+        });
+      } catch (error: unknown) {
+        await this.handleMessageFailure(
+          integration,
+          message,
+          error,
+          null,
+          '准备条件已保留。这条消息暂未处理，请稍后重试或补充准备信息。',
+        );
+        return;
+      }
+
+      if (
+        decision.intent === 'customer_preparation' ||
+        decision.intent === 'ambiguous' ||
+        decision.confidence < 0.55
+      ) {
+        await this.processPreparationTurn(
+          integration,
+          message,
+          preparationSession,
+        );
+        return;
+      }
+
+      const closed: boolean = await this.store.closePreparationSession(
+        integration.tenantId,
+        message.senderOpenId,
         message.chatId,
-        '已补充准备条件。我会继续核对客户、沟通时间和目的；确认后再生成完整准备包。',
-        `${message.messageId}-preparation-clarification`,
+        preparationSession.revision,
       );
+      if (!closed) {
+        await this.messenger.sendText(
+          integration,
+          message.chatId,
+          '准备条件刚被更新，我没有处理这条旧消息。请重发这条消息。',
+          `${message.messageId}-preparation-route-conflict`,
+        );
+        return;
+      }
+
+      await this.processMessage(integration, message, context, decision);
       return;
     }
     const storedSession: AgentSession | null =
@@ -470,7 +536,7 @@ export class AgentWorkflowService {
         activeWorkflow: 'record_or_analyze',
         activeSourceText: session.rawText,
       };
-      const decision: ConversationDecision = await this.conversation.respond({
+      const decision: ConversationDecision = classifiedDecision ?? await this.conversation.respond({
         text: message.text,
         timezone: 'Asia/Shanghai',
         now: message.receivedAt,
@@ -638,7 +704,7 @@ export class AgentWorkflowService {
       }
       let decision: ConversationDecision;
       try {
-        decision = await this.conversation.respond({
+        decision = classifiedDecision ?? await this.conversation.respond({
           text: message.text,
           timezone: 'Asia/Shanghai',
           now: message.receivedAt,
@@ -711,22 +777,7 @@ export class AgentWorkflowService {
         decision.intent === 'customer_preparation' &&
         decision.confidence >= 0.55
       ) {
-        await this.store.savePreparationClarificationSession({
-          tenantId: integration.tenantId,
-          actorOpenId: message.senderOpenId,
-          chatId: message.chatId,
-          sourceMessageId: message.messageId,
-          rawText: message.text,
-          expiresAt: new Date(
-            message.receivedAt.getTime() + SESSION_TTL_MS,
-          ),
-        });
-        await this.finishConversationWaiting(
-          integration,
-          message,
-          waitingMessageId,
-          '已识别为客户沟通准备。请补充客户名称、沟通时间和沟通目的；暂不会发送消息或写入业务数据。',
-        );
+        await this.processPreparationTurn(integration, message, null, waitingMessageId);
         return;
       }
       if (decision.intent === 'memory_save' && decision.confidence >= 0.55) {
@@ -909,6 +960,192 @@ export class AgentWorkflowService {
       message,
       { context: activeContext, decision, waitingMessageId },
     );
+  }
+
+  private async processPreparationTurn(
+    integration: TenantIntegration,
+    message: IncomingMessage,
+    session: AgentSession | null,
+    waitingMessageId: string | null = null,
+  ): Promise<void> {
+    if (!this.preparationModel) {
+      await this.messenger.sendText(
+        integration,
+        message.chatId,
+        '客户沟通准备暂时不可用，请稍后重试。业务数据尚未写入。',
+        `${message.messageId}-preparation-unavailable`,
+      );
+      return;
+    }
+    const previous: PreparationConditions | null =
+      session?.preparationContext?.conditions ?? null;
+    const baseline: AgentSession | null = session ??
+      await this.store.getOpenPreparationSession(
+        integration.tenantId, message.senderOpenId, message.chatId, true,
+      );
+    // A concurrent message may have started a session during intent detection.
+    if (!session && baseline?.state === 'preparation_clarifying' &&
+      baseline.expiresAt.getTime() > Date.now()) return;
+    const candidates = session?.preparationContext?.candidates;
+    const selection = /^选择\s*(\d+)$/u.exec(message.text.trim());
+    const selected = candidates && selection ? candidates[Number(selection[1]) - 1] : undefined;
+    if (selection && !selected) {
+      await this.messenger.sendText(
+        integration, message.chatId,
+        candidates?.length ? `请回复“选择 N”，N 为 1 到 ${candidates.length}。` : '当前没有待选择的客户，请重新提供客户名称。',
+        `${message.messageId}-preparation-selection-invalid`,
+      );
+      return;
+    }
+    let extracted: PreparationConditions;
+    try {
+      extracted = selected && previous ? previous : await this.preparationModel.extractPreparation({
+        text: message.text,
+        timezone: 'Asia/Shanghai',
+        now: message.receivedAt,
+        previous,
+      });
+    } catch {
+      await this.messenger.sendText(
+        integration,
+        message.chatId,
+        '我没有可靠识别出客户、沟通时间或目的，请补充明确内容后重试。',
+        `${message.messageId}-preparation-invalid`,
+      );
+      return;
+    }
+    const rawText: string = session ? `${session.rawText}\n${message.text}` : message.text;
+    const turnCount: number = (session?.preparationContext?.turnCount ?? 0) + 1;
+    let conditions: PreparationConditions;
+    try {
+      conditions = mergePreparationConditions(
+        previous,
+        extracted,
+        turnCount,
+        rawText.length,
+      );
+    } catch {
+      await this.messenger.sendText(
+        integration,
+        message.chatId,
+        '准备信息已超过可处理范围，请重新发起一次客户沟通准备。',
+        `${message.messageId}-preparation-limit`,
+      );
+      return;
+    }
+    const context: PreparationContext = {
+      conditions, turnCount, ...(selected ? { candidates } : {}),
+    };
+    const missing: string[] = [];
+    if (!conditions.customerName) missing.push('客户名称');
+    if (!conditions.communicationAt) missing.push('沟通时间（含时区）');
+    if (!conditions.purpose) missing.push('沟通目的');
+    const saved: AgentSession = await this.store.savePreparationClarificationSession({
+        tenantId: integration.tenantId,
+        actorOpenId: message.senderOpenId,
+        chatId: message.chatId,
+        sourceMessageId: session?.sourceMessageId ?? message.messageId,
+        rawText,
+        preparationContext: context,
+        expectedRevision: baseline?.revision ?? 0,
+        expiresAt: new Date(message.receivedAt.getTime() + SESSION_TTL_MS),
+    });
+    if (missing.length > 0 || !this.preparationOrchestrator) {
+      const clarification: string = missing.length > 0
+        ? `还缺少：${missing.join('、')}。`
+        : '条件已保存，准备服务暂时不可用，请稍后重试。';
+      if (waitingMessageId) {
+        await this.finishConversationWaiting(
+          integration,
+          message,
+          waitingMessageId,
+          `已识别为客户沟通准备，${clarification}`,
+        );
+      } else {
+        await this.messenger.sendText(
+          integration,
+          message.chatId,
+          `已记录准备信息，${clarification}`,
+          `${message.messageId}-preparation-clarification`,
+        );
+      }
+      return;
+    }
+    let result: Awaited<ReturnType<CustomerPreparationOrchestratorService['prepare']>>;
+    try {
+      result = await this.preparationOrchestrator.prepare({
+      integration,
+      actorOpenId: message.senderOpenId,
+      request: conditions,
+      ...(selected ? { selectedCustomerRecordId: selected.recordId } : {}),
+      timezone: 'Asia/Shanghai',
+      now: message.receivedAt,
+      });
+    } catch {
+      result = { status: 'unavailable', reason: 'source_unavailable' };
+    }
+    const current: AgentSession | null = await this.store.getOpenPreparationSession(
+      integration.tenantId, message.senderOpenId, message.chatId,
+    );
+    if (!current || current.revision !== saved.revision) return;
+    if (result.status !== 'ready') {
+      if (result.status === 'clarification_required' && result.candidates.length > 0) {
+        const visibleCandidates = result.candidates.slice(0, 20);
+        await this.store.savePreparationClarificationSession({
+          tenantId: integration.tenantId,
+          actorOpenId: message.senderOpenId,
+          chatId: message.chatId,
+          sourceMessageId: saved.sourceMessageId,
+          rawText,
+          preparationContext: { ...context, candidates: visibleCandidates },
+          expectedRevision: saved.revision,
+          expiresAt: saved.expiresAt,
+        });
+        const choices: string = visibleCandidates.map((candidate, index) =>
+          `${index + 1}. ${candidate.name}（${candidate.recordId}）`).join('\n');
+        await this.messenger.sendText(
+          integration, message.chatId,
+          `请确认客户，回复“选择 N”：\n${choices}${result.candidates.length > 20 ? '\n仅显示前 20 项，也可补充更准确的客户名称。' : ''}`,
+          `${message.messageId}-preparation-result`,
+        );
+        return;
+      }
+      const text = result.status === 'unavailable'
+        ? '客户沟通准备暂时无法完成，信息已保留，可稍后重试。'
+        : '客户信息需要进一步确认，请补充或选择准确的客户。';
+      await this.messenger.sendText(integration, message.chatId, text, `${message.messageId}-preparation-result`);
+      return;
+    }
+    const snapshot = await this.store.completePreparationSession({
+      tenantId: integration.tenantId, actorOpenId: message.senderOpenId,
+      chatId: message.chatId, expectedRevision: saved.revision ?? 0,
+      request: { customerName: conditions.customerName!, communicationAt: conditions.communicationAt, purpose: conditions.purpose },
+      report: result.preparation,
+    });
+    if (!snapshot) return;
+    const notification = preparationResultNotification(
+      snapshot.id, result.preparation.customer?.name ?? conditions.customerName!, process.env.WEB_PUBLIC_URL,
+    );
+    const deliveryScope = {
+      tenantId: integration.tenantId, actorOpenId: message.senderOpenId, resultId: snapshot.id,
+    };
+    const lease = await this.store.claimPreparationDelivery({
+      ...deliveryScope, text: notification.text, now: new Date(),
+    });
+    if (!lease) return;
+    try {
+      const messageId: string = await this.messenger.sendText(
+        integration, lease.chatId, lease.text, notification.key,
+      );
+      const marked: boolean = await this.store.finishPreparationDelivery({
+        ...deliveryScope, token: lease.token, messageId,
+      });
+      if (!marked) this.logger.warn(`Preparation delivery state conflict: ${snapshot.id}`);
+    } catch (error: unknown) {
+      await this.store.finishPreparationDelivery({ ...deliveryScope, token: lease.token, messageId: null });
+      this.logger.error(`Preparation delivery requires verification: ${snapshot.id}`,
+        error instanceof Error ? error.stack : String(error));
+    }
   }
 
   private async processFollowupText(
@@ -2641,6 +2878,7 @@ export class AgentWorkflowService {
     message: IncomingMessage,
     error: unknown,
     waitingMessageId: string | null = null,
+    fallbackText: string = MESSAGE_FAILURE_TEXT,
   ): Promise<void> {
     const normalized: Error = this.toError(error);
     const safeMessage: string = redactErrorMessage(normalized);
@@ -2690,7 +2928,7 @@ export class AgentWorkflowService {
       ? this.minutesFailureText(integration, error)
       : error instanceof DocumentIngestionError
         ? this.documentFailureText(integration, error)
-        : MESSAGE_FAILURE_TEXT;
+        : fallbackText;
 
     if (waitingMessageId) {
       try {

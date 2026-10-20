@@ -341,6 +341,21 @@ describe('CustomerVisitBriefingService', (): void => {
     expect(result.agenda[2].purpose).toContain('责任人');
   });
 
+  it('retains decision evidence even when it is outside the recent followup list', async (): Promise<void> => {
+    const decision: OpportunityDecisionItem = decisionItem('opportunity-active', 'customer-a');
+    decision.evidence = [{
+      id: 'followup:followup-0', kind: 'followup', label: '判断依据',
+      value: '客户尚未确认评审范围', occurredAt: '2026-09-01T02:00:00Z',
+      source: { recordId: 'followup-0', recordUrl: 'https://example.test/followups/0', sourceVersion: 'v1' },
+    }];
+    const result: CustomerVisitBriefingResponse = await generate(
+      setup(portfolio(), decisions([decision])).service,
+    );
+    expect(result.recentFollowups.map((item) => item.recordId)).not.toContain('followup-0');
+    expect(result.opportunities[0].evidence).toEqual(decision.evidence);
+    expect(result.opportunities[1].evidence).toEqual([]);
+  });
+
   it('returns empty without exposing an inaccessible or missing customer', async (): Promise<void> => {
     const harness: Harness = setup();
     const result: CustomerVisitBriefingResponse = await generate(

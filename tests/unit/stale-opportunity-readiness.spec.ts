@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
+  AuditEventInput,
   StaleOpportunityFollowupPage,
   StaleOpportunityPage,
   TenantIntegration,
@@ -225,7 +226,7 @@ describe('StaleOpportunityReadinessService', (): void => {
       ...followup('opportunity-unknown', '2026-09-20T02:00:00.000Z'),
       sourceVersion: 'followup-v1',
     };
-    const audit = vi.fn(async (): Promise<void> => undefined);
+    const audit = vi.fn(async (_event: AuditEventInput): Promise<void> => undefined);
     const records = {
       readStaleOpportunity: vi.fn(async (): Promise<typeof currentOpportunity> =>
         currentOpportunity),
@@ -322,9 +323,9 @@ describe('StaleOpportunityReadinessService', (): void => {
         expectedFollowupSourceVersion: null,
         idempotencyKey: 'governance-2',
       },
-    })).rejects.toMatchObject<Partial<StaleOpportunityGovernanceError>>({
+    })).rejects.toMatchObject({
       code: 'CONFLICT',
-    });
+    } satisfies Partial<StaleOpportunityGovernanceError>);
     expect(records.updateOpportunityStatus).not.toHaveBeenCalled();
   });
 
@@ -350,9 +351,9 @@ describe('StaleOpportunityReadinessService', (): void => {
         communicationAt: '2026-09-23T02:00:00.000Z',
         idempotencyKey: 'governance-3',
       },
-    })).rejects.toMatchObject<Partial<StaleOpportunityGovernanceError>>({
+    })).rejects.toMatchObject({
       code: 'VALIDATION_FAILED',
-    });
+    } satisfies Partial<StaleOpportunityGovernanceError>);
     expect(updateStatus).not.toHaveBeenCalled();
   });
 });

@@ -9,6 +9,7 @@ interface CustomerPreparationOrchestrationInput {
   integration: TenantIntegration;
   actorOpenId: string;
   request: unknown;
+  selectedCustomerRecordId?: string;
   timezone: string;
   now: Date;
 }
@@ -32,6 +33,15 @@ class CustomerPreparationOrchestratorService {
     if (!request.communicationAt || !request.purpose) {
       return { status: 'clarification_required', reason: 'missing_fields', candidates: [] };
     }
+    const dateParts: Intl.DateTimeFormatPart[] = new Intl.DateTimeFormat('en-US', {
+      timeZone: input.timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date(request.communicationAt));
+    const datePart = (type: string): string =>
+      dateParts.find((part: Intl.DateTimeFormatPart) => part.type === type)!.value;
+    const referenceDate: string = `${datePart('year')}-${datePart('month')}-${datePart('day')}`;
     let resolution;
     try {
       resolution = await this.access.resolve(
@@ -45,21 +55,34 @@ class CustomerPreparationOrchestratorService {
     if (resolution.status === 'unavailable') {
       return { status: 'unavailable', reason: 'source_unavailable' };
     }
-    if (resolution.status !== 'matched') {
+    const selected = input.selectedCustomerRecordId
+      ? resolution.candidates.find((candidate) => candidate.recordId === input.selectedCustomerRecordId)
+      : undefined;
+    if ((input.selectedCustomerRecordId && !selected) ||
+      (!input.selectedCustomerRecordId && resolution.status !== 'matched')) {
       return {
         status: 'clarification_required',
-        reason: resolution.status,
+        reason: resolution.candidates.length > 0 ? 'ambiguous' : 'not_found',
         candidates: resolution.candidates,
       };
     }
-    const preparation = await this.preparations.generate({
+    let preparation: CustomerCommunicationPreparationResponse;
+    try {
+      preparation = await this.preparations.generate({
       integration: input.integration,
       actorOpenId: input.actorOpenId,
-      customerRecordId: resolution.candidates[0].recordId,
-      referenceDate: request.communicationAt,
+      customerRecordId: selected?.recordId ?? resolution.candidates[0].recordId,
+      purpose: request.purpose,
+      referenceDate,
       timezone: input.timezone,
       now: input.now,
-    });
+      });
+    } catch {
+      return { status: 'unavailable', reason: 'source_unavailable' };
+    }
+    if (preparation.status === 'unavailable') {
+      return { status: 'unavailable', reason: 'source_unavailable' };
+    }
     return { status: 'ready', preparation };
   }
 }

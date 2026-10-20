@@ -19,7 +19,9 @@ import {
   buildCustomerCommunicationPreparation,
 } from './customer-communication-preparation-content';
 
-type CustomerCommunicationPreparationInput = CustomerVisitBriefingInput;
+interface CustomerCommunicationPreparationInput extends CustomerVisitBriefingInput {
+  purpose?: string;
+}
 
 interface CustomerCommunicationBriefingReader {
   generate(
@@ -77,7 +79,7 @@ class CustomerCommunicationPreparationService {
     }
 
     const preparation: CustomerCommunicationPreparationResponse =
-      buildCustomerCommunicationPreparation(briefing, now.toISOString());
+      buildCustomerCommunicationPreparation(briefing, now.toISOString(), input.purpose);
     if (
       preparation.status === 'empty' ||
       preparation.status === 'unavailable'
@@ -134,6 +136,7 @@ class CustomerCommunicationPreparationService {
       status: 'unavailable',
       generatedAt: now.toISOString(),
       customer: null,
+      briefing: null,
       objective: null,
       angles: [],
       questions: [],

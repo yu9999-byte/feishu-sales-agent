@@ -1,5 +1,13 @@
 # 技术架构
 
+PREP-TEST-TYPES（2026-10-20，已完成）：测试配置显式覆盖继承的 spec exclude，采用匹配 Vitest/Vite 的 ESM/bundler 解析及 JSX，关闭仅生产构建需要的 composite/incremental，复用现有路径别名。覆盖回归先红复现 124 个 spec 遗漏，修正夹具与缺失导入后，136 个测试源文件全部入选且类型通过；全量 1052 单元及本轮 25 文件 ESLint 通过。未用 any、类型忽略或排除测试消除诊断，生产配置及契约未改。证据见 [验证归档](evidence/preparation-content-20261020/verification.md)。
+
+PREP-WEB-ENTRY（2026-10-20，已实现）：独立 Vite 的 GET/HEAD HTML 导航选择 agent.html 并保留查询参数；16 项真实 HTTP 回归通过，内置浏览器深链刷新到达身份提示。测试服务器关闭 watcher/预转换，避免全量并行时无关预热导致超时。API/runtime/模块/静态请求与平台模板不变。
+
+PREP-CONTENT 验收补充（2026-10-20）：准备包组件先判 lifecycleStatus，再判 health；active/unknown 的 null health 使用待核实标签，不能直接套用拜访页将 null 视为历史的格式函数。仅修改准备包组件，不扩大共享格式函数行为。
+
+准备包内容完整性（2026-10-20，已实现）：可选 briefing 保存 metrics/opportunities/recentFollowups/agenda；empty/unavailable 为 null，原决策证据完整透传，Web 显示引用及缺失提示。JSONB 完整往返、快照不可变与隔离已验证；沿用权限重验及编辑 CAS，无新增迁移或外部调用。
+
 ## 客户沟通准备包 Goal v1（2026-10-19）
 
 已确认启动，执行设计见 [SDD 49](specs/49-customer-preparation-chat-sdd.md)。先请求边界、客户解析与独立多轮状态，再组合既有服务接聊天和 Web。仅生成建议，权限/来源/幂等/人工边界不变；真实消息与业务写入不增加。当前实现中，不宣称可用。

@@ -61,6 +61,7 @@ const integration: TenantIntegration = {
 
 const opportunity = (): StaleOpportunityPage['items'][number] => ({
   recordId: 'opportunity-1',
+  recordUrl: null,
   name: '北辰数字化项目',
   status: 'active',
   ownerOpenId: 'ou_sales_a',

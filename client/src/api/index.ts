@@ -4,9 +4,14 @@ import { axiosForBackend } from
 
 import type {
   AgentExecutionResult,
+  ConfirmPreparationDeliveryRequest,
+  ConfirmPreparationDeliveryResponse,
   ConfirmFollowupDraftRequest,
   CreateFollowupDraftRequest,
   CustomerCommunicationPreparationResponse,
+  CustomerPreparationDeliveryStatus,
+  CustomerPreparationResultSnapshot,
+  SaveCustomerPreparationDraftRequest,
   CustomerVisitBriefingResponse,
   DailySalesReportResponse,
   FollowupDraftResponse,
@@ -350,6 +355,65 @@ const getCustomerCommunicationPreparation = async (
   }
 };
 
+const getCustomerPreparationResult = async (id: string): Promise<CustomerPreparationResultSnapshot> => {
+  try {
+    const response = await axiosForBackend<CustomerPreparationResultSnapshot>({
+      url: `/api/platform/customer-communications/results/${encodeURIComponent(id)}`,
+      method: 'GET', withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
+const getCustomerPreparationDelivery = async (
+  id: string,
+): Promise<CustomerPreparationDeliveryStatus> => {
+  try {
+    const response = await axiosForBackend<CustomerPreparationDeliveryStatus>({
+      url: `/api/platform/customer-communications/results/${encodeURIComponent(id)}/delivery`,
+      method: 'GET',
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
+const confirmCustomerPreparationDelivery = async (
+  id: string,
+  input: ConfirmPreparationDeliveryRequest,
+): Promise<ConfirmPreparationDeliveryResponse> => {
+  try {
+    const response = await axiosForBackend<ConfirmPreparationDeliveryResponse>({
+      url: `/api/platform/customer-communications/results/${encodeURIComponent(id)}/delivery/confirm`,
+      method: 'POST',
+      data: input,
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
+const saveCustomerPreparationDraft = async (
+  id: string,
+  input: SaveCustomerPreparationDraftRequest,
+): Promise<CustomerPreparationResultSnapshot> => {
+  try {
+    const response = await axiosForBackend<CustomerPreparationResultSnapshot>({
+      url: `/api/platform/customer-communications/results/${encodeURIComponent(id)}/draft`,
+      method: 'PATCH', data: input, withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    throw normalizeError(error);
+  }
+};
+
 const getStaleOpportunityReadiness = async (): Promise<StaleOpportunityReadinessResponse> => {
   try {
     const response = await axiosForBackend<StaleOpportunityReadinessResponse>({
@@ -547,9 +611,13 @@ const getFollowupExecution = async (
 };
 
 export {
+  confirmCustomerPreparationDelivery,
   confirmFollowupDraft,
   createFollowupDraft,
   getCustomerCommunicationPreparation,
+  getCustomerPreparationDelivery,
+  getCustomerPreparationResult,
+  saveCustomerPreparationDraft,
   getCustomerVisitBriefing,
   getFollowupDraft,
   getFollowupExecution,

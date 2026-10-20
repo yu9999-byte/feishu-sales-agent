@@ -15,14 +15,13 @@ import type {
   TokenGenerator,
   WebAuthStore,
 } from '@server/modules/web-auth/web-auth.ports';
-import type {
-  ControlStore,
-} from '@server/modules/agent-core/agent.ports';
+import { MemoryControlStore } from '@server/modules/agent-core/memory-control.store';
 import type {
   IdentityAccessRepository,
   PlatformTenant,
 } from '@server/modules/identity-access/identity-access.ports';
 import type {
+  AuthorizationAuditInput,
   PlatformMember,
   ReportingRelation,
   ResourceGrant,
@@ -92,7 +91,11 @@ const integration: TenantIntegration = {
   },
 };
 
-class FakeControlStore implements ControlStore {
+class FakeControlStore extends MemoryControlStore {
+  constructor() {
+    super([integration]);
+  }
+
   async resolveTenant(
     feishuTenantKey: string,
   ): Promise<TenantIntegration | null> {
@@ -170,6 +173,12 @@ class FakeControlStore implements ControlStore {
 }
 
 class FakeIdentityRepository implements IdentityAccessRepository {
+  readonly authorizationAudits: AuthorizationAuditInput[] = [];
+
+  async appendAuthorizationAudit(input: AuthorizationAuditInput): Promise<void> {
+    this.authorizationAudits.push(structuredClone(input));
+  }
+
   updatedDisplayName: string | null = null;
   member: PlatformMember | null = {
     id: 'member-current',

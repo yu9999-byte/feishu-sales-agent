@@ -51,6 +51,7 @@ import type {
   TaskGateway,
 } from '@server/modules/agent-core/agent.ports';
 import type {
+  AgentSession,
   ConversationDecision,
   ConversationInput,
   FollowupExtractionInput,
@@ -549,7 +550,9 @@ class FakeTasks implements TaskGateway {
     };
   }
 
-  async updateTask(): Promise<TaskCreationResult> {
+  async updateTask(
+    ..._input: Parameters<NonNullable<TaskGateway['updateTask']>>
+  ): Promise<TaskCreationResult> {
     this.updateCalls += 1;
     return {
       guid: 'task-guid',
@@ -624,6 +627,8 @@ const createHarness = (
     new FakeOpportunityDecisionReader(),
   minutesIngestion?: MinutesIngestionService,
   documentIngestion?: DocumentIngestionService,
+  preparationModel?: ConstructorParameters<typeof AgentWorkflowService>[16],
+  preparationOrchestrator?: ConstructorParameters<typeof AgentWorkflowService>[17],
 ): TestHarness => {
   const integrationA: TenantIntegration = createIntegration(
     '00000000-0000-0000-0000-00000000000a',
@@ -750,6 +755,8 @@ const createHarness = (
     minutesIngestion,
     undefined,
     documentIngestion,
+    preparationModel,
+    preparationOrchestrator,
   );
   return {
     integrationA,
@@ -1911,7 +1918,7 @@ describe('AgentWorkflowService', (): void => {
     expect(response).toMatchObject({
       header: { title: { content: '正在执行销售动作' } },
     });
-    await new Promise<void>((resolve): void => setImmediate(resolve));
+    await new Promise<void>((resolve): void => { setImmediate(resolve); });
     expect(harness.records.opportunityStatusCalls).toBe(1);
     expect(harness.records.customerCalls).toBe(0);
     expect(harness.records.followupCalls).toBe(0);
@@ -3606,6 +3613,346 @@ describe('AgentWorkflowService', (): void => {
             .toContain('action.succeeded');
         });
     });
+});
+
+describe('customer preparation intent routing', () => {
+  const saveActivePreparationSession = async (
+    harness: TestHarness,
+    message: IncomingMessage,
+  ): Promise<AgentSession> => harness.store.savePreparationClarificationSession({
+    tenantId: harness.integrationA.tenantId,
+    actorOpenId: message.senderOpenId,
+    chatId: message.chatId,
+    sourceMessageId: 'preparation-origin',
+    rawText: '请准备北辰制造的续约沟通',
+    preparationContext: {
+      conditions: {
+        customerName: '北辰制造',
+        communicationAt: null,
+        purpose: '讨论续约',
+      },
+      turnCount: 1,
+    },
+    expectedRevision: 0,
+    expiresAt: new Date(Date.now() + 60_000),
+  });
+
+  it('routes a high-confidence sales question once and closes only the preparation session', async () => {
+    const extractPreparation = vi.fn().mockResolvedValue({
+      customerName: '北辰制造',
+      communicationAt: null,
+      purpose: '讨论续约',
+    });
+    const harness = createHarness(
+      undefined, undefined, undefined, undefined, undefined,
+      { extractPreparation },
+    );
+    const message: IncomingMessage = {
+      ...createMessage(),
+      messageId: 'prep-switch-sales-qa',
+      receivedAt: new Date(),
+      text: '客户一直压价，我该怎么回应？',
+    };
+    const session: AgentSession = await saveActivePreparationSession(harness, message);
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1', intent: 'sales_qa', confidence: 0.95,
+      reply: '先确认预算和客户关注的价值，再回应价格。',
+    };
+
+    await harness.workflow.handleMessage(message);
+
+    expect(harness.conversation.calls).toBe(1);
+    expect(harness.conversation.inputs[0].context).toMatchObject({
+      activeWorkflow: 'customer_preparation',
+      activeSourceText: session.rawText,
+    });
+    expect(harness.salesKnowledge.answer).toHaveBeenCalledOnce();
+    expect(extractPreparation).not.toHaveBeenCalled();
+    expect(await harness.store.getOpenPreparationSession(
+      harness.integrationA.tenantId, message.senderOpenId, message.chatId,
+    )).toBeNull();
+  });
+
+  it.each([
+    ['ambiguous intent', { intent: 'ambiguous', confidence: 0.95 }],
+    ['low confidence', { intent: 'sales_qa', confidence: 0.4 }],
+  ] as const)(
+    'keeps collecting preparation conditions for %s',
+    async (_caseName, decision) => {
+      const extractPreparation = vi.fn().mockResolvedValue({
+        customerName: '北辰制造',
+        communicationAt: null,
+        purpose: '讨论续约',
+      });
+      const harness = createHarness(
+        undefined, undefined, undefined, undefined, undefined,
+        { extractPreparation },
+      );
+      const message: IncomingMessage = {
+        ...createMessage(),
+        messageId: `prep-continue-${_caseName.replaceAll(' ', '-')}`,
+        receivedAt: new Date(),
+        text: '下周三下午',
+      };
+      const session: AgentSession = await saveActivePreparationSession(harness, message);
+      harness.conversation.nextDecision = {
+        schemaVersion: 'conversation-intent-v1',
+        ...decision,
+        reply: '继续补充准备信息。',
+      };
+
+      await harness.workflow.handleMessage(message);
+
+      expect(harness.conversation.calls).toBe(1);
+      expect(harness.conversation.inputs[0].context).toMatchObject({
+        activeWorkflow: 'customer_preparation',
+        activeSourceText: session.rawText,
+      });
+      expect(extractPreparation).toHaveBeenCalledOnce();
+      expect(extractPreparation.mock.calls[0][0].previous).toEqual({
+        customerName: '北辰制造',
+        communicationAt: null,
+        purpose: '讨论续约',
+      });
+      expect(await harness.store.getOpenPreparationSession(
+        harness.integrationA.tenantId, message.senderOpenId, message.chatId,
+      )).toMatchObject({ rawText: `${session.rawText}\n${message.text}` });
+      expect(harness.salesKnowledge.answer).not.toHaveBeenCalled();
+    },
+  );
+
+  it('preserves the preparation session when intent classification fails', async () => {
+    const extractPreparation = vi.fn();
+    const harness = createHarness(
+      undefined, undefined, undefined, undefined, undefined,
+      { extractPreparation },
+    );
+    const message: IncomingMessage = {
+      ...createMessage(),
+      messageId: 'prep-switch-classifier-failed',
+      receivedAt: new Date(),
+      text: '客户问题',
+    };
+    await saveActivePreparationSession(harness, message);
+    harness.conversation.failNext = true;
+
+    await harness.workflow.handleMessage(message);
+
+    expect(extractPreparation).not.toHaveBeenCalled();
+    expect(await harness.store.getOpenPreparationSession(
+      harness.integrationA.tenantId, message.senderOpenId, message.chatId,
+    )).toMatchObject({ state: 'preparation_clarifying', revision: 1 });
+    expect(harness.messenger.texts.join('')).toContain('准备条件已保留');
+  });
+
+  it('does not route a classified intent when preparation revision CAS fails', async () => {
+    const extractPreparation = vi.fn();
+    const harness = createHarness(
+      undefined, undefined, undefined, undefined, undefined,
+      { extractPreparation },
+    );
+    const message: IncomingMessage = {
+      ...createMessage(),
+      messageId: 'prep-switch-cas-conflict',
+      receivedAt: new Date(),
+      text: '客户一直压价，我该怎么回应？',
+    };
+    const session: AgentSession = await saveActivePreparationSession(harness, message);
+    harness.conversation.nextDecision = {
+      schemaVersion: 'conversation-intent-v1', intent: 'sales_qa', confidence: 0.95,
+      reply: '先确认预算和客户关注的价值，再回应价格。',
+    };
+    const close = vi.spyOn(harness.store, 'closePreparationSession')
+      .mockResolvedValue(false);
+
+    await harness.workflow.handleMessage(message);
+
+    expect(close).toHaveBeenCalledWith(
+      harness.integrationA.tenantId,
+      message.senderOpenId,
+      message.chatId,
+      session.revision,
+    );
+    expect(harness.salesKnowledge.answer).not.toHaveBeenCalled();
+    expect(extractPreparation).not.toHaveBeenCalled();
+    expect(await harness.store.getOpenPreparationSession(
+      harness.integrationA.tenantId, message.senderOpenId, message.chatId,
+    )).toMatchObject({ state: 'preparation_clarifying', revision: 1 });
+    expect(harness.messenger.texts.join('')).toContain('请重发这条消息');
+  });
+});
+
+it.each(['sent', 'unknown'])('persists preparation delivery %s without regenerating on replay', async (status) => {
+  const conditions = { customerName: '甲', communicationAt: '2026-10-20T01:00:00Z', purpose: '评审' };
+  const harness = createHarness(undefined, undefined, undefined, undefined, undefined,
+    { extractPreparation: vi.fn().mockResolvedValue(conditions) });
+  const prepare = vi.fn().mockResolvedValue({ status: 'ready', preparation: { customer: { name: '甲' } } });
+  Object.assign(harness.workflow, { preparationOrchestrator: { prepare } });
+  harness.conversation.nextDecision = { schemaVersion: 'conversation-intent-v1', intent: 'customer_preparation', confidence: 1, reply: '准备' };
+  const completion = vi.spyOn(harness.store, 'completePreparationSession');
+  const finish = vi.spyOn(harness.store, 'finishPreparationDelivery');
+  const originalSend = harness.messenger.sendText.bind(harness.messenger);
+  const send = vi.spyOn(harness.messenger, 'sendText');
+  send.mockImplementation(async (...args) => {
+    if (status === 'unknown' && args[2].includes('准备包已生成并保存')) throw new Error('Injected uncertain delivery');
+    return originalSend(...args);
+  });
+  const message = { ...createMessage(), receivedAt: new Date(), text: '准备甲客户沟通' };
+  await Promise.all([
+    harness.workflow.handleMessage(message),
+    harness.workflow.handleMessage(message),
+  ]);
+  expect(prepare).toHaveBeenCalledOnce();
+  expect(completion).toHaveBeenCalledOnce();
+  const result = await completion.mock.results[0].value;
+  if (!result) throw new Error('Expected saved result');
+  expect(await harness.store.getPreparationResult(harness.integrationA.tenantId, message.senderOpenId, result.id)).not.toBeNull();
+  expect(finish).toHaveBeenCalledOnce();
+  expect(finish.mock.calls[0][0].messageId === null).toBe(status === 'unknown');
+  expect(send.mock.calls.filter((args) => args[3] === `preparation-result:${result.id}`)).toHaveLength(1);
+  expect(await harness.store.claimPreparationDelivery({ tenantId: harness.integrationA.tenantId,
+    actorOpenId: message.senderOpenId, resultId: result.id, text: 'changed', now: new Date() })).toBeNull();
+});
+
+it('persists same-name choices and selects a saved customer without model extraction', async () => {
+  const conditions = { customerName: '同名客户', communicationAt: '2026-10-20T01:00:00.000Z', purpose: '评审' };
+  const extractPreparation = vi.fn().mockResolvedValue(conditions);
+  const harness = createHarness(undefined, undefined, undefined, undefined, undefined, { extractPreparation });
+  const candidates = [{ recordId: 'c1', name: '同名客户' }, { recordId: 'c2', name: '同名客户' }];
+  const prepare = vi.fn().mockResolvedValueOnce({ status: 'clarification_required', reason: 'ambiguous', candidates })
+    .mockResolvedValue({ status: 'ready', preparation: { customer: { name: '同名客户' } } });
+  Object.assign(harness.workflow, { preparationOrchestrator: { prepare } });
+  harness.conversation.nextDecision = { schemaVersion: 'conversation-intent-v1', intent: 'customer_preparation', confidence: 1, reply: '准备' };
+  const message = { ...createMessage(), receivedAt: new Date(), text: '准备客户沟通' };
+  await harness.workflow.handleMessage(message);
+  expect((await harness.store.getOpenPreparationSession(harness.integrationA.tenantId, message.senderOpenId, message.chatId))?.preparationContext?.candidates).toEqual(candidates);
+  expect(harness.messenger.texts.join('')).toContain('2. 同名客户（c2）');
+  await harness.workflow.handleMessage({ ...message, messageId: 'invalid-choice', text: '选择 3' });
+  expect(prepare).toHaveBeenCalledTimes(1);
+  const selection = { ...message, messageId: 'valid-choice', text: '选择 2' };
+  await harness.workflow.handleMessage(selection);
+  await harness.workflow.handleMessage(selection);
+  expect(extractPreparation).toHaveBeenCalledOnce();
+  expect(prepare).toHaveBeenCalledTimes(2);
+  expect(prepare.mock.calls[1][0]).toMatchObject({ selectedCustomerRecordId: 'c2', request: conditions });
+});
+
+it.each(['closed', 'expired'])('starts a fresh preparation after the previous session is %s', async (state) => {
+  const extractPreparation = vi.fn().mockResolvedValue({ customerName: '新客户', communicationAt: null, purpose: null });
+  const harness = createHarness(undefined, undefined, undefined, undefined, undefined, { extractPreparation });
+  const message = { ...createMessage(), receivedAt: new Date(), text: '准备新客户沟通' };
+  await harness.store.savePreparationClarificationSession({
+    tenantId: harness.integrationA.tenantId, actorOpenId: message.senderOpenId,
+    chatId: message.chatId, sourceMessageId: 'old', rawText: '旧客户',
+    expiresAt: new Date(Date.now() + (state === 'expired' ? -60000 : 60000)), expectedRevision: 0,
+  });
+  if (state === 'closed') {
+    await harness.store.closePreparationSession(harness.integrationA.tenantId, message.senderOpenId, message.chatId);
+  }
+  harness.conversation.nextDecision = { schemaVersion: 'conversation-intent-v1', intent: 'customer_preparation', confidence: 1, reply: '准备' };
+  await harness.workflow.handleMessage(message);
+  const session = await harness.store.getOpenPreparationSession(harness.integrationA.tenantId, message.senderOpenId, message.chatId);
+  expect(session?.revision).toBe(state === 'closed' ? 3 : 2);
+  expect(session?.preparationContext?.turnCount).toBe(1);
+  expect(session?.rawText).toBe(message.text);
+  expect(extractPreparation.mock.calls[0][0].previous).toBeNull();
+});
+
+it.each(['cancel', 'update'])('suppresses preparation results returned after %s', async (operation) => {
+  const extractPreparation = vi.fn().mockResolvedValue({
+    customerName: '测试客户', communicationAt: '2026-10-20T01:00:00.000Z', purpose: '续约',
+  });
+  const harness = createHarness(undefined, undefined, undefined, undefined, undefined, { extractPreparation });
+  let finish: (value: unknown) => void = () => { throw new Error('Not initialized'); };
+  const pending = new Promise<unknown>((resolve) => { finish = resolve; });
+  const prepare = vi.fn().mockReturnValue(pending);
+  Object.assign(harness.workflow, { preparationOrchestrator: { prepare } });
+  harness.conversation.nextDecision = { schemaVersion: 'conversation-intent-v1', intent: 'customer_preparation', confidence: 1, reply: '准备' };
+  const message = { ...createMessage(), receivedAt: new Date(), text: '准备客户沟通' };
+  const processing = harness.workflow.handleMessage(message);
+  await vi.waitFor(() => expect(prepare).toHaveBeenCalledOnce());
+  if (operation === 'cancel') {
+    await harness.store.closePreparationSession(harness.integrationA.tenantId, message.senderOpenId, message.chatId);
+  } else {
+    const session = await harness.store.getOpenPreparationSession(
+      harness.integrationA.tenantId, message.senderOpenId, message.chatId,
+    );
+    if (!session) throw new Error('Expected preparation session');
+    await harness.store.savePreparationClarificationSession({
+      ...session, expectedRevision: session.revision, rawText: '更新后的准备条件',
+    });
+  }
+  finish({ status: 'ready', preparation: { customer: { name: '测试客户' } } });
+  await processing;
+  expect(harness.messenger.texts.join('')).not.toContain('准备包已生成');
+  if (operation === 'update') {
+    const current = await harness.store.getOpenPreparationSession(
+      harness.integrationA.tenantId, message.senderOpenId, message.chatId,
+    );
+    expect(current?.rawText).toBe('更新后的准备条件');
+    expect(current?.revision).toBe(2);
+  }
+});
+
+it('retains preparation context after extraction failure and carries it into the next turn', async () => {
+  const conditions = { customerName: '测试客户', communicationAt: null, purpose: null };
+  const extractPreparation = vi.fn().mockResolvedValueOnce(conditions)
+    .mockRejectedValueOnce(new Error('invalid extraction'))
+    .mockResolvedValueOnce({ ...conditions, purpose: '讨论续约' });
+  const harness = createHarness(undefined, undefined, undefined, undefined, undefined, { extractPreparation });
+  harness.conversation.nextDecision = {
+    schemaVersion: 'conversation-intent-v1', intent: 'customer_preparation', confidence: 1, reply: '准备客户沟通',
+  };
+  const message = { ...createMessage(), receivedAt: new Date(), text: '准备测试客户沟通' };
+  await harness.workflow.handleMessage(message);
+  await harness.workflow.handleMessage({ ...message, messageId: 'prep-invalid', text: '补充' });
+  const prior = await harness.store.getOpenPreparationSession(
+    harness.integrationA.tenantId, message.senderOpenId, message.chatId,
+  );
+  expect(prior?.revision).toBe(1);
+  expect(prior?.preparationContext?.conditions).toEqual(conditions);
+  await harness.workflow.handleMessage({ ...message, messageId: 'prep-purpose', text: '讨论续约' });
+  expect(extractPreparation.mock.calls[2][0].previous).toEqual(conditions);
+  const updated = await harness.store.getOpenPreparationSession(
+    harness.integrationA.tenantId, message.senderOpenId, message.chatId,
+  );
+  expect(updated?.revision).toBe(2);
+  expect(updated?.preparationContext?.turnCount).toBe(2);
+  expect(updated?.preparationContext?.conditions.purpose).toBe('讨论续约');
+});
+
+it('preserves complete preparation conditions when orchestration throws and ignores duplicate messages', async () => {
+  const conditions = {
+    customerName: '测试客户',
+    communicationAt: '2026-10-20T01:00:00.000Z',
+    purpose: '讨论续约',
+  };
+  const extractPreparation = vi.fn().mockResolvedValue(conditions);
+  const harness = createHarness(undefined, undefined, undefined, undefined, undefined, { extractPreparation });
+  const orchestration = vi.fn().mockRejectedValue(new Error('source offline'));
+  // Inject only the orchestration method consumed by the workflow.
+  Object.assign(harness.workflow, { preparationOrchestrator: { prepare: orchestration } });
+  harness.conversation.nextDecision = {
+    schemaVersion: 'conversation-intent-v1', intent: 'customer_preparation', confidence: 1, reply: '准备客户沟通',
+  };
+  const message = { ...createMessage(), receivedAt: new Date(), text: '请准备明天测试客户的续约沟通' };
+  await Promise.all([
+    harness.workflow.handleMessage(message),
+    harness.workflow.handleMessage(message),
+  ]);
+  const session = await harness.store.getOpenPreparationSession(
+    harness.integrationA.tenantId, message.senderOpenId, message.chatId,
+  );
+  expect(session?.preparationContext?.conditions).toEqual(conditions);
+  expect(session?.revision).toBe(1);
+  expect(extractPreparation).toHaveBeenCalledOnce();
+  expect(orchestration).toHaveBeenCalledOnce();
+  expect(harness.messenger.texts.filter((text: string): boolean =>
+    text === '正在组织回答…')).toHaveLength(1);
+  expect(harness.messenger.texts.filter((text: string): boolean =>
+    text.includes('准备暂时无法完成'))).toHaveLength(1);
+  expect(harness.records.customerCalls).toBe(0);
+  expect(harness.tasks.calls).toBe(0);
 });
 
 it('refuses a standalone task retry after task assignment permission is revoked', async () => {

@@ -36,6 +36,7 @@ const mapVisitOpportunity = (
   risks: decision?.risks ?? [],
   gaps: decision?.gaps ?? [],
   recommendation: decision?.recommendation ?? null,
+  evidence: decision?.evidence ?? [],
   source: {
     recordId: opportunity.recordId,
     recordUrl: opportunity.recordUrl,

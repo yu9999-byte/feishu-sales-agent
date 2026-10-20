@@ -17,6 +17,7 @@ import {
   FollowupDraftWorkflowService,
 } from '@server/modules/sales-behavior/followup-draft-workflow.service';
 import { FollowupQualityService } from '@server/modules/sales-behavior/followup-quality.service';
+import { MemoryControlStore } from '@server/modules/agent-core/memory-control.store';
 import type {
   CreateDraftRecordInput,
   FollowupDraftRecord,
@@ -203,8 +204,7 @@ const service = (
 ): FollowupDraftWorkflowService => {
   const controlStore: ControlStore | undefined = salesContext === undefined
     ? undefined
-    : {
-      resolveTenantById: async (): Promise<TenantIntegration> => ({
+    : new MemoryControlStore([{
         tenantId: TENANT_ID,
         feishuTenantKey: 'tenant-a',
         name: '企业 A',
@@ -230,8 +230,7 @@ const service = (
             },
           },
         },
-      }),
-    } as ControlStore;
+      }]);
   const reader: SalesContextReader | undefined = salesContext === undefined
     ? undefined
     : {

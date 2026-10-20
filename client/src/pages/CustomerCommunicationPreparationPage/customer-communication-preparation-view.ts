@@ -1,4 +1,6 @@
 import type {
+  CustomerCommunicationDraft,
+  CustomerPreparationDraftEdit,
   CustomerCommunicationDraftChannel,
   CustomerCommunicationEvidenceKind,
   CustomerCommunicationMaterial,
@@ -6,6 +8,14 @@ import type {
   CustomerCommunicationPreparationStatus,
   SalesMaterialSourceType,
 } from '@shared/api.interface';
+
+const resolvePreparationDrafts = (
+  drafts: CustomerCommunicationDraft[],
+  edits: CustomerPreparationDraftEdit[] | undefined,
+): CustomerCommunicationDraft[] => drafts.map((draft: CustomerCommunicationDraft): CustomerCommunicationDraft => {
+  const edit = edits?.find((item: CustomerPreparationDraftEdit): boolean => item.channel === draft.channel);
+  return edit ? { ...draft, subject: edit.subject, body: edit.body } : { ...draft };
+});
 
 const STATUS_LABELS: Record<
   CustomerCommunicationPreparationStatus,
@@ -90,6 +100,7 @@ const customerCommunicationDraftChannelLabel = (
 ): string => DRAFT_CHANNEL_LABELS[channel];
 
 export {
+  resolvePreparationDrafts,
   customerCommunicationDraftChannelLabel,
   customerCommunicationEvidenceKindLabel,
   customerCommunicationMaterialSearchStatusLabel,

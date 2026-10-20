@@ -13,7 +13,7 @@ describe('today action evidence planner', () => {
   });
   it('uses tenant timezone for opportunity recommendation dates', () => {
     const opportunity: OpportunityDecisionItem = { rank: 1, recordId: 'o', recordUrl: null,
-      name: '试点', customerRecordId: 'c', customerName: '客户', lifecycleStatus: 'open',
+      name: '试点', customerRecordId: 'c', customerName: '客户', lifecycleStatus: 'active',
       expectedAmount: null, progress: null, lastFollowupAt: null, lastFollowupSummary: null,
       nextAction: null, dueAt: null, health: 'at_risk', priorityScore: 1,
       risks: [{ code: 'followup_stale', severity: 'high', title: '停滞', detail: '14天', evidenceIds: ['e'] }],
@@ -88,7 +88,7 @@ it('uses tenant day rather than the UTC prefix for followup deadlines', () => {
 it('merges stale, missing information and risk reasons with original evidence', () => {
   const items = buildTodayActions({ referenceDate: '2026-10-16', tasks: [], followups: [],
     opportunities: [{ rank: 1, recordId: 'o1', recordUrl: null, name: '试点',
-      customerRecordId: 'c1', customerName: '客户', lifecycleStatus: 'open',
+      customerRecordId: 'c1', customerName: '客户', lifecycleStatus: 'active',
       expectedAmount: null, progress: null, lastFollowupAt: null, lastFollowupSummary: null,
       nextAction: null, dueAt: null, health: 'at_risk', priorityScore: 80,
       risks: [{ code: 'followup_stale', severity: 'high', title: '跟进停滞',

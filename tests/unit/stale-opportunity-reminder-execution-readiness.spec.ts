@@ -10,6 +10,7 @@ import type {
   StaleOpportunityTriggerResponse,
 } from '@shared/api.interface';
 import type { AgentRuntimeConfig } from '@server/config/agent.config';
+import type { StaleOpportunityReminderUncertainRecord } from '@server/modules/insight/stale-opportunity-reminder.service';
 import type {
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
@@ -45,7 +46,7 @@ interface HarnessOptions {
   config?: AgentRuntimeConfig;
   integration?: TenantIntegration | null;
   member?: PlatformMember | null;
-  permissions?: PlatformPermission[];
+  permissions?: readonly PlatformPermission[];
   uncertain?: boolean;
   ledgerFails?: boolean;
   triggerResult?: StaleOpportunityTriggerResponse;
@@ -242,7 +243,7 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
   const selectedMember: PlatformMember | null =
     options.member === undefined ? member() : options.member;
   const permissions: PlatformPermission[] =
-    options.permissions ?? ['review:read-personal'];
+    [...(options.permissions ?? ['review:read-personal'])];
   const resolveTenantById = vi.fn(
     async (): Promise<TenantIntegration | null> => selectedIntegration,
   );
@@ -272,9 +273,15 @@ const createHarness = (options: HarnessOptions = {}): Harness => {
       };
     },
   );
-  const listUncertain = vi.fn(async (): Promise<unknown[]> => {
+  const listUncertain = vi.fn(async (): Promise<StaleOpportunityReminderUncertainRecord[]> => {
     if (options.ledgerFails) throw new Error('ledger unavailable');
-    return options.uncertain ? [{}] : [];
+    return options.uncertain ? [{
+      tenantId: TENANT_ID, opportunityRecordId: 'opportunity-1',
+      followupVersion: 'version-1', reminderKind: 'stale_followup',
+      opportunityName: '测试商机', ownerOpenId: OPEN_ID, attemptCount: 1,
+      dispatchStartedAt: NOW.toISOString(), failureCode: 'DELIVERY_UNKNOWN',
+      failureMessage: 'Delivery could not be verified', updatedAt: NOW.toISOString(),
+    }] : [];
   });
   const run = vi.fn(async (): Promise<StaleOpportunityTriggerResponse> => {
     if (options.triggerFails) throw new Error('source unavailable');

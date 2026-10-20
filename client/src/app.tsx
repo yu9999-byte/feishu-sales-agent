@@ -28,6 +28,7 @@ const RoutesComponent: React.FC = () => (
       <Route path="daily-report" element={<DailyReportPage />} />
       <Route path="stale-opportunity-readiness" element={<StaleOpportunityReadinessPage />} />
       <Route path="customers" element={<CustomerPortfolioPage />} />
+      <Route path="preparations/:resultId" element={<CustomerCommunicationPreparationPage />} />
       <Route
         path="customers/:customerRecordId/briefing"
         element={<CustomerVisitBriefingPage />}

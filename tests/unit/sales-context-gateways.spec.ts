@@ -10,6 +10,10 @@ import { StaleOpportunityContextService } from
 import { FeishuTaskGateway } from '@server/modules/integrations/task/feishu-task.gateway';
 import type { FeishuClientFactory } from '@server/modules/feishu/feishu-client.factory';
 
+type FeishuSdkClient = ReturnType<FeishuClientFactory['getClient']>;
+type BaseSearchInput = Parameters<FeishuSdkClient['bitable']['appTableRecord']['search']>[0];
+type SdkRequestInput = Parameters<FeishuSdkClient['request']>[0];
+
 const integration: TenantIntegration = {
   tenantId: 'tenant-a',
   feishuTenantKey: 'tenant-key-a',
@@ -272,7 +276,7 @@ describe('sales context gateways', (): void => {
   });
 
   it('does not cross the owner boundary when a portfolio scope is missing', async (): Promise<void> => {
-    const search = vi.fn(async () => ({
+    const search = vi.fn(async (_input: BaseSearchInput) => ({
       code: 0,
       data: { items: [], has_more: false },
     }));
@@ -356,7 +360,7 @@ describe('sales context gateways', (): void => {
   });
 
   it('returns the first stale-followup page and its continuation token', async (): Promise<void> => {
-    const search = vi.fn(async (): Promise<{
+    const search = vi.fn(async (_input: BaseSearchInput): Promise<{
       code: number;
       data: {
         items: Array<Record<string, unknown>>;
@@ -413,7 +417,7 @@ describe('sales context gateways', (): void => {
   });
 
   it('derives a stable followup version when Base omits modification time', async (): Promise<void> => {
-    const search = vi.fn(async () => ({
+    const search = vi.fn(async (_input: BaseSearchInput) => ({
       code: 0,
       data: {
         items: [{
@@ -453,7 +457,7 @@ describe('sales context gateways', (): void => {
   });
 
   it('reads owner-scoped opportunities only with explicit status semantics', async (): Promise<void> => {
-    const search = vi.fn(async () => ({
+    const search = vi.fn(async (_input: BaseSearchInput) => ({
       code: 0,
       data: {
         items: [{
@@ -495,7 +499,7 @@ describe('sales context gateways', (): void => {
   });
 
   it('derives a stable governance version when Base omits modification time', async (): Promise<void> => {
-    const search = vi.fn(async () => ({
+    const search = vi.fn(async (_input: BaseSearchInput) => ({
       code: 0,
       data: {
         items: [{
@@ -1010,7 +1014,7 @@ describe('sales context gateways', (): void => {
         }],
       },
     }));
-    const request = vi.fn(async () => ({
+    const request = vi.fn(async (_input: SdkRequestInput) => ({
       code: 0,
       data: {
         record: {
@@ -1293,7 +1297,7 @@ describe('sales context gateways', (): void => {
       code: number;
       data: { items: [] };
     }> => ({ code: 0, data: { items: [] } }));
-    const request = vi.fn(async (): Promise<{
+    const request = vi.fn(async (_input: SdkRequestInput): Promise<{
       code: number;
       data: { record: { record_id: string } };
     }> => ({
@@ -1328,7 +1332,7 @@ describe('sales context gateways', (): void => {
       code: 0,
       data: { items: [] },
     }));
-    const request = vi.fn(async () => ({
+    const request = vi.fn(async (_input: SdkRequestInput) => ({
       code: 0,
       data: { record: { record_id: 'followup-without-opportunity' } },
     }));
@@ -1356,7 +1360,7 @@ describe('sales context gateways', (): void => {
   });
 
   it('clears a previous opportunity link when an edited followup is unlinked', async (): Promise<void> => {
-    const request = vi.fn(async () => ({
+    const request = vi.fn(async (_input: SdkRequestInput) => ({
       code: 0,
       data: { record: { record_id: 'followup-existing' } },
     }));

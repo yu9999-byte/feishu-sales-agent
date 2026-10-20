@@ -7,6 +7,7 @@ import { WebPageController } from
   '@server/modules/platform-shell/web-page.controller';
 
 import {
+  resolvePreparationDrafts,
   customerCommunicationDraftChannelLabel,
   customerCommunicationEvidenceKindLabel,
   customerCommunicationMaterialSearchStatusLabel,
@@ -15,8 +16,20 @@ import {
   customerCommunicationMaterialStatusLabel,
   customerCommunicationStatusLabel,
 } from '../../client/src/pages/CustomerCommunicationPreparationPage/customer-communication-preparation-view';
+import type { CustomerCommunicationDraft } from '@shared/api.interface';
 
 describe('customer communication preparation view helpers', (): void => {
+  it('overlays saved text only on existing drafts without mutating evidence or original text', () => {
+    const drafts: CustomerCommunicationDraft[] = [{ channel: 'email', title: '邮件', subject: '原主题',
+      body: '原正文', editable: true, execution: 'preview_only', sourceKeys: ['fact-1'] }];
+    const displayed = resolvePreparationDrafts(drafts, [
+      { channel: 'email', subject: '新主题', body: '新正文' },
+      { channel: 'feishu', subject: null, body: '未生成渠道' },
+    ]);
+    expect(displayed).toEqual([{ ...drafts[0], subject: '新主题', body: '新正文' }]);
+    expect(drafts[0].body).toBe('原正文');
+    expect(resolvePreparationDrafts(drafts, undefined)).toEqual(drafts);
+  });
   it('uses stable product language for preparation states', (): void => {
     expect(customerCommunicationStatusLabel('ready')).toBe('沟通内容已准备');
     expect(customerCommunicationStatusLabel('partial')).toBe('部分内容可准备');
@@ -77,6 +90,7 @@ describe('customer communication preparation view helpers', (): void => {
       throw new Error('Web page routes are not registered');
     }
     expect(routes).toContain('customers/:customerRecordId/communication');
+    expect(routes).toContain('preparations/:resultId');
   });
 
   it('renders real material provenance without adding execution actions', (): void => {

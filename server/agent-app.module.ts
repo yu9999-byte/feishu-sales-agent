@@ -23,9 +23,11 @@ import { ProactiveSalesNotificationModule } from
   './modules/insight/proactive-sales-notification.module';
 import { FeishuWebhookBridge } from './modules/feishu/feishu-webhook.bridge';
 import { FeishuWebhookController } from './modules/feishu/feishu-webhook.controller';
+import { AgentRuntimeHealthModule } from './modules/insight/agent-runtime-health.module';
 
 @Module({
   imports: [
+    AgentRuntimeHealthModule,
     AgentControlModule,
     AgentExecutionModule,
     WebAuthModule,

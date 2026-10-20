@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowLeft,
@@ -11,14 +11,19 @@ import { Link, useParams } from 'react-router-dom';
 
 import type {
   CustomerCommunicationPreparationResponse,
+  CustomerPreparationResultSnapshot,
 } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   getCustomerCommunicationPreparation,
+  getCustomerPreparationResult,
   type ProductApiError,
 } from '../../api';
 import CustomerCommunicationDrafts from './CustomerCommunicationDrafts';
+import CustomerPreparationDraftWorkspace from './CustomerPreparationDraftWorkspace';
+import PreparationDeliveryPanel from './PreparationDeliveryPanel';
+import CustomerCommunicationContext from './CustomerCommunicationContext';
 import CustomerCommunicationEvidencePanel from
   './CustomerCommunicationEvidence';
 import CustomerCommunicationPlan from './CustomerCommunicationPlan';
@@ -27,14 +32,32 @@ import {
 } from './customer-communication-preparation-view';
 
 const CustomerCommunicationPreparationPage: React.FC = () => {
-  const { customerRecordId } = useParams<{ customerRecordId: string }>();
+  const { customerRecordId, resultId } = useParams<{ customerRecordId: string; resultId: string }>();
+  return <PreparationPageContent key={resultId ?? customerRecordId ?? 'missing'} />;
+};
+
+const PreparationPageContent: React.FC = () => {
+  const { customerRecordId, resultId } = useParams<{ customerRecordId: string; resultId: string }>();
   const [report, setReport] =
     useState<CustomerCommunicationPreparationResponse | null>(null);
+  const [snapshot, setSnapshot] = useState<CustomerPreparationResultSnapshot | null>(null);
   const [error, setError] = useState<ProductApiError | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const reportRequest = useRef<number>(0);
+
+  const handleAccessFailure = useCallback((failure: ProductApiError): void => {
+    if (![401, 403, 404].includes(failure.status)) return;
+    reportRequest.current += 1;
+    setReport(null);
+    setSnapshot(null);
+    setLoading(false);
+    setError(failure);
+  }, []);
 
   const refresh = useCallback((): void => {
-    if (!customerRecordId) {
+    const requestId: number = reportRequest.current + 1;
+    reportRequest.current = requestId;
+    if (!customerRecordId && !resultId) {
       setError({
         status: 0,
         message: '客户标识缺失，请从客户组合重新进入',
@@ -45,15 +68,31 @@ const CustomerCommunicationPreparationPage: React.FC = () => {
     }
     setLoading(true);
     setError(null);
-    void getCustomerCommunicationPreparation(customerRecordId)
-      .then((result: CustomerCommunicationPreparationResponse): void =>
-        setReport(result))
-      .catch((failure: ProductApiError): void => setError(failure))
-      .finally((): void => setLoading(false));
-  }, [customerRecordId]);
+    const readReport: Promise<CustomerCommunicationPreparationResponse> = resultId
+      ? getCustomerPreparationResult(resultId).then((saved: CustomerPreparationResultSnapshot) => {
+        if (reportRequest.current === requestId) setSnapshot(saved);
+        return saved.report;
+      })
+      : getCustomerCommunicationPreparation(customerRecordId!);
+    void readReport
+      .then((result: CustomerCommunicationPreparationResponse): void => {
+        if (reportRequest.current === requestId) setReport(result);
+      })
+      .catch((failure: ProductApiError): void => {
+        if (reportRequest.current !== requestId) return;
+        setError(failure);
+        handleAccessFailure(failure);
+      })
+      .finally((): void => {
+        if (reportRequest.current === requestId) setLoading(false);
+      });
+  }, [customerRecordId, resultId, handleAccessFailure]);
 
-  useEffect((): void => {
+  useEffect((): (() => void) => {
     refresh();
+    return (): void => {
+      reportRequest.current += 1;
+    };
   }, [refresh]);
 
   const unavailable: boolean = report?.status === 'unavailable';
@@ -67,7 +106,7 @@ const CustomerCommunicationPreparationPage: React.FC = () => {
             客户沟通内容准备 Agent
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-            把客户攻略变成可用的沟通内容
+            {resultId ? '客户沟通准备包' : '把客户攻略变成可用的沟通内容'}
           </h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             基于本人可见的客户、商机和跟进事实，准备沟通角度、问题、材料清单和可编辑草稿。
@@ -83,19 +122,22 @@ const CustomerCommunicationPreparationPage: React.FC = () => {
             </Button>
           )}
           <Button variant="outline" onClick={refresh} disabled={loading}>
-            <RefreshCw aria-hidden="true" />重新准备
+            <RefreshCw aria-hidden="true" />{resultId ? '刷新结果' : '重新准备'}
           </Button>
         </div>
       </header>
 
-      {loading && <CommunicationLoading />}
+      {loading && !report && <CommunicationLoading />}
       {!loading && error && (
         <CommunicationError error={error} onRetry={refresh} />
       )}
       {!loading && !error && report && (empty || unavailable) && (
         <CommunicationUnavailable report={report} onRetry={refresh} />
       )}
-      {!loading && !error && report && report.customer && report.objective && (
+      {resultId && report && (
+        <PreparationDeliveryPanel key={resultId} resultId={resultId} onAccessFailure={handleAccessFailure} />
+      )}
+      {report && report.customer && report.objective && (
         <>
           {report.status === 'partial' && (
             <section
@@ -111,6 +153,7 @@ const CustomerCommunicationPreparationPage: React.FC = () => {
               </p>
             </section>
           )}
+          <CustomerCommunicationContext report={report} />
           <CustomerCommunicationPlan
             objective={report.objective}
             angles={report.angles}
@@ -118,10 +161,11 @@ const CustomerCommunicationPreparationPage: React.FC = () => {
             materials={report.materials}
             materialSearch={report.materialSearch}
           />
-          <CustomerCommunicationDrafts
+          {snapshot ? <CustomerPreparationDraftWorkspace key={snapshot.id} snapshot={snapshot}
+            onAccessFailure={handleAccessFailure} /> : <CustomerCommunicationDrafts
             drafts={report.drafts}
             generatedAt={report.generatedAt}
-          />
+          />}
           <CustomerCommunicationEvidencePanel
             evidence={report.evidence}
             coverage={report.coverage}

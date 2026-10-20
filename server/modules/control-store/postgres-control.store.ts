@@ -3,18 +3,25 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { parsePreparationContext } from '@server/modules/insight/customer-preparation-context';
+import { parsePreparationDraftEdit } from '@server/modules/insight/preparation-draft-edit';
 
 import type { Sql } from 'postgres';
 import type {
   AgentExecutionResult,
+  CustomerPreparationResultSnapshot,
+  CustomerPreparationDeliveryStatus,
   AgentSessionState,
   PendingActionStatus,
   TaskFulfillmentChange,
 } from '@shared/api.interface';
 import type { ControlStore } from '@server/modules/agent-core/agent.ports';
+import type { ConfirmPreparationDeliveryInput, PreparationDeliveryClaim, PreparationDeliveryLease, PreparationDeliveryFinish } from '@server/modules/agent-core/preparation-delivery.types';
 import type {
   AgentSession,
+  CompletePreparationSessionInput,
+  SavePreparationDraftInput,
   AuditEventInput,
   CreatePendingActionInput,
   PendingAction,
@@ -46,6 +53,8 @@ interface IntegrationRow {
 }
 
 interface SessionRow {
+  revision?: number;
+  preparation_context?: unknown;
   id: string;
   tenant_id: string;
   actor_open_id: string;
@@ -337,40 +346,238 @@ export class PostgresControlStore
   async getOpenPreparationSession(
     tenantId: string,
     actorOpenId: string,
+    chatId: string,
+    includeInactive: boolean = false,
   ): Promise<AgentSession | null> {
     const rows: SessionRow[] = await this.sql<SessionRow[]>`
-      SELECT id, tenant_id, actor_open_id, chat_id, state,
+      SELECT revision, preparation_context, id, tenant_id, actor_open_id, chat_id, state,
         source_message_id, raw_text, draft, expires_at, created_at, updated_at
-      FROM agent_sessions
+      FROM preparation_sessions
       WHERE tenant_id = ${tenantId} AND actor_open_id = ${actorOpenId}
-        AND state = 'preparation_clarifying' AND expires_at > CURRENT_TIMESTAMP
+        AND chat_id = ${chatId}
+        AND (${includeInactive} OR
+          (state = 'preparation_clarifying' AND expires_at > CURRENT_TIMESTAMP))
       LIMIT 1
     `;
     const row: SessionRow | undefined = rows[0];
     return row ? this.mapSession(row) : null;
   }
 
+  async completePreparationSession(input: CompletePreparationSessionInput): Promise<CustomerPreparationResultSnapshot | null> {
+    const rows = await this.sql<Array<{
+      id: string; request: CustomerPreparationResultSnapshot['request'];
+      report: CustomerPreparationResultSnapshot['report']; revision: number; created_at: Date;
+      draft_edits: CustomerPreparationResultSnapshot['draftEdits']; updated_at: Date;
+    }>>`
+      WITH completed AS (
+        UPDATE preparation_sessions
+        SET state = 'closed', revision = revision + 1, updated_at = CURRENT_TIMESTAMP
+        WHERE tenant_id = ${input.tenantId} AND actor_open_id = ${input.actorOpenId}
+          AND chat_id = ${input.chatId} AND revision = ${input.expectedRevision}
+          AND state = 'preparation_clarifying' AND expires_at > CURRENT_TIMESTAMP
+        RETURNING tenant_id, actor_open_id, source_message_id
+      )
+      , saved AS (
+      INSERT INTO preparation_results (tenant_id, actor_open_id, source_message_id, request, report)
+      SELECT tenant_id, actor_open_id, source_message_id,
+        ${JSON.stringify(input.request)}::text::jsonb, ${JSON.stringify(input.report)}::text::jsonb
+      FROM completed
+      RETURNING id, request, report, revision, created_at, draft_edits, updated_at
+      ), delivery AS (
+        INSERT INTO preparation_result_deliveries (result_id, chat_id)
+        SELECT id, ${input.chatId} FROM saved RETURNING result_id
+      )
+      SELECT saved.* FROM saved JOIN delivery ON delivery.result_id = saved.id
+    `;
+    const row = rows[0];
+    return row ? { id: row.id, request: row.request, report: row.report,
+      revision: row.revision, createdAt: row.created_at.toISOString(),
+      draftEdits: row.draft_edits, updatedAt: row.updated_at.toISOString() } : null;
+  }
+
+  async getPreparationResult(tenantId: string, actorOpenId: string, id: string): Promise<CustomerPreparationResultSnapshot | null> {
+    const rows = await this.sql<Array<{
+      id: string; request: CustomerPreparationResultSnapshot['request'];
+      report: CustomerPreparationResultSnapshot['report']; revision: number; created_at: Date;
+      draft_edits: CustomerPreparationResultSnapshot['draftEdits']; updated_at: Date;
+    }>>`
+      SELECT id, request, report, revision, created_at, draft_edits, updated_at FROM preparation_results
+      WHERE tenant_id = ${tenantId} AND actor_open_id = ${actorOpenId} AND id = ${id}
+    `;
+    const row = rows[0];
+    return row ? { id: row.id, request: row.request, report: row.report,
+      revision: row.revision, createdAt: row.created_at.toISOString(),
+      draftEdits: row.draft_edits, updatedAt: row.updated_at.toISOString() } : null;
+  }
+
+  async claimPreparationDelivery(input: PreparationDeliveryClaim): Promise<PreparationDeliveryLease | null> {
+    const token: string = randomUUID();
+    const expiredAt: Date = new Date(input.now.getTime() - 300000);
+    const rows = await this.sql<Array<{ status: string; claim_token: string; chat_id: string; frozen_text: string }>>`
+      UPDATE preparation_result_deliveries AS delivery
+      SET status = CASE WHEN delivery.status = 'pending' THEN 'dispatching' ELSE 'unknown' END,
+        frozen_text = COALESCE(delivery.frozen_text, ${input.text}),
+        claim_token = CASE WHEN delivery.status = 'pending' THEN ${token}::uuid ELSE delivery.claim_token END,
+        started_at = CASE WHEN delivery.status = 'pending' THEN ${input.now} ELSE delivery.started_at END,
+        updated_at = CURRENT_TIMESTAMP
+      FROM preparation_results AS result
+      WHERE delivery.result_id = result.id AND result.id = ${input.resultId}
+        AND result.tenant_id = ${input.tenantId} AND result.actor_open_id = ${input.actorOpenId}
+        AND (delivery.status = 'pending' OR (delivery.status = 'dispatching' AND delivery.started_at <= ${expiredAt}))
+      RETURNING delivery.status, delivery.claim_token, delivery.chat_id, delivery.frozen_text
+    `;
+    const row = rows[0];
+    return row?.status === 'dispatching'
+      ? { token: row.claim_token, chatId: row.chat_id, text: row.frozen_text } : null;
+  }
+
+  async getPreparationDelivery(input: { tenantId: string; actorOpenId: string; resultId: string }): Promise<CustomerPreparationDeliveryStatus | null> {
+    const rows = await this.sql<CustomerPreparationDeliveryStatus[]>`
+      SELECT delivery.status, delivery.updated_at AS "updatedAt",
+        delivery.reconciliation_version AS "reconciliationVersion" FROM preparation_result_deliveries AS delivery
+      JOIN preparation_results AS result ON result.id = delivery.result_id
+      WHERE result.id = ${input.resultId} AND result.tenant_id = ${input.tenantId}
+        AND result.actor_open_id = ${input.actorOpenId}
+    `;
+    return rows[0] ? { status: rows[0].status, updatedAt: new Date(rows[0].updatedAt).toISOString(),
+      reconciliationVersion: rows[0].reconciliationVersion } : null;
+  }
+
+  async confirmPreparationDelivery(input: ConfirmPreparationDeliveryInput): Promise<boolean> {
+    const rows = await this.sql`
+      WITH current_delivery AS (
+        SELECT delivery.result_id, result.tenant_id, result.actor_open_id
+        FROM preparation_result_deliveries AS delivery
+        JOIN preparation_results AS result ON result.id = delivery.result_id
+        WHERE result.id = ${input.resultId} AND result.tenant_id = ${input.tenantId}
+          AND result.actor_open_id = ${input.actorOpenId} AND delivery.status = 'unknown'
+          AND delivery.reconciliation_version = 1
+          AND delivery.reconciliation_version = ${input.expectedVersion}
+          AND EXISTS (SELECT 1 FROM tenant_members AS member WHERE member.tenant_id = result.tenant_id
+            AND member.feishu_open_id = ${input.operatorOpenId} AND member.status = 'active')
+        FOR UPDATE OF delivery
+      ), updated AS (
+        UPDATE preparation_result_deliveries AS delivery
+        SET status = 'sent', message_id = ${input.messageId}, updated_at = ${input.now},
+          reconciliation_version = reconciliation_version + 1
+        FROM current_delivery
+        WHERE delivery.result_id = current_delivery.result_id
+        RETURNING current_delivery.result_id, current_delivery.tenant_id, current_delivery.actor_open_id
+      ), audited AS (
+        INSERT INTO preparation_result_delivery_reconciliations (
+          result_id, tenant_id, actor_open_id, operator_member_id, decision,
+          expected_version, note, evidence_message_id, evidence_sent_at, reconciled_at
+        )
+        SELECT updated.result_id, updated.tenant_id, updated.actor_open_id, member.id,
+          'confirm_sent', 1, ${input.note}, ${input.messageId}, ${input.sentAt}, ${input.now}
+        FROM updated
+        JOIN tenant_members AS member ON member.tenant_id = updated.tenant_id
+          AND member.feishu_open_id = ${input.operatorOpenId} AND member.status = 'active'
+        RETURNING result_id
+      ) SELECT result_id FROM audited
+    `;
+    return rows.length === 1;
+  }
+
+  async finishPreparationDelivery(input: PreparationDeliveryFinish): Promise<boolean> {
+    const status: string = input.messageId ? 'sent' : 'unknown';
+    const rows = await this.sql`
+      WITH updated AS (
+        UPDATE preparation_result_deliveries AS delivery
+        SET status = ${status}, message_id = ${input.messageId}, updated_at = CURRENT_TIMESTAMP
+        FROM preparation_results AS result
+        WHERE delivery.result_id = result.id AND result.id = ${input.resultId}
+          AND result.tenant_id = ${input.tenantId} AND result.actor_open_id = ${input.actorOpenId}
+          AND delivery.status = 'dispatching' AND delivery.claim_token = ${input.token}::uuid
+        RETURNING result.tenant_id, result.actor_open_id, result.id
+      )
+      INSERT INTO audit_events (tenant_id, actor_open_id, trace_id, event_type, entity_id, outcome, details)
+      SELECT tenant_id, actor_open_id, ${input.token}, 'preparation.delivery_finished', id,
+        ${input.messageId ? 'succeeded' : 'failed'},
+        jsonb_build_object('status', ${status}::text) FROM updated RETURNING id
+    `;
+    return rows.length === 1;
+  }
+
+  async savePreparationDraft(input: SavePreparationDraftInput): Promise<CustomerPreparationResultSnapshot | null> {
+    const edit = parsePreparationDraftEdit(input.edit);
+    const draftJson: string = JSON.stringify({ channel: edit.channel, subject: edit.subject, body: edit.body });
+    const rows = await this.sql<Array<{
+      id: string; request: CustomerPreparationResultSnapshot['request'];
+      report: CustomerPreparationResultSnapshot['report']; revision: number; created_at: Date;
+      draft_edits: CustomerPreparationResultSnapshot['draftEdits']; updated_at: Date;
+    }>>`
+      WITH updated AS (
+        UPDATE preparation_results AS result
+        SET draft_edits = (
+          SELECT COALESCE(jsonb_agg(draft), '[]'::jsonb)
+          FROM jsonb_array_elements(result.draft_edits) AS draft
+          WHERE draft->>'channel' <> ${edit.channel}
+        ) || jsonb_build_array(${draftJson}::text::jsonb),
+        revision = revision + 1, updated_at = CURRENT_TIMESTAMP
+        WHERE tenant_id = ${input.tenantId} AND actor_open_id = ${input.actorOpenId}
+          AND id = ${input.id} AND revision = ${edit.expectedRevision}
+          AND EXISTS (SELECT 1 FROM jsonb_array_elements(report->'drafts') AS draft
+            WHERE draft->>'channel' = ${edit.channel})
+        RETURNING *
+      ), audited AS (
+        INSERT INTO audit_events (tenant_id, trace_id, event_type, actor_open_id, entity_id, outcome, details)
+        SELECT tenant_id, ${randomUUID()}, 'preparation.draft_saved', actor_open_id, id::text, 'succeeded',
+          jsonb_build_object('channel', ${edit.channel}::text, 'revision', revision)
+        FROM updated RETURNING id
+      )
+      SELECT updated.id, request, report, revision, updated.created_at, draft_edits, updated_at
+      FROM updated CROSS JOIN audited
+    `;
+    const row = rows[0];
+    return row ? { id: row.id, request: row.request, report: row.report,
+      revision: row.revision, createdAt: row.created_at.toISOString(),
+      draftEdits: row.draft_edits, updatedAt: row.updated_at.toISOString() } : null;
+  }
+
   async savePreparationClarificationSession(
     input: SavePreparationClarificationSessionInput,
   ): Promise<AgentSession> {
+    const preparationContext = parsePreparationContext(input.preparationContext, input.rawText);
+    const contextJson: string = JSON.stringify(preparationContext);
+    const expectedRevision: number | null = input.expectedRevision ?? null;
     const rows: SessionRow[] = await this.sql<SessionRow[]>`
-      INSERT INTO agent_sessions (
+      INSERT INTO preparation_sessions (
         tenant_id, actor_open_id, chat_id, state, source_message_id,
-        raw_text, draft, expires_at
-      ) VALUES (
+        raw_text, draft, expires_at, preparation_context
+      ) SELECT
         ${input.tenantId}, ${input.actorOpenId}, ${input.chatId},
         'preparation_clarifying', ${input.sourceMessageId}, ${input.rawText},
-        NULL, ${input.expiresAt}
-      )
-      ON CONFLICT (tenant_id, actor_open_id) DO UPDATE SET
+        NULL, ${input.expiresAt}, ${contextJson}::text::jsonb
+      WHERE ${expectedRevision}::integer IS NULL OR ${expectedRevision}::integer = 0
+        OR EXISTS (SELECT 1 FROM preparation_sessions
+          WHERE tenant_id = ${input.tenantId} AND actor_open_id = ${input.actorOpenId}
+            AND chat_id = ${input.chatId} AND revision = ${expectedRevision})
+      ON CONFLICT (tenant_id, actor_open_id, chat_id) DO UPDATE SET
         chat_id = EXCLUDED.chat_id, state = 'preparation_clarifying',
         source_message_id = EXCLUDED.source_message_id,
         raw_text = EXCLUDED.raw_text, draft = NULL,
+        preparation_context = EXCLUDED.preparation_context,
+        revision = preparation_sessions.revision + 1,
         expires_at = EXCLUDED.expires_at, updated_at = CURRENT_TIMESTAMP
-      RETURNING id, tenant_id, actor_open_id, chat_id, state,
+      WHERE ${expectedRevision}::integer IS NULL OR preparation_sessions.revision = ${expectedRevision}
+      RETURNING revision, preparation_context, id, tenant_id, actor_open_id, chat_id, state,
         source_message_id, raw_text, draft, expires_at, created_at, updated_at
     `;
+    if (rows.length === 0) throw new Error('Preparation revision conflict');
     return this.requireSessionRow(rows);
+  }
+
+  async closePreparationSession(tenantId: string, actorOpenId: string, chatId: string, expectedRevision?: number): Promise<boolean> {
+    const rows = await this.sql`
+      UPDATE preparation_sessions SET state = 'closed', revision = revision + 1, updated_at = CURRENT_TIMESTAMP
+      WHERE tenant_id = ${tenantId} AND actor_open_id = ${actorOpenId} AND chat_id = ${chatId}
+        AND (${expectedRevision ?? null}::integer IS NULL OR
+          (revision = ${expectedRevision ?? null} AND state = 'preparation_clarifying'
+           AND expires_at > CURRENT_TIMESTAMP))
+      RETURNING id
+    `;
+    return rows.length > 0;
   }
 
   async closeSession(
@@ -1043,6 +1250,10 @@ export class PostgresControlStore
   private mapSession(row: SessionRow): AgentSession {
     const draftValue: unknown = this.parseJsonColumn(row.draft);
     return {
+      ...(row.revision === undefined ? {} : { revision: row.revision }),
+      ...(row.state === 'preparation_clarifying'
+        ? { preparationContext: parsePreparationContext(this.parseJsonColumn(row.preparation_context ?? null), row.raw_text) }
+        : {}),
       id: row.id,
       tenantId: row.tenant_id,
       actorOpenId: row.actor_open_id,

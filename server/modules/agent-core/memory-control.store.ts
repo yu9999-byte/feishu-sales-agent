@@ -1,10 +1,17 @@
+import { parsePreparationContext } from '@server/modules/insight/customer-preparation-context';
+import { parsePreparationDraftEdit } from '@server/modules/insight/preparation-draft-edit';
+import { randomUUID } from 'node:crypto';
 import type {
   AgentExecutionResult,
+  CustomerPreparationResultSnapshot,
+  CustomerPreparationDeliveryStatus,
   PendingActionStatus,
   TaskFulfillmentChange,
 } from '@shared/api.interface';
 import type {
   AgentSession,
+  CompletePreparationSessionInput,
+  SavePreparationDraftInput,
   AuditEventInput,
   CreatePendingActionInput,
   PendingAction,
@@ -18,6 +25,7 @@ import type {
   TaskEventReceiptInput,
 } from './agent.types';
 import type { ControlStore } from './agent.ports';
+import type { ConfirmPreparationDeliveryInput, PreparationDeliveryClaim, PreparationDeliveryLease, PreparationDeliveryFinish } from './preparation-delivery.types';
 
 interface StoredAuditEvent extends AuditEventInput {
   createdAt: Date;
@@ -26,6 +34,112 @@ interface StoredAuditEvent extends AuditEventInput {
 const clone = <T>(value: T): T => structuredClone(value);
 
 export class MemoryControlStore implements ControlStore {
+  private readonly preparationDeliveries = new Map<string, {
+    chatId: string; text: string | null; token: string | null;
+    status: 'pending' | 'dispatching' | 'sent' | 'unknown'; startedAt: number; updatedAt: number; messageId: string | null; reconciliationVersion: number;
+  }>();
+
+  async claimPreparationDelivery(input: PreparationDeliveryClaim): Promise<PreparationDeliveryLease | null> {
+    const key: string = JSON.stringify([input.tenantId, input.actorOpenId, input.resultId]);
+    const delivery = this.preparationDeliveries.get(key);
+    if (!delivery) return null;
+    if (delivery.status === 'dispatching' && delivery.startedAt <= input.now.getTime() - 300000) {
+      delivery.status = 'unknown';
+    }
+    if (delivery.status !== 'pending') return null;
+    delivery.status = 'dispatching';
+    delivery.text ??= input.text;
+    delivery.token = randomUUID();
+    delivery.startedAt = input.now.getTime();
+    return { token: delivery.token, chatId: delivery.chatId, text: delivery.text };
+  }
+
+  async getPreparationDelivery(input: { tenantId: string; actorOpenId: string; resultId: string }): Promise<CustomerPreparationDeliveryStatus | null> {
+    const delivery = this.preparationDeliveries.get(JSON.stringify([input.tenantId, input.actorOpenId, input.resultId]));
+    return delivery ? { status: delivery.status, updatedAt: new Date(delivery.updatedAt).toISOString(), reconciliationVersion: delivery.reconciliationVersion } : null;
+  }
+
+  async confirmPreparationDelivery(input: ConfirmPreparationDeliveryInput): Promise<boolean> {
+    const delivery = this.preparationDeliveries.get(JSON.stringify([input.tenantId, input.actorOpenId, input.resultId]));
+    if (!delivery || delivery.status !== 'unknown' || delivery.reconciliationVersion !== input.expectedVersion) return false;
+    delivery.status = 'sent';
+    delivery.messageId = input.messageId;
+    delivery.reconciliationVersion += 1;
+    delivery.updatedAt = input.now.getTime();
+    this.auditEvents.push({ tenantId: input.tenantId, actorOpenId: input.operatorOpenId,
+      traceId: input.resultId, eventType: 'preparation.delivery_reconciled', entityId: input.resultId,
+      outcome: 'succeeded', details: { decision: 'confirm_sent', messageId: input.messageId, sentAt: input.sentAt.toISOString(), note: input.note }, createdAt: input.now });
+    return true;
+  }
+
+  async finishPreparationDelivery(input: PreparationDeliveryFinish): Promise<boolean> {
+    const delivery = this.preparationDeliveries.get(JSON.stringify([input.tenantId, input.actorOpenId, input.resultId]));
+    if (!delivery || delivery.status !== 'dispatching' || delivery.token !== input.token) return false;
+    delivery.status = input.messageId ? 'sent' : 'unknown';
+    delivery.updatedAt = Date.now();
+    this.auditEvents.push({ tenantId: input.tenantId, actorOpenId: input.actorOpenId,
+      traceId: input.token, eventType: 'preparation.delivery_finished', entityId: input.resultId,
+      outcome: input.messageId ? 'succeeded' : 'failed', details: { status: delivery.status }, createdAt: new Date() });
+    return true;
+  }
+  private readonly preparationResults = new Map<string, CustomerPreparationResultSnapshot>();
+  private readonly preparationResultSources = new Set<string>();
+
+  async completePreparationSession(input: CompletePreparationSessionInput): Promise<CustomerPreparationResultSnapshot | null> {
+    const key: string = JSON.stringify([input.tenantId, input.actorOpenId, input.chatId]);
+    const session: AgentSession | undefined = this.preparationSessions.get(key);
+    if (!session || session.revision !== input.expectedRevision ||
+      session.state !== 'preparation_clarifying' || session.expiresAt.getTime() <= Date.now()) return null;
+    const sourceKey: string = JSON.stringify([
+      input.tenantId, input.actorOpenId, session.sourceMessageId,
+    ]);
+    if (this.preparationResultSources.has(sourceKey)) {
+      throw new Error('Duplicate preparation result source');
+    }
+    const createdAt: string = new Date().toISOString();
+    const result: CustomerPreparationResultSnapshot = {
+      id: randomUUID(), request: clone(input.request), report: clone(input.report),
+      revision: 1, createdAt, updatedAt: createdAt, draftEdits: [],
+    };
+    this.preparationResults.set(JSON.stringify([input.tenantId, input.actorOpenId, result.id]), result);
+    this.preparationDeliveries.set(JSON.stringify([input.tenantId, input.actorOpenId, result.id]), {
+      chatId: input.chatId, text: null, token: null, status: 'pending', startedAt: 0,
+      updatedAt: Date.now(), messageId: null, reconciliationVersion: 1,
+    });
+    this.preparationResultSources.add(sourceKey);
+    session.state = 'closed';
+    session.revision = input.expectedRevision + 1;
+    return clone(result);
+  }
+
+  async getPreparationResult(tenantId: string, actorOpenId: string, id: string): Promise<CustomerPreparationResultSnapshot | null> {
+    const result = this.preparationResults.get(JSON.stringify([tenantId, actorOpenId, id]));
+    return result ? clone(result) : null;
+  }
+
+  async savePreparationDraft(input: SavePreparationDraftInput): Promise<CustomerPreparationResultSnapshot | null> {
+    const edit = parsePreparationDraftEdit(input.edit);
+    const key: string = JSON.stringify([input.tenantId, input.actorOpenId, input.id]);
+    const result = this.preparationResults.get(key);
+    if (!result || result.revision !== edit.expectedRevision ||
+      !result.report.drafts.some((draft) => draft.channel === edit.channel)) return null;
+    const updated: CustomerPreparationResultSnapshot = {
+      ...result, revision: result.revision + 1, updatedAt: new Date().toISOString(),
+      draftEdits: [
+        ...(result.draftEdits ?? []).filter((draft) => draft.channel !== edit.channel),
+        { channel: edit.channel, subject: edit.subject, body: edit.body },
+      ],
+    };
+    this.auditEvents.push({
+      tenantId: input.tenantId, actorOpenId: input.actorOpenId,
+      traceId: randomUUID(), eventType: 'preparation.draft_saved', entityId: input.id,
+      outcome: 'succeeded', details: { channel: edit.channel, revision: updated.revision },
+      createdAt: new Date(),
+    });
+    this.preparationResults.set(key, updated);
+    return clone(updated);
+  }
+  private readonly preparationSessions: Map<string, AgentSession> = new Map();
   private readonly tenantsByKey: Map<string, TenantIntegration>;
   private readonly processedMessages: Set<string> = new Set<string>();
   private readonly sessions: Map<string, AgentSession> =
@@ -172,9 +286,12 @@ export class MemoryControlStore implements ControlStore {
   async getOpenPreparationSession(
     tenantId: string,
     actorOpenId: string,
+    chatId: string,
+    includeInactive: boolean = false,
   ): Promise<AgentSession | null> {
-    const key: string = this.sessionKey(tenantId, actorOpenId);
-    const session: AgentSession | undefined = this.sessions.get(key);
+    const key: string = JSON.stringify([tenantId, actorOpenId, chatId]);
+    const session: AgentSession | undefined = this.preparationSessions.get(key);
+    if (includeInactive) return session ? clone(session) : null;
     if (!session || session.state !== 'preparation_clarifying') return null;
     if (session.expiresAt.getTime() <= Date.now()) {
       session.state = 'closed';
@@ -187,8 +304,12 @@ export class MemoryControlStore implements ControlStore {
   async savePreparationClarificationSession(
     input: SavePreparationClarificationSessionInput,
   ): Promise<AgentSession> {
-    const key: string = this.sessionKey(input.tenantId, input.actorOpenId);
-    const existing: AgentSession | undefined = this.sessions.get(key);
+    const preparationContext = parsePreparationContext(input.preparationContext, input.rawText);
+    const key: string = JSON.stringify([input.tenantId, input.actorOpenId, input.chatId]);
+    const existing: AgentSession | undefined = this.preparationSessions.get(key);
+    if (input.expectedRevision !== undefined && input.expectedRevision !== (existing?.revision ?? 0)) {
+      throw new Error('Preparation revision conflict');
+    }
     const now: Date = new Date();
     const session: AgentSession = {
       id: existing?.id ?? crypto.randomUUID(),
@@ -196,6 +317,8 @@ export class MemoryControlStore implements ControlStore {
       actorOpenId: input.actorOpenId,
       chatId: input.chatId,
       state: 'preparation_clarifying',
+      revision: (existing?.revision ?? 0) + 1,
+      preparationContext,
       sourceMessageId: input.sourceMessageId,
       rawText: input.rawText,
       draft: null,
@@ -203,8 +326,23 @@ export class MemoryControlStore implements ControlStore {
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     };
-    this.sessions.set(key, session);
+    this.preparationSessions.set(key, session);
     return clone(session);
+  }
+
+  async closePreparationSession(tenantId: string, actorOpenId: string, chatId: string, expectedRevision?: number): Promise<boolean> {
+    const session: AgentSession | undefined = this.preparationSessions.get(
+      JSON.stringify([tenantId, actorOpenId, chatId]),
+    );
+    if (!session || (expectedRevision !== undefined &&
+      (session.revision !== expectedRevision || session.state !== 'preparation_clarifying' ||
+       session.expiresAt.getTime() <= Date.now()))) return false;
+    if (session) {
+      session.revision = (session.revision ?? 0) + 1;
+      session.state = 'closed';
+      session.updatedAt = new Date();
+    }
+    return true;
   }
 
   async closeSession(

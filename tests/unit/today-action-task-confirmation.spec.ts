@@ -1,13 +1,17 @@
 import { expect, it, vi } from 'vitest';
 import { confirmTodayTaskCard } from '@server/modules/insight/today-action-task-confirmation';
+import type { IncomingCardAction } from '@server/modules/agent-core/agent.types';
+import { testIntegration } from '../fixtures/tenant-integration';
 
 it('rejects forged card ownership before acquiring a task execution lease', async () => {
   const control = { getPendingAction: vi.fn().mockResolvedValue(null), acquirePendingAction: vi.fn() };
   const executor = { schedule: vi.fn() };
-  const incoming = { value: { action: 'today_task_confirm', actionId: 'one', version: 1,
+  const incoming: IncomingCardAction = { feishuTenantKey: 'tenant-key', eventId: 'event-1',
+    callbackToken: 'callback-1', actionName: 'today_task_confirm',
+    value: { action: 'today_task_confirm', actionId: 'one', version: 1,
     recipientOpenId: 'owner' }, operatorOpenId: 'owner', cardMessageId: 'card', chatId: 'chat',
     receivedAt: new Date(), formValue: {} };
-  await expect(confirmTodayTaskCard(control, executor, { tenantId: 'tenant' }, incoming))
+  await expect(confirmTodayTaskCard(control, executor, testIntegration, incoming))
     .rejects.toThrow('ACCESS_DENIED');
   expect(control.acquirePendingAction).not.toHaveBeenCalled();
   expect(executor.schedule).not.toHaveBeenCalled();
@@ -18,10 +22,12 @@ it('replays an executing task without parsing stale form data or scheduling it a
     status: 'executing', payload: { actionKind: 'task', draftVersion: 1 } };
   const control = { getPendingAction: vi.fn().mockResolvedValue(pending), acquirePendingAction: vi.fn() };
   const executor = { schedule: vi.fn() };
-  const incoming = { value: { action: 'today_task_confirm', actionId: 'one', version: 1,
+  const incoming: IncomingCardAction = { feishuTenantKey: 'tenant-key', eventId: 'event-2',
+    callbackToken: 'callback-2', actionName: 'today_task_confirm',
+    value: { action: 'today_task_confirm', actionId: 'one', version: 1,
     recipientOpenId: 'owner' }, operatorOpenId: 'owner', cardMessageId: 'card', chatId: 'chat',
     receivedAt: new Date(), formValue: {} };
-  await expect(confirmTodayTaskCard(control, executor, { tenantId: 'tenant' }, incoming)).resolves.toBe('executing');
+  await expect(confirmTodayTaskCard(control, executor, testIntegration, incoming)).resolves.toBe('executing');
   expect(control.acquirePendingAction).not.toHaveBeenCalled();
   expect(executor.schedule).not.toHaveBeenCalled();
 });
@@ -34,10 +40,12 @@ it('passes the edited task fields and expected version into the atomic execution
   const control = { getPendingAction: vi.fn().mockResolvedValue(pending),
     acquirePendingAction: vi.fn().mockResolvedValue({ ...pending, status: 'executing' }) };
   const executor = { schedule: vi.fn() };
-  const incoming = { value: { action: 'today_task_confirm', actionId: 'one', version: 1,
+  const incoming: IncomingCardAction = { feishuTenantKey: 'tenant-key', eventId: 'event-3',
+    callbackToken: 'callback-3', actionName: 'today_task_confirm',
+    value: { action: 'today_task_confirm', actionId: 'one', version: 1,
     recipientOpenId: 'owner' }, operatorOpenId: 'owner', cardMessageId: 'card', chatId: 'chat',
     receivedAt: now, formValue: { title: '编辑后的任务', dueAt: '2026-10-18T09:00:00+08:00', channel: '电话' } };
-  await expect(confirmTodayTaskCard(control, executor, { tenantId: 'tenant' }, incoming)).resolves.toBe('executing');
+  await expect(confirmTodayTaskCard(control, executor, testIntegration, incoming)).resolves.toBe('executing');
   const lease = control.acquirePendingAction.mock.calls[0];
   expect(lease[5].draft.nextAction).toBe('编辑后的任务');
   expect(lease[5].draft.dueAt).toBe('2026-10-18T01:00:00.000Z');
@@ -45,6 +53,6 @@ it('passes the edited task fields and expected version into the atomic execution
   expect(executor.schedule).toHaveBeenCalledOnce();
   executor.schedule.mockClear();
   control.acquirePendingAction.mockResolvedValue(null);
-  await expect(confirmTodayTaskCard(control, executor, { tenantId: 'tenant' }, incoming)).rejects.toThrow('ACTION_CONFLICT');
+  await expect(confirmTodayTaskCard(control, executor, testIntegration, incoming)).rejects.toThrow('ACTION_CONFLICT');
   expect(executor.schedule).not.toHaveBeenCalled();
 });

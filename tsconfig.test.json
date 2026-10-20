@@ -2,12 +2,27 @@
   "extends": "./tsconfig.node.json",
   "compilerOptions": {
     "noEmit": true,
-    "types": ["node", "vitest/globals"]
+    "composite": false,
+    "incremental": false,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "types": ["node", "vitest/globals"],
+    "paths": {
+      "@server/*": ["server/*"],
+      "@shared/*": ["shared/*"],
+      "@client/*": ["client/*"],
+      "@/*": ["client/src/*"],
+      "@lark-apaas/client-toolkit/tools/*": ["node_modules/@lark-apaas/client-toolkit/lib/apis/tools/*"]
+    }
   },
   "include": [
     "server/**/*.ts",
     "shared/**/*.ts",
     "tests/**/*.ts",
-    "vitest.config.ts"
-  ]
+    "vitest.config.ts",
+    "vitest.integration.config.ts",
+    "vite.agent.config.ts"
+  ],
+  "exclude": ["node_modules", "dist", "source_package"]
 }

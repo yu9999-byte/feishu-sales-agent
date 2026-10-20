@@ -1,5 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import type { TodayActionOperationRequest } from '../../shared/api.interface';
+import type {
+  ConfirmPreparationDeliveryRequest,
+  ConfirmPreparationDeliveryResponse,
+  CustomerPreparationDeliveryStatus,
+  TodayActionOperationRequest,
+  UpdateFollowupDraftRequest,
+} from '../../shared/api.interface';
 
 const transport = vi.hoisted(() => ({ send: vi.fn(), shortcut: vi.fn() }));
 vi.mock('@lark-apaas/client-toolkit/utils/getAxiosForBackend', () => ({
@@ -10,7 +16,8 @@ vi.mock('axios', () => ({ default: {
   get: transport.shortcut, post: transport.shortcut, patch: transport.shortcut,
 } }));
 import { operateTodayAction, confirmTodayTaskDraft, updateFollowupDraft,
-  createTodayFollowupDraft, createTodayTaskDraft } from '../../client/src/api';
+  createTodayFollowupDraft, createTodayTaskDraft,
+  getCustomerPreparationDelivery, confirmCustomerPreparationDelivery } from '../../client/src/api';
 
 beforeEach((): void => {
   transport.send.mockResolvedValue({ data: { accepted: true } });
@@ -48,8 +55,44 @@ it('keeps followup and task draft bodies separate from transport configuration',
 });
 
 it('retains PATCH revision semantics', async (): Promise<void> => {
-  const input = { expectedVersion: 1, communicationText: '修订原文' };
+  const input: UpdateFollowupDraftRequest = {
+    expectedVersion: 1, generatedBody: '修订原文',
+    draft: {
+      customerName: null, contactName: null, opportunityName: null,
+      summary: '修订摘要', customerNeeds: [], objections: [], risks: [],
+      progress: null, expectedAmount: null, nextAction: null,
+      dueAt: null, evidenceQuotes: [],
+    },
+  };
   await updateFollowupDraft('draft/1', input);
   expect(transport.send).toHaveBeenCalledWith({ method: 'PATCH',
     url: '/api/platform/followup-drafts/draft%2F1', data: input, withCredentials: true });
+});
+
+it('reads persisted preparation delivery without side effects', async (): Promise<void> => {
+  const status: CustomerPreparationDeliveryStatus = { status: 'unknown',
+    reconciliationVersion: 2 };
+  transport.send.mockResolvedValueOnce({ data: status });
+  await expect(getCustomerPreparationDelivery('result/1')).resolves.toEqual(status);
+  expect(transport.send).toHaveBeenCalledWith({ method: 'GET',
+    url: '/api/platform/customer-communications/results/result%2F1/delivery',
+    withCredentials: true });
+});
+
+it('confirms only the supplied preparation delivery evidence with session credentials', async (): Promise<void> => {
+  const input: ConfirmPreparationDeliveryRequest = {
+    expectedVersion: 2,
+    messageId: 'om_message_verified',
+    sentAt: '2026-10-19T12:00:00+08:00',
+    note: '已在原飞书会话核实该消息发送成功',
+  };
+  const response: ConfirmPreparationDeliveryResponse = {
+    status: 'sent', updatedAt: '2026-10-19T04:10:00.000Z',
+  };
+  transport.send.mockResolvedValueOnce({ data: response });
+  await expect(confirmCustomerPreparationDelivery('result/1', input))
+    .resolves.toEqual(response);
+  expect(transport.send).toHaveBeenLastCalledWith({ method: 'POST',
+    url: '/api/platform/customer-communications/results/result%2F1/delivery/confirm',
+    data: input, withCredentials: true });
 });

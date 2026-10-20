@@ -1,5 +1,7 @@
 import type {
   AgentExecutionResult,
+  CustomerPreparationResultSnapshot,
+  CustomerPreparationDeliveryStatus,
   FollowupDraft,
   FollowupMissingField,
   JsonObject,
@@ -8,6 +10,8 @@ import type {
 } from '@shared/api.interface';
 import type {
   AgentSession,
+  CompletePreparationSessionInput,
+  SavePreparationDraftInput,
   AuditEventInput,
   ConversationDecision,
   ConversationInput,
@@ -41,7 +45,9 @@ import type {
   TaskCreationResult,
   TenantIntegration,
 } from './agent.types';
+import type { ConfirmPreparationDeliveryInput } from './preparation-delivery.types';
 import type { SalesContext } from '@shared/api.interface';
+import type { PreparationDeliveryClaim, PreparationDeliveryLease, PreparationDeliveryFinish } from './preparation-delivery.types';
 import type { FollowupProjectRiskInsight } from '@server/modules/insight/followup-project-risk.service';
 
 export const CONTROL_STORE = Symbol('CONTROL_STORE');
@@ -56,6 +62,13 @@ export const OPPORTUNITY_DECISION_READER = Symbol(
 );
 
 export interface ControlStore {
+  claimPreparationDelivery(input: PreparationDeliveryClaim): Promise<PreparationDeliveryLease | null>;
+  finishPreparationDelivery(input: PreparationDeliveryFinish): Promise<boolean>;
+  completePreparationSession(input: CompletePreparationSessionInput): Promise<CustomerPreparationResultSnapshot | null>;
+  getPreparationResult(tenantId: string, actorOpenId: string, id: string): Promise<CustomerPreparationResultSnapshot | null>;
+  getPreparationDelivery(input: { tenantId: string; actorOpenId: string; resultId: string }): Promise<CustomerPreparationDeliveryStatus | null>;
+  confirmPreparationDelivery(input: ConfirmPreparationDeliveryInput): Promise<boolean>;
+  savePreparationDraft(input: SavePreparationDraftInput): Promise<CustomerPreparationResultSnapshot | null>;
   resolveTenant(feishuTenantKey: string): Promise<TenantIntegration | null>;
   resolveTenantById(tenantId: string): Promise<TenantIntegration | null>;
   listActiveIntegrations?(): Promise<TenantIntegration[]>;
@@ -73,7 +86,10 @@ export interface ControlStore {
   getOpenPreparationSession(
     tenantId: string,
     actorOpenId: string,
+    chatId: string,
+    includeInactive?: boolean,
   ): Promise<AgentSession | null>;
+  closePreparationSession(tenantId: string, actorOpenId: string, chatId: string, expectedRevision?: number): Promise<boolean>;
   savePreparationClarificationSession(
     input: SavePreparationClarificationSessionInput,
   ): Promise<AgentSession>;

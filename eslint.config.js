@@ -59,7 +59,7 @@ module.exports = tseslint.config(
   },
   // Agent tests and Vitest configuration
   {
-    files: ['tests/**/*.ts', 'vitest.config.ts'],
+    files: ['tests/**/*.ts', 'vitest.config.ts', 'vitest.integration.config.ts', 'vite.agent.config.ts'],
     extends: [
       ...eslintPresetsOfSimple.server,
     ],

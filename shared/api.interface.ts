@@ -1,9 +1,53 @@
 export type JsonPrimitive = string | number | boolean | null;
 
+export interface AgentReadinessResponse {
+  status: 'ready' | 'not_ready';
+  database: 'ready' | 'schema_pending' | 'unavailable';
+  checkedAt: string;
+}
+
+export interface CustomerPreparationDeliveryStatus {
+  status: 'pending' | 'dispatching' | 'sent' | 'unknown' | 'not_recorded';
+  updatedAt?: string;
+  reconciliationVersion?: number;
+}
+
+export interface ConfirmPreparationDeliveryRequest {
+  expectedVersion: number;
+  messageId: string;
+  sentAt: string;
+  note: string;
+}
+
+export interface ConfirmPreparationDeliveryResponse {
+  status: 'sent';
+  updatedAt: string;
+}
+
 export interface CustomerPreparationRequest {
   customerName: string;
   communicationAt: string | null;
   purpose: string | null;
+}
+
+export interface CustomerPreparationResultSnapshot {
+  id: string;
+  request: CustomerPreparationRequest;
+  report: CustomerCommunicationPreparationResponse;
+  revision: number;
+  createdAt: string;
+  draftEdits?: CustomerPreparationDraftEdit[];
+  updatedAt?: string;
+}
+
+export interface CustomerPreparationDraftEdit {
+  channel: 'feishu' | 'email';
+  subject: string | null;
+  body: string;
+}
+
+export interface SaveCustomerPreparationDraftRequest extends CustomerPreparationDraftEdit {
+  expectedRevision: number;
 }
 
 export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
@@ -638,6 +682,8 @@ export interface CustomerVisitBriefingOpportunity {
   gaps: OpportunityDecisionGap[];
   recommendation: OpportunityDecisionRecommendation | null;
   source: CustomerVisitBriefingSource;
+  // Older persisted reports did not retain decision evidence.
+  evidence?: OpportunityDecisionEvidence[];
 }
 
 export interface CustomerVisitBriefingFollowup {
@@ -914,6 +960,8 @@ export interface CustomerCommunicationPreparationResponse {
   status: CustomerCommunicationPreparationStatus;
   generatedAt: string;
   customer: CustomerVisitBriefingCustomer | null;
+  // Missing only on historical snapshots; unavailable new reports use null.
+  briefing?: CustomerCommunicationBriefing | null;
   objective: CustomerCommunicationObjective | null;
   angles: CustomerCommunicationAngle[];
   questions: CustomerCommunicationQuestion[];
@@ -923,6 +971,13 @@ export interface CustomerCommunicationPreparationResponse {
   evidence: CustomerCommunicationEvidence[];
   coverage: CustomerVisitBriefingCoverage;
   warnings: string[];
+}
+
+export interface CustomerCommunicationBriefing {
+  metrics: CustomerVisitBriefingMetrics;
+  opportunities: CustomerVisitBriefingOpportunity[];
+  recentFollowups: CustomerVisitBriefingFollowup[];
+  agenda: CustomerVisitBriefingAgendaItem[];
 }
 
 export type TaskFulfillmentStatus =

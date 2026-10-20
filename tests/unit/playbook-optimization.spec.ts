@@ -237,10 +237,10 @@ describe('PlaybookOptimizationService', (): void => {
       expectedUpdatedAt: NOW.toISOString(),
       note: '当前不进入资料编写',
       now: new Date('2026-10-08T03:02:00.000Z'),
-    })).rejects.toMatchObject<Partial<PlaybookOptimizationError>>({
+    })).rejects.toMatchObject({
       code: 'CONFLICT',
       currentUpdatedAt: '2026-10-08T03:01:00.000Z',
-    });
+    } satisfies Partial<PlaybookOptimizationError>);
     expect(review).toHaveBeenCalledTimes(1);
   });
 

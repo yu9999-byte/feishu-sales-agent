@@ -76,6 +76,7 @@ describe('FeishuDocumentGateway', (): void => {
       reference: {
         referenceType: 'docx',
         token: 'NDlodAhO5ouaYqxQskPcJCpjnoh',
+        canonicalUrl: 'https://example.feishu.cn/docx/NDlodAhO5ouaYqxQskPcJCpjnoh',
       },
       accessToken: 'uat-current',
     })).resolves.toEqual({
@@ -121,6 +122,7 @@ describe('FeishuDocumentGateway', (): void => {
       reference: {
         referenceType: 'docx',
         token: 'NDlodAhO5ouaYqxQskPcJCpjnoh',
+        canonicalUrl: 'https://example.feishu.cn/docx/NDlodAhO5ouaYqxQskPcJCpjnoh',
       },
       accessToken: 'uat-current',
     })).resolves.toEqual({
@@ -161,6 +163,7 @@ describe('FeishuDocumentGateway', (): void => {
       reference: {
         referenceType: 'wiki',
         token: 'WikcnToken12345678',
+        canonicalUrl: 'https://example.feishu.cn/wiki/WikcnToken12345678',
       },
       accessToken: 'uat-current',
     })).resolves.toMatchObject({
@@ -204,6 +207,7 @@ describe('FeishuDocumentGateway', (): void => {
       reference: {
         referenceType: 'wiki',
         token: 'WikcnToken12345678',
+        canonicalUrl: 'https://example.feishu.cn/wiki/WikcnToken12345678',
       },
       accessToken: 'uat-current',
     })).rejects.toEqual(new DocumentContentGatewayError('UNSUPPORTED_TYPE'));
@@ -239,6 +243,7 @@ describe('FeishuDocumentGateway', (): void => {
       reference: {
         referenceType: 'docx',
         token: 'NDlodAhO5ouaYqxQskPcJCpjnoh',
+        canonicalUrl: 'https://example.feishu.cn/docx/NDlodAhO5ouaYqxQskPcJCpjnoh',
       },
       accessToken: 'uat-current',
     })).rejects.toEqual(new DocumentContentGatewayError('ACCESS_DENIED'));

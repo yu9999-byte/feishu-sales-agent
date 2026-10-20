@@ -75,6 +75,8 @@ import {
     { provide: SALES_CONTEXT_READER, useExisting: SalesContextService },
   ],
   exports: [
+    LANGCHAIN_INTENT_MODEL,
+    LangChainIntentModel,
     FOLLOWUP_EXTRACTOR,
     CONVERSATION_ASSISTANT,
     LONG_TERM_MEMORY,

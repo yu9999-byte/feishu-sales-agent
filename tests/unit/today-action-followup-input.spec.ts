@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest';
 import { openTodayFollowupInput } from '@server/modules/insight/today-action-followup-input';
+import { testIntegration } from '../fixtures/tenant-integration';
 
 it('uses a stable draft and patches the original card without treating suggestions as communication', async () => {
   const create = vi.fn(async (input) => ({ ...input, status: 'pendingConfirmation',
@@ -9,7 +10,7 @@ it('uses a stable draft and patches the original card without treating suggestio
   const messenger = { updateCard: vi.fn(), sendConfirmationCard: vi.fn().mockResolvedValue('confirmation') };
   const input = { tenantId: 'tenant', memberId: 'member', actorOpenId: 'owner',
     chatId: 'chat', messageId: 'card', itemId: 'one', itemVersion: 'v1', now: new Date() };
-  await openTodayFollowupInput(control, messenger, { tenantId: 'tenant' }, input);
+  await openTodayFollowupInput(control, messenger, testIntegration, input);
   expect(create.mock.calls[0][0].payload.rawText).toBe('');
   expect(create.mock.calls[0][0].id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
   expect(create.mock.calls[0][0].payload.interactionStage).toBe('input');
@@ -26,10 +27,10 @@ it('refuses a foreign or already executed draft before patching its card', async
   const messenger = { updateCard: vi.fn(), sendConfirmationCard: vi.fn().mockResolvedValue('confirmation') };
   const input = { tenantId: 'tenant', memberId: 'member', actorOpenId: 'owner',
     chatId: 'chat', messageId: 'card', itemId: 'one', itemVersion: 'v1', now: new Date() };
-  await expect(openTodayFollowupInput(control, messenger, { tenantId: 'tenant' }, input))
+  await expect(openTodayFollowupInput(control, messenger, testIntegration, input))
     .rejects.toThrow('ACCESS_DENIED');
   control.getPendingAction.mockResolvedValue({ ...base, actorOpenId: 'owner' });
-  await expect(openTodayFollowupInput(control, messenger, { tenantId: 'tenant' }, input))
+  await expect(openTodayFollowupInput(control, messenger, testIntegration, input))
     .rejects.toThrow('ACTION_CONFLICT');
   expect(control.createPendingAction).not.toHaveBeenCalled();
   expect(messenger.updateCard).not.toHaveBeenCalled();
@@ -44,7 +45,7 @@ it('does not overwrite an already bound input card on a duplicate callback', asy
   const control = { getPendingAction: vi.fn().mockResolvedValue(pending),
     createPendingAction: vi.fn(), setPendingCardMessage: vi.fn() };
   const messenger = { updateCard: vi.fn(), sendConfirmationCard: vi.fn() };
-  await openTodayFollowupInput(control, messenger, { tenantId: 'tenant' }, {
+  await openTodayFollowupInput(control, messenger, testIntegration, {
     tenantId: 'tenant', memberId: 'member', actorOpenId: 'owner', chatId: 'chat',
     messageId: 'digest', itemId: 'one', itemVersion: 'v1', now });
   expect(control.createPendingAction).not.toHaveBeenCalled();

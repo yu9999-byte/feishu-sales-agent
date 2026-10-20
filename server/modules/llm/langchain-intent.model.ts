@@ -1,5 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ChatOpenAI } from '@langchain/openai';
+import { preparationExtractionSchema } from '@server/modules/insight/customer-preparation-extraction';
+import type { PreparationConditions } from '@server/modules/insight/customer-preparation-context';
+import { extractPreparationConditions, type PreparationModelInput } from './preparation-model';
 
 import {
   AGENT_CONFIG,
@@ -20,6 +23,7 @@ export interface ConversationIntentModel {
 
 @Injectable()
 export class LangChainIntentModel implements ConversationIntentModel {
+  private readonly preparationModel: ReturnType<ChatOpenAI['withStructuredOutput']>;
   private readonly structuredModel: ReturnType<ChatOpenAI['withStructuredOutput']>;
 
   constructor(
@@ -45,6 +49,14 @@ export class LangChainIntentModel implements ConversationIntentModel {
         method: 'jsonMode',
       },
     );
+    this.preparationModel = model.withStructuredOutput(preparationExtractionSchema, {
+      name: 'preparation_conditions',
+      method: 'jsonMode',
+    });
+  }
+
+  async extractPreparation(input: PreparationModelInput): Promise<PreparationConditions> {
+    return extractPreparationConditions(this.preparationModel, input);
   }
 
   async invoke(prompt: string): Promise<ConversationDecision> {

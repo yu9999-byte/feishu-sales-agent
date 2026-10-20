@@ -35,9 +35,6 @@ const opportunityEvidenceValue = (
   if (opportunity.nextAction?.trim()) {
     facts.push(`原定下一步：${opportunity.nextAction.trim()}`);
   }
-  if (opportunity.recommendation?.action.trim()) {
-    facts.push(`建议核对：${opportunity.recommendation.action.trim()}`);
-  }
   return facts.join('；');
 };
 
@@ -285,6 +282,7 @@ const buildCommunicationDrafts = (
   briefing: CustomerVisitBriefingResponse,
   objective: CustomerCommunicationObjective,
   questions: CustomerCommunicationQuestion[],
+  purpose?: string,
 ): CustomerCommunicationDraft[] => {
   const customer = briefing.customer;
   if (customer === null) return [];
@@ -298,9 +296,9 @@ const buildCommunicationDrafts = (
   const active: CustomerVisitBriefingOpportunity[] =
     activeOpportunities(briefing);
   const top: CustomerVisitBriefingOpportunity | undefined = active[0];
-  const topic: string = top
+  const topic: string = purpose?.trim() || (top
     ? `${top.name}的当前进展和下一步`
-    : '当前重点和新的合作需求';
+    : '当前重点和新的合作需求');
   const sourceKeys: string[] = uniqueKeys([
     sourceKey('customer', customer.recordId),
     ...objective.sourceKeys,
@@ -332,6 +330,7 @@ const buildCommunicationDrafts = (
 const buildCustomerCommunicationPreparation = (
   briefing: CustomerVisitBriefingResponse,
   generatedAt: string,
+  purpose?: string,
 ): CustomerCommunicationPreparationResponse => {
   if (
     briefing.customer === null ||
@@ -344,6 +343,7 @@ const buildCustomerCommunicationPreparation = (
       status: briefing.status,
       generatedAt,
       customer: null,
+      briefing: null,
       objective: null,
       angles: [],
       questions: [],
@@ -362,7 +362,10 @@ const buildCustomerCommunicationPreparation = (
     };
   }
   const objective: CustomerCommunicationObjective =
-    buildCommunicationObjective(briefing);
+    purpose?.trim() ? {
+      id: 'seller-purpose', title: purpose.trim(),
+      detail: '销售提供的沟通目的，需在沟通中确认，不作为客户事实。', sourceKeys: [],
+    } : buildCommunicationObjective(briefing);
   const questions: CustomerCommunicationQuestion[] =
     buildCommunicationQuestions(briefing);
   return {
@@ -371,6 +374,12 @@ const buildCustomerCommunicationPreparation = (
     status: briefing.status,
     generatedAt,
     customer: briefing.customer,
+    briefing: {
+      metrics: briefing.metrics,
+      opportunities: briefing.opportunities,
+      recentFollowups: briefing.recentFollowups,
+      agenda: briefing.agenda,
+    },
     objective,
     angles: buildCommunicationAngles(briefing),
     questions,
@@ -382,7 +391,7 @@ const buildCustomerCommunicationPreparation = (
       trustedResultCount: 0,
       warnings: ['资料库尚未配置'],
     },
-    drafts: buildCommunicationDrafts(briefing, objective, questions),
+    drafts: buildCommunicationDrafts(briefing, objective, questions, purpose),
     evidence: buildCommunicationEvidence(briefing),
     coverage: briefing.coverage,
     warnings: briefing.warnings,

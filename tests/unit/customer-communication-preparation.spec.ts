@@ -168,7 +168,7 @@ interface Harness {
 }
 
 const notConfiguredRetriever = (): CustomerCommunicationMaterialRetriever => ({
-  retrieve: vi.fn(async (input) => ({
+  retrieve: vi.fn<CustomerCommunicationMaterialRetriever['retrieve']>(async (input) => ({
     materials: input.pendingMaterials,
     search: {
       status: 'not_configured',
@@ -210,6 +210,71 @@ const generate = async (
 });
 
 describe('CustomerCommunicationPreparationService', (): void => {
+  it.each(['ready', 'partial'] as const)(
+    'preserves full briefing context and decision evidence for %s reports',
+    async (status): Promise<void> => {
+      const original: CustomerVisitBriefingResponse = briefing(status);
+      original.opportunities[0].evidence = [{
+        id: 'task-promise:confirmed-task', kind: 'task_promise',
+        label: '已确认任务', value: '核实评审参与人',
+        occurredAt: null, source: null,
+      }];
+      const result: CustomerCommunicationPreparationResponse =
+        await generate(setup(original).service);
+      expect(result.briefing).toEqual({
+        metrics: original.metrics, opportunities: original.opportunities,
+        recentFollowups: original.recentFollowups, agenda: original.agenda,
+      });
+      expect(result.coverage).toEqual(original.coverage);
+      expect(result.warnings).toEqual(original.warnings);
+      expect(result.briefing?.opportunities[0].evidence).toEqual(
+        original.opportunities[0].evidence,
+      );
+    },
+  );
+
+  it.each(['empty', 'unavailable'] as const)(
+    'does not leak residual briefing content when %s',
+    async (status): Promise<void> => {
+      const residual: CustomerVisitBriefingResponse = { ...briefing(), status };
+      const harness: Harness = setup(residual);
+      const result: CustomerCommunicationPreparationResponse =
+        await generate(harness.service);
+      expect(result.briefing).toBeNull();
+      expect(result.customer).toBeNull();
+      expect(result.evidence).toEqual([]);
+      expect(harness.materialRetriever.retrieve).not.toHaveBeenCalled();
+      expect(JSON.stringify(result)).not.toContain('年度协同项目');
+    },
+  );
+
+  it('keeps recommendations separate from factual evidence', async (): Promise<void> => {
+    const result: CustomerCommunicationPreparationResponse =
+      await generate(setup().service);
+    expect(result.evidence.find((item) => item.kind === 'opportunity')?.value)
+      .toBe('年度协同项目；当前进展：等待客户确认决策范围');
+    expect(result.briefing?.opportunities[0].recommendation?.action)
+      .toBe('确认客户决策范围和下一承诺');
+  });
+
+  it.each(['ready', 'empty', 'unavailable'] as const)('uses seller purpose without inventing evidence for %s', async (status) => {
+    const harness = setup(briefing(status));
+    const result = await harness.service.generate({
+      integration, actorOpenId: 'ou_sales_a', customerRecordId: 'customer-a',
+      referenceDate: '2026-10-07', timezone: 'Asia/Shanghai', now: NOW,
+      purpose: '确认接口验收范围',
+    });
+    expect(result.status).toBe(status);
+    if (status === 'ready') {
+      expect(result.objective).toMatchObject({ title: '确认接口验收范围', sourceKeys: [], detail: expect.stringContaining('销售提供') });
+      expect(result.drafts.every((draft) => draft.body.includes('确认接口验收范围'))).toBe(true);
+    } else {
+      expect(result.objective).toBeNull();
+      expect(result.drafts).toEqual([]);
+    }
+    expect(result.evidence.some((item) => item.value.includes('确认接口验收范围'))).toBe(false);
+  });
+
   it('reuses the exact customer briefing and produces traceable content', async (): Promise<void> => {
     const harness: Harness = setup();
     const result: CustomerCommunicationPreparationResponse =
@@ -282,7 +347,7 @@ describe('CustomerCommunicationPreparationService', (): void => {
 
   it('adds trusted retrieved materials without changing the communication plan', async (): Promise<void> => {
     const materialRetriever: CustomerCommunicationMaterialRetriever = {
-      retrieve: vi.fn(async (input) => ({
+      retrieve: vi.fn<CustomerCommunicationMaterialRetriever['retrieve']>(async (input) => ({
         materials: [{
           id: 'source:solution',
           category: 'solution_overview',
@@ -398,6 +463,7 @@ describe('CustomerCommunicationPreparationService', (): void => {
 
     expect(result.status).toBe('unavailable');
     expect(result.customer).toBeNull();
+    expect(result.briefing).toBeNull();
     expect(result.drafts).toEqual([]);
     expect(result.warnings).toEqual(['客户拜访攻略暂时不可用']);
   });

@@ -12,6 +12,7 @@ class WebPageController {
     'customers',
     'customers/:customerRecordId/briefing',
     'customers/:customerRecordId/communication',
+    'preparations/:resultId',
     'opportunities',
     'followups',
     'followups/new',

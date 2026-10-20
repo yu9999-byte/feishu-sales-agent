@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { AgentRuntimeConfig } from '@server/config/agent.config';
+import type { TenantIntegration } from '@server/modules/agent-core/agent.types';
+import type { PlatformSessionResponse } from '@shared/api.interface';
 import {
   ProactiveSalesNotificationService,
 } from '@server/modules/insight/proactive-sales-notification.service';
@@ -26,14 +28,19 @@ const config = (
 
 const dependencies = () => ({
   control: {
-    listActiveIntegrations: vi.fn(async () => [{
+    listActiveIntegrations: vi.fn(async (): Promise<TenantIntegration[]> => [{
       tenantId: '10000000-0000-4000-8000-00000000000a',
-      feishuTenantKey: 'tenant-a', tenantName: '租户 A', status: 'active' as const,
-      appId: 'cli_a', appSecretEnv: 'FEISHU_APP_SECRET', appType: 'self_built' as const,
+      feishuTenantKey: 'tenant-a', name: '租户 A', status: 'active',
+      appId: 'cli_a', appSecretEnv: 'FEISHU_APP_SECRET', appType: 'selfBuild',
       base: {
-        appToken: 'base-a', customersTableId: 'customers',
-        opportunitiesTableId: 'opportunities', followupsTableId: 'followups',
-        customerFields: {}, opportunityFields: {}, followupFields: {},
+        appToken: 'base-a',
+        customers: { tableId: 'customers', primaryField: 'name',
+          fields: { customerName: 'name' } },
+        opportunities: { tableId: 'opportunities', primaryField: 'name',
+          fields: { opportunityName: 'name', customerLink: 'customer' } },
+        followups: { tableId: 'followups', primaryField: 'summary',
+          fields: { sourceMessageId: 'message', customerLink: 'customer',
+            opportunityLink: 'opportunity', rawText: 'text', summary: 'summary' } },
       },
     }]),
   },
@@ -45,7 +52,7 @@ const dependencies = () => ({
     }]),
   },
   sessions: {
-    getSessionByMembership: vi.fn(async () => ({
+    getSessionByMembership: vi.fn(async (): Promise<PlatformSessionResponse> => ({
       tenant: {
         id: '10000000-0000-4000-8000-00000000000a',
         name: '租户 A', timezone: 'Asia/Shanghai',

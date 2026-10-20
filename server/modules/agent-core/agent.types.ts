@@ -1,5 +1,8 @@
 import type {
   AgentExecutionResult,
+  CustomerPreparationRequest,
+  SaveCustomerPreparationDraftRequest,
+  CustomerCommunicationPreparationResponse,
   AgentSessionState,
   CustomerCommunicationMaterialCategory,
   FollowupDraft,
@@ -12,6 +15,15 @@ import type {
 } from '@shared/api.interface';
 
 export type FeishuAppType = 'selfBuild' | 'isv';
+
+export interface CompletePreparationSessionInput {
+  tenantId: string;
+  actorOpenId: string;
+  chatId: string;
+  expectedRevision: number;
+  request: CustomerPreparationRequest;
+  report: CustomerCommunicationPreparationResponse;
+}
 
 export interface CustomerFieldMapping {
   customerName: string;
@@ -142,6 +154,8 @@ export interface IncomingCardAction {
 }
 
 export interface AgentSession {
+  revision?: number;
+  preparationContext?: import('@server/modules/insight/customer-preparation-context').PreparationContext | null;
   id: string;
   tenantId: string;
   actorOpenId: string;
@@ -157,7 +171,8 @@ export interface AgentSession {
 
 export type ActiveConversationWorkflow =
   | 'record_or_analyze'
-  | 'followup_collecting';
+  | 'followup_collecting'
+  | 'customer_preparation';
 
 export interface ConversationContext {
   tenantId?: string;
@@ -202,6 +217,8 @@ export interface SaveIntentClarificationSessionInput {
 }
 
 export interface SavePreparationClarificationSessionInput {
+  expectedRevision?: number;
+  preparationContext?: import('@server/modules/insight/customer-preparation-context').PreparationContext | null;
   tenantId: string;
   actorOpenId: string;
   chatId: string;
@@ -563,3 +580,10 @@ export interface ExecutionContext {
   integration: TenantIntegration;
   action: PendingAction;
 }
+export interface SavePreparationDraftInput {
+  tenantId: string;
+  actorOpenId: string;
+  id: string;
+  edit: SaveCustomerPreparationDraftRequest;
+}
+

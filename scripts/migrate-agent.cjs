@@ -28,6 +28,13 @@ const MIGRATION_FILES = [
   '022_feishu_user_credentials.sql',
   '023_today_action_state.sql',
   '024_proactive_notification_payload.sql',
+  '025_preparation_sessions.sql',
+  '026_preparation_context.sql',
+  '027_preparation_revision.sql',
+  '028_preparation_results.sql',
+  '029_preparation_draft_edits.sql',
+  '030_preparation_result_deliveries.sql',
+  '031_preparation_delivery_reconciliation.sql',
 ];
 
 const checksum = (content) => createHash('sha256')
