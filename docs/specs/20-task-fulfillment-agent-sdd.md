@@ -44,10 +44,11 @@ TypeScript、ESLint、Stylelint、Agent/Web 构建和
   不是飞书全量历史事件流，也不能证明观察窗口之外没有变化。
 - API 的 `coverage.taskHistory` 显式标记历史覆盖：当前为 `agent_observations`，事件源不可用时
   为 `unavailable`；`full` 仅作为未来可信全量历史来源接入后的保留值，当前不得返回。
-- `TaskGateway.readTaskHistory` 是可信历史来源的可选扩展口。它必须返回机器可读的
-  `coverage` 声明；只有 `coverage=full` 且没有 `warning` 时，履约服务才允许输出
-  `taskHistory=full`。`partial`、`unavailable`、异常或带警告的来源一律 fail closed，
-  不得升级为全量历史。当前飞书任务网关未实现该端口，因为现有 Task API 只有搜索和详情读取。
+- `TaskGateway.readTaskHistory` 是可信历史来源的可选扩展口。按 [SDD 53](53-task-history-promise-evidence-sdd.md)，
+  除 `coverage=full` 且没有 `warning` 外，还必须提供可信来源、相同租户和本人、精确 GUID 与起止窗口、
+  无缺口及分页结束的连续性证明，并通过事件有效性校验，才能输出 `taskHistory=full`。
+  `partial`、`unavailable`、异常、警告或无效证明均保守降级。当前飞书任务网关未实现该端口；
+  2026-10-21 核对公开文档目录未发现满足全量状态历史回放及连续性要求的接口，详见[来源核对](../evidence/task-history-observations-20261021/verification.md)。
 
 ### 3.1 飞书前向事件源的边界
 
@@ -84,7 +85,9 @@ TypeScript、ESLint、Stylelint、Agent/Web 构建和
 任务历史恢复只能使用精确 GUID 的明确事件：最新事件为 `completed` 时可恢复“已完成”，
 最新事件为 `reopened` 时可恢复“已重新开放”；只有 `observed` 或普通 `changed` 时仍须
 核实，且更早的明确终态不能覆盖较新的普通事件。事件读取失败、事件来源不完整或超出查询范围
-时不得做完成结论。跨任务只有在外部来源
+时不得做完成结论。可信历史和观察账本均校验事件标识、GUID、有效 UTC 时间、请求窗口、完成时间不晚于
+观察时间，以及同 GUID 同时刻的状态冲突；无效批次保留待核实，不能跳过无效新事件再采用旧终态。
+该门禁不改变观察账本的覆盖等级。跨任务只有在外部来源
 明确提供 `relatedTaskGuid` 且关系为 `replaces` 时才允许建立替代关系；当前快照观察不会自动
 按标题、时间相近或列表缺失生成跨任务关系。
 详情读取失败标记“详情暂不可用”，详情为空标记“当前不可见”。对精确关联且当前可见的非完成

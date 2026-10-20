@@ -1,0 +1,270 @@
+
+> fullstack-nestjs-template@2.3.0 test:agent
+> vitest run tests/unit/task-history-observations.spec.ts --no-color
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 A:/基于飞书的销售agent
+
+ ❯ tests/unit/task-history-observations.spec.ts (17 tests | 15 failed) 45ms
+     × keeps future observation evidence unknown 12ms
+     × keeps invalid observation time evidence unknown 2ms
+     × keeps normalized invalid calendar date evidence unknown 2ms
+     × keeps outside requested window evidence unknown 1ms
+     × keeps completion after observation evidence unknown 2ms
+     × keeps nonpositive completion evidence unknown 1ms
+     × keeps invalid completion evidence unknown 2ms
+     × keeps missing completion evidence unknown 2ms
+     × keeps reopening with completion evidence unknown 2ms
+     × keeps blank event identity evidence unknown 2ms
+     × keeps foreign task identity evidence unknown 1ms
+     × rejects contradictory simultaneous states, reverse=false 2ms
+     × rejects contradictory simultaneous states, reverse=true 2ms
+     × rejects reused event IDs at different times 1ms
+     × does not revive an older terminal event after invalid newer evidence 2ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 15 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > keeps future observation evidence unknown
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > keeps invalid observation time evidence unknown
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > keeps normalized invalid calendar date evidence unknown
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > keeps outside requested window evidence unknown
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > keeps reopening with completion evidence unknown
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > keeps blank event identity evidence unknown
+AssertionError: expected { pendingActionId: 'action-a', …(15) } to match object { …(4) }
+(24 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "completionState": "unknown",
+-   "status": "task_lookup_unavailable",
+-   "taskCompletedAt": null,
+-   "taskTitle": null,
++   "completionState": "completed",
++   "status": "completed",
++   "taskCompletedAt": "2026-10-20T03:00:00.000Z",
++   "taskTitle": "Deliver proposal",
+  }
+
+ ❯ expectUnknown tests/unit/task-history-observations.spec.ts:42:30
+     40|
+     41| const expectUnknown = (report: TaskFulfillmentResponse): void => {
+     42|   expect(report.promises[0]).toMatchObject({
+       |                              ^
+     43|     status: 'task_lookup_unavailable', completionState: 'unknown', tas…
+     44|   });
+ ❯ tests/unit/task-history-observations.spec.ts:74:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/15]⎯
+
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > keeps completion after observation evidence unknown
+AssertionError: expected { pendingActionId: 'action-a', …(15) } to match object { …(4) }
+(24 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "completionState": "unknown",
+-   "status": "task_lookup_unavailable",
+-   "taskCompletedAt": null,
+-   "taskTitle": null,
++   "completionState": "completed",
++   "status": "completed",
++   "taskCompletedAt": "2026-10-20T03:02:00.000Z",
++   "taskTitle": "Deliver proposal",
+  }
+
+ ❯ expectUnknown tests/unit/task-history-observations.spec.ts:42:30
+     40|
+     41| const expectUnknown = (report: TaskFulfillmentResponse): void => {
+     42|   expect(report.promises[0]).toMatchObject({
+       |                              ^
+     43|     status: 'task_lookup_unavailable', completionState: 'unknown', tas…
+     44|   });
+ ❯ tests/unit/task-history-observations.spec.ts:74:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/15]⎯
+
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > keeps nonpositive completion evidence unknown
+AssertionError: expected { pendingActionId: 'action-a', …(15) } to match object { …(4) }
+(24 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "completionState": "unknown",
+-   "status": "task_lookup_unavailable",
+-   "taskCompletedAt": null,
+-   "taskTitle": null,
++   "completionState": "completed",
++   "status": "completed",
++   "taskCompletedAt": "1970-01-01T00:00:00.000Z",
++   "taskTitle": "Deliver proposal",
+  }
+
+ ❯ expectUnknown tests/unit/task-history-observations.spec.ts:42:30
+     40|
+     41| const expectUnknown = (report: TaskFulfillmentResponse): void => {
+     42|   expect(report.promises[0]).toMatchObject({
+       |                              ^
+     43|     status: 'task_lookup_unavailable', completionState: 'unknown', tas…
+     44|   });
+ ❯ tests/unit/task-history-observations.spec.ts:74:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/15]⎯
+
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > keeps invalid completion evidence unknown
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > keeps missing completion evidence unknown
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > keeps foreign task identity evidence unknown
+AssertionError: expected { pendingActionId: 'action-a', …(14) } to match object { …(4) }
+(11 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "completionState": "unknown",
+-   "status": "task_lookup_unavailable",
++   "status": "task_not_visible",
+    "taskCompletedAt": null,
+    "taskTitle": null,
+  }
+
+ ❯ expectUnknown tests/unit/task-history-observations.spec.ts:42:30
+     40|
+     41| const expectUnknown = (report: TaskFulfillmentResponse): void => {
+     42|   expect(report.promises[0]).toMatchObject({
+       |                              ^
+     43|     status: 'task_lookup_unavailable', completionState: 'unknown', tas…
+     44|   });
+ ❯ tests/unit/task-history-observations.spec.ts:74:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/15]⎯
+
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > rejects contradictory simultaneous states, reverse=false
+AssertionError: expected { pendingActionId: 'action-a', …(15) } to match object { …(4) }
+(24 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "completionState": "unknown",
+-   "status": "task_lookup_unavailable",
+-   "taskCompletedAt": null,
+-   "taskTitle": null,
++   "completionState": "completed",
++   "status": "completed",
++   "taskCompletedAt": "2026-10-20T03:00:00.000Z",
++   "taskTitle": "Deliver proposal",
+  }
+
+ ❯ expectUnknown tests/unit/task-history-observations.spec.ts:42:30
+     40|
+     41| const expectUnknown = (report: TaskFulfillmentResponse): void => {
+     42|   expect(report.promises[0]).toMatchObject({
+       |                              ^
+     43|     status: 'task_lookup_unavailable', completionState: 'unknown', tas…
+     44|   });
+ ❯ tests/unit/task-history-observations.spec.ts:82:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/15]⎯
+
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > rejects contradictory simultaneous states, reverse=true
+AssertionError: expected { pendingActionId: 'action-a', …(15) } to match object { …(4) }
+(24 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "completionState": "unknown",
+-   "status": "task_lookup_unavailable",
++   "completionState": "still_open",
++   "status": "open_changed",
+    "taskCompletedAt": null,
+-   "taskTitle": null,
++   "taskTitle": "Deliver proposal",
+  }
+
+ ❯ expectUnknown tests/unit/task-history-observations.spec.ts:42:30
+     40|
+     41| const expectUnknown = (report: TaskFulfillmentResponse): void => {
+     42|   expect(report.promises[0]).toMatchObject({
+       |                              ^
+     43|     status: 'task_lookup_unavailable', completionState: 'unknown', tas…
+     44|   });
+ ❯ tests/unit/task-history-observations.spec.ts:82:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/15]⎯
+
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > rejects reused event IDs at different times
+AssertionError: expected { pendingActionId: 'action-a', …(15) } to match object { …(4) }
+(24 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "completionState": "unknown",
+-   "status": "task_lookup_unavailable",
+-   "taskCompletedAt": null,
+-   "taskTitle": null,
++   "completionState": "completed",
++   "status": "completed",
++   "taskCompletedAt": "2026-10-20T03:00:00.000Z",
++   "taskTitle": "Deliver proposal",
+  }
+
+ ❯ expectUnknown tests/unit/task-history-observations.spec.ts:42:30
+     40|
+     41| const expectUnknown = (report: TaskFulfillmentResponse): void => {
+     42|   expect(report.promises[0]).toMatchObject({
+       |                              ^
+     43|     status: 'task_lookup_unavailable', completionState: 'unknown', tas…
+     44|   });
+ ❯ tests/unit/task-history-observations.spec.ts:86:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/15]⎯
+
+ FAIL  tests/unit/task-history-observations.spec.ts > task observation evidence reconciliation > does not revive an older terminal event after invalid newer evidence
+AssertionError: expected { pendingActionId: 'action-a', …(15) } to match object { …(4) }
+(24 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+-   "completionState": "unknown",
+-   "status": "task_lookup_unavailable",
+-   "taskCompletedAt": null,
+-   "taskTitle": null,
++   "completionState": "completed",
++   "status": "completed",
++   "taskCompletedAt": "2026-10-20T03:00:00.000Z",
++   "taskTitle": "Deliver proposal",
+  }
+
+ ❯ expectUnknown tests/unit/task-history-observations.spec.ts:42:30
+     40|
+     41| const expectUnknown = (report: TaskFulfillmentResponse): void => {
+     42|   expect(report.promises[0]).toMatchObject({
+       |                              ^
+     43|     status: 'task_lookup_unavailable', completionState: 'unknown', tas…
+     44|   });
+ ❯ tests/unit/task-history-observations.spec.ts:90:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/15]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  15 failed | 2 passed (17)
+   Start at  00:19:09
+   Duration  992ms (transform 108ms, setup 0ms, import 538ms, tests 45ms, environment 0ms)
+

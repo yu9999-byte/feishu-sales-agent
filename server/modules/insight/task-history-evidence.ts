@@ -23,12 +23,20 @@ const hasCompleteTaskHistory = (result: TaskHistorySourceResult, scope: TaskHist
     !Array.isArray(proof.taskGuids) || proof.taskGuids.length !== scope.taskGuids.length ||
     new Set(proof.taskGuids).size !== proof.taskGuids.length ||
     scope.taskGuids.some((guid: string): boolean => !proof.taskGuids.includes(guid))) return false;
+  return hasValidTaskHistoryEvents(result.items, scope);
+};
+
+const hasValidTaskHistoryEvents = (
+  items: TaskStatusEvent[],
+  scope: Pick<TaskHistoryScope, 'taskGuids' | 'since' | 'until'>,
+): boolean => {
   const ids: Set<string> = new Set();
   const terminal: Map<string, string> = new Map();
-  return result.items.every((event: TaskStatusEvent): boolean => {
+  return items.every((event: TaskStatusEvent): boolean => {
     const at: number = timestamp(event.occurredAt);
     const completed: number = timestamp(event.completedAt);
-    if (!event.eventId || ids.has(event.eventId) || !scope.taskGuids.includes(event.guid) ||
+    if (typeof event.eventId !== 'string' || !event.eventId.trim() || ids.has(event.eventId) ||
+      !scope.taskGuids.includes(event.guid) ||
       !Number.isFinite(at) || at < scope.since.getTime() || at > scope.until.getTime() ||
       !['observed', 'changed', 'completed', 'reopened'].includes(event.kind)) return false;
     ids.add(event.eventId);
@@ -44,4 +52,4 @@ const hasCompleteTaskHistory = (result: TaskHistorySourceResult, scope: TaskHist
   });
 };
 
-export { hasCompleteTaskHistory };
+export { hasCompleteTaskHistory, hasValidTaskHistoryEvents };

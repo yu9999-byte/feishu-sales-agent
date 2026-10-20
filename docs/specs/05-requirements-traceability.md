@@ -2,6 +2,8 @@
 
 TASK-008/009：第 8 项的可信历史覆盖证明门禁与无任务承诺独立凭证账本已按 [SDD/TDD 53](53-task-history-promise-evidence-sdd.md) 完成本地实现、单元/组件、隔离 PostgreSQL/HTTP 和桌面/窄屏合成验证。本人声明与自动任务完成分别展示；真实完整历史来源和有效身份 UAT 仍待外部条件，未新增真实业务写入。证据见[验证归档](../evidence/task-promise-evidence-20261020/verification.md)。
 
+TASK-008 补验（2026-10-21）：观察账本回退复用事件时序/范围/冲突门禁，异常批次保持待核实，不能污染承诺统计。新增 17 项单元先 15 失败后通过、5 项真实 PostgreSQL/HTTP 回归通过；全量 1209 项、相关集成 21 项、类型、Lint 与 Agent 构建通过。已核对公开任务 API 的历史边界；第 8 项真实来源与身份 UAT 继续待办，见[补验证据](../evidence/task-history-observations-20261021/verification.md)。
+
 `BPA-007` / PLAYBOOK-REVIEW：最新版本提交、管理员批准/退回、旧版失效、不可变记录、双 CAS 和幂等恢复已完成本地实现；全量单元、隔离 PostgreSQL/HTTP、类型、Lint 和双构建通过。审核快照已补冻结来源，新增 2 项先红后绿、面板/工作区 23 项回归通过；1280px/390px 独立审核面板合成截图及布局检查完成，原始审核 Red 日志已归档。真实身份、真实路由及工作区弹窗 UAT 仍待完成；审核通过不等于发布。见 [SDD/TDD 52](52-playbook-review-sdd.md) 和[验证记录](../evidence/playbook-review-20261020/verification.md)。
 
 PLAYBOOK-DRAFT：已接受候选的创建/编辑/历史、租户隔离、可信作者、CAS、幂等重试及失败恢复已实现，自动化和合成组件验证通过；真实登录 UAT 待补。执行与测试见 [SDD/TDD 51](51-playbook-authoring-sdd.md)；发布/采用/样本不计入完成。

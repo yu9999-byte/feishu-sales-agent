@@ -28,7 +28,7 @@ import type {
   TaskStatusSnapshot,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
-import { hasCompleteTaskHistory } from './task-history-evidence';
+import { hasCompleteTaskHistory, hasValidTaskHistoryEvents } from './task-history-evidence';
 import { followupPromiseNextAction } from './followup-promise';
 
 interface TaskFulfillmentInput {
@@ -775,6 +775,14 @@ class TaskFulfillmentService {
       }
       if (result.warning) {
         warnings.push(`任务状态历史${sourceWarning(result.warning)}`);
+        return {
+          changes: [],
+          unavailableGuids: new Set(missingGuids),
+          coverage: 'unavailable',
+        };
+      }
+      if (!hasValidTaskHistoryEvents(result.items, { taskGuids, since, until: now })) {
+        warnings.push('任务状态历史包含无效或冲突证据，部分承诺待核实');
         return {
           changes: [],
           unavailableGuids: new Set(missingGuids),

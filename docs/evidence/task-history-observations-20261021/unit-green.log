@@ -1,0 +1,287 @@
+
+> fullstack-nestjs-template@2.3.0 test:agent
+> vitest run --no-color
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 A:/基于飞书的销售agent
+
+[Nest] 3628  - 2026/10/21 00:25:05   ERROR [AgentActionExecutorService] Action task-revision-missing-target failed: Task update requires the original task ID
+Error: Task update requires the original task ID
+    at AgentActionExecutorService.executeRemainingSteps (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:281:15)
+    at AgentActionExecutorService.executeAction (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:158:14)
+    at A:/基于飞书的销售agent/tests/unit/agent-action-executor.spec.ts:269:22
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:05   ERROR [AgentActionExecutorService] Action task-audit-blocked failed: audit unavailable
+Error: audit unavailable
+    at A:/基于飞书的销售agent/tests/unit/agent-action-executor.spec.ts:278:58
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:05   ERROR [AgentActionExecutorService] Action action-0-试点项目 failed: 跟进必须同时创建待办，请补充待办内容和截止时间。
+MandatoryFollowupTaskError: 跟进必须同时创建待办，请补充待办内容和截止时间。
+    at AgentActionExecutorService.assertMandatoryFollowupTask (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:774:13)
+    at AgentActionExecutorService.executeRemainingSteps (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:306:10)
+    at AgentActionExecutorService.executeAction (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:158:14)
+[Nest] 3628  - 2026/10/21 00:25:05   ERROR [AgentActionExecutorService] Action action-1-试点项目 failed: Selected opportunity is not available in the confirmed context
+Error: Selected opportunity is not available in the confirmed context
+    at AgentActionExecutorService.confirmedOpportunityAssociation (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:498:13)
+    at AgentActionExecutorService.executeRemainingSteps (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:308:12)
+    at AgentActionExecutorService.executeAction (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:158:14)
+[Nest] 3628  - 2026/10/21 00:25:05   ERROR [AgentActionExecutorService] Action action-timeout failed: 执行超过时间上限，已停止并可安全重试。
+ActionExecutionTimeoutError: 执行超过时间上限，已停止并可安全重试。
+    at Timeout.<anonymous> (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:787:16)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)
+[Nest] 3628  - 2026/10/21 00:25:05    WARN [AgentActionExecutorService] Processing card update failed for action action-messaging: Injected source card update failure
+[Nest] 3628  - 2026/10/21 00:25:05   ERROR [AgentActionExecutorService] Source card finalization failed for action action-messaging: Injected source card update failure
+[Nest] 3628  - 2026/10/21 00:25:05    WARN [AgentActionExecutorService] Error: Injected source card update failure
+    at Object.<anonymous> (A:/基于飞书的销售agent/tests/unit/agent-action-executor.spec.ts:496:15)
+    at Object.Mock [as updateCard] (file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/spy/dist/index.js:332:34)
+    at AgentActionExecutorService.updateProcessingCard (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:232:28)
+    at AgentActionExecutorService.executeAction (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:143:16)
+    at Immediate.<anonymous> (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:103:17)
+    at processImmediate (node:internal/timers:504:21)
+Error: Injected source card update failure
+    at Object.<anonymous> (A:/基于飞书的销售agent/tests/unit/agent-action-executor.spec.ts:496:15)
+    at Object.Mock [as updateCard] (file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/spy/dist/index.js:332:34)
+    at AgentActionExecutorService.updateSourceCard (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:703:28)
+    at AgentActionExecutorService.executeAction (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:196:53)
+[Nest] 3628  - 2026/10/21 00:25:05   ERROR [AgentActionExecutorService] Project risk card send failed for action action-messaging: Injected risk card failure
+Error: Injected risk card failure
+    at Object.<anonymous> (A:/基于飞书的销售agent/tests/unit/agent-action-executor.spec.ts:513:32)
+    at Object.Mock [as sendProjectRiskCard] (file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/spy/dist/index.js:332:34)
+    at AgentActionExecutorService.sendConditionalProjectRiskCard (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:652:54)
+    at AgentActionExecutorService.executeAction (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:215:20)
+[Nest] 3628  - 2026/10/21 00:25:06    WARN [OpenAiFollowupExtractor] LLM extraction attempt 1 failed for model test-model: LLM returned an evidence quote absent from source text
+[Nest] 3628  - 2026/10/21 00:25:06    WARN [OpenAiFollowupExtractor] LLM extraction attempt 1 failed for model test-model: model busy
+[Nest] 3628  - 2026/10/21 00:25:07    WARN [OpenAiFollowupExtractor] LLM extraction attempt 1 failed for model test-model: model busy
+[Nest] 3628  - 2026/10/21 00:25:09    WARN [OpenAiFollowupExtractor] LLM extraction attempt 2 failed for model test-model: model busy
+[Nest] 3628  - 2026/10/21 00:25:12    WARN [OpenAiFollowupExtractor] LLM extraction attempt 3 failed for model test-model: model busy
+[Nest] 3628  - 2026/10/21 00:25:18    WARN [OpenAiFollowupExtractor] LLM extraction attempt 4 failed for model test-model: model busy
+[Nest] 3628  - 2026/10/21 00:25:07    WARN [OpenAiFollowupExtractor] LLM extraction attempt 1 failed for model test-model: timeout
+[Nest] 3628  - 2026/10/21 00:25:09     LOG [FeishuWebhookBridge] Feishu message mapped: message=9deb880b43bd tenant=0a96abb33b07 chatType=p2p messageType=text
+[Nest] 3628  - 2026/10/21 00:25:09   ERROR [FeishuWebhookBridge] Feishu task event mapping failed: [
+  {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+      "task_guid"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+  }
+]
+[Nest] 3628  - 2026/10/21 00:25:09   DEBUG [FeishuWebhookBridge] Feishu message workflow started: message=9deb880b43bd
+[Nest] 3628  - 2026/10/21 00:25:09     LOG [FeishuWebhookBridge] Feishu message workflow completed: message=9deb880b43bd
+[Nest] 3628  - 2026/10/21 00:25:09   DEBUG [FeishuWebhookBridge] Feishu task event mapped: event=085033d5bbee tenant=0a96abb33b07 task=47cc544a5992
+ZodError: [
+  {
+    "expected": "string",
+    "code": "invalid_type",
+    "path": [
+      "task_guid"
+    ],
+    "message": "Invalid input: expected string, received undefined"
+  }
+]
+    at FeishuWebhookBridge.mapTaskUpdate (A:/基于飞书的销售agent/server/modules/feishu/feishu-webhook.bridge.ts:401:37)
+    at task.task.update_user_access_v2 (A:/基于飞书的销售agent/server/modules/feishu/feishu-webhook.bridge.ts:186:29)
+    at EventDispatcher.<anonymous> (A:\基于飞书的销售agent\node_modules\@larksuiteoapi\node-sdk\lib\index.js:100995:57)
+    at Generator.next (<anonymous>)
+    at A:\基于飞书的销售agent\node_modules\@larksuiteoapi\node-sdk\lib\index.js:80:71
+    at new Promise (<anonymous>)
+    at __awaiter (A:\基于飞书的销售agent\node_modules\@larksuiteoapi\node-sdk\lib\index.js:76:12)
+    at EventDispatcher.invoke (A:\基于飞书的销售agent\node_modules\@larksuiteoapi\node-sdk\lib\index.js:100986:16)
+    at A:/基于飞书的销售agent/tests/unit/feishu-card-callback.spec.ts:223:29
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:09   ERROR [AgentWorkflowService] Message om-minutes-auth failed: authorization required
+[Nest] 3628  - 2026/10/21 00:25:09    WARN [CustomerCommunicationPreparationService] Sales material retrieval failed and was withheld (Error)
+[Nest] 3628  - 2026/10/21 00:25:09    WARN [CustomerCommunicationPreparationService] Customer communication briefing read failed: briefing unavailable
+MinutesIngestionError: authorization required
+    at Object.<anonymous> (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1093:15)
+    at Object.Mock [as ingest] (file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/spy/dist/index.js:332:34)
+    at AgentWorkflowService.processFollowupText (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1189:37)
+    at AgentWorkflowService.processFollowupTextWithProgress (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1353:7)
+    at AgentWorkflowService.processMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:733:11)
+    at AgentWorkflowService.handleMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:225:7)
+    at A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1113:5
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:09   ERROR [AgentWorkflowService] Message om-document-auth failed: authorization required
+DocumentIngestionError: authorization required
+    at Object.<anonymous> (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1217:15)
+    at Object.Mock [as ingest] (file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/spy/dist/index.js:332:34)
+    at AgentWorkflowService.processFollowupText (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1233:38)
+    at AgentWorkflowService.processFollowupTextWithProgress (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1353:7)
+    at AgentWorkflowService.processMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:749:11)
+    at AgentWorkflowService.handleMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:225:7)
+    at A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1238:5
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:09   ERROR [AgentWorkflowService] Message om-mixed-source failed: 一次只能提交一份跟进来源
+DocumentIngestionError: 一次只能提交一份跟进来源
+    at AgentWorkflowService.processFollowupText (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1166:13)
+    at AgentWorkflowService.processFollowupTextWithProgress (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1353:18)
+    at AgentWorkflowService.processMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:687:22)
+    at AgentWorkflowService.handleMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:225:7)
+    at A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1277:5
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:09   ERROR [AgentWorkflowService] Message om-document-DOCUMENT_ACCESS_DENIED failed: injected document failure
+DocumentIngestionError: injected document failure
+    at Object.<anonymous> (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1304:17)
+    at Object.Mock [as ingest] (file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/spy/dist/index.js:332:34)
+    at AgentWorkflowService.processFollowupText (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1233:38)
+    at AgentWorkflowService.processFollowupTextWithProgress (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1353:7)
+    at AgentWorkflowService.processMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:749:11)
+    at AgentWorkflowService.handleMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:225:7)
+    at A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1325:7
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:09   ERROR [AgentWorkflowService] Message om-document-DOCUMENT_UNSUPPORTED_TYPE failed: injected document failure
+DocumentIngestionError: injected document failure
+    at Object.<anonymous> (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1304:17)
+    at Object.Mock [as ingest] (file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/spy/dist/index.js:332:34)
+    at AgentWorkflowService.processFollowupText (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1233:38)
+    at AgentWorkflowService.processFollowupTextWithProgress (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1353:7)
+    at AgentWorkflowService.processMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:749:11)
+    at AgentWorkflowService.handleMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:225:7)
+    at A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1325:7
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:09   ERROR [AgentWorkflowService] Message om-document-DOCUMENT_CONTENT_EMPTY failed: injected document failure
+DocumentIngestionError: injected document failure
+    at Object.<anonymous> (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1304:17)
+    at Object.Mock [as ingest] (file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/spy/dist/index.js:332:34)
+    at AgentWorkflowService.processFollowupText (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1233:38)
+    at AgentWorkflowService.processFollowupTextWithProgress (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1353:7)
+    at AgentWorkflowService.processMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:749:11)
+    at AgentWorkflowService.handleMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:225:7)
+    at A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1325:7
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:09   ERROR [AgentWorkflowService] Message om-document-DOCUMENT_DEPENDENCY_UNAVAILABLE failed: injected document failure
+DocumentIngestionError: injected document failure
+    at Object.<anonymous> (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1304:17)
+    at Object.Mock [as ingest] (file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/spy/dist/index.js:332:34)
+    at AgentWorkflowService.processFollowupText (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1233:38)
+    at AgentWorkflowService.processFollowupTextWithProgress (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1353:7)
+    at AgentWorkflowService.processMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:749:11)
+    at AgentWorkflowService.handleMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:225:7)
+    at A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1325:7
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:09   ERROR [AgentWorkflowService] Member check failed for message om-member-check-failed: Injected member lookup failure
+Error: Injected member lookup failure
+    at Object.getActiveMember (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:692:15)
+    at AgentWorkflowService.hasAuthorizedMember (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:3393:36)
+    at AgentWorkflowService.handleMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:190:47)
+    at A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1436:5
+[Nest] 3628  - 2026/10/21 00:25:09   ERROR [AgentWorkflowService] Role check failed for message om-role-check-failed: Injected role lookup failure
+Error: Injected role lookup failure
+    at Object.getSessionByMembership (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:712:15)
+    at AgentWorkflowService.hasAuthorizedMember (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:3426:27)
+    at AgentWorkflowService.handleMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:190:36)
+    at A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1544:5
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:09   ERROR [AgentWorkflowService] Role check failed for card evt-role-check-failed: Injected role lookup failure
+Error: Injected role lookup failure
+    at Object.getSessionByMembership (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:712:15)
+    at AgentWorkflowService.hasAuthorizedMember (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:3426:27)
+    at AgentWorkflowService.handleCardAction (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:243:36)
+    at A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1571:34
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:09   ERROR [AgentWorkflowService] Message om_source_1 failed: Injected conversation failure
+[Nest] 3628  - 2026/10/21 00:25:09    WARN [AgentWorkflowService] Message om_source_1 progress delivery failed: Injected text edit failure
+Error: Injected conversation failure
+    at FakeConversationAssistant.respond (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:218:13)
+    at AgentWorkflowService.processMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:707:66)
+    at AgentWorkflowService.handleMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:225:7)
+    at A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:1641:5
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:09    WARN [AgentWorkflowService] Message om_source_1 progress delivery failed: Injected text send failure
+[Nest] 3628  - 2026/10/21 00:25:09    WARN [AgentWorkflowService] Playbook optimization observation failed: Injected playbook optimization failure
+[Nest] 3628  - 2026/10/21 00:25:09    WARN [AgentWorkflowService] Sales knowledge question failed: 无权访问当前工作区
+[Nest] 3628  - 2026/10/21 00:25:10    WARN [CustomerVisitBriefingService] Customer visit portfolio read failed: source unavailable
+[Nest] 3628  - 2026/10/21 00:25:10    WARN [TeamOpportunityDecisionService] Team opportunity member read failed: sales-a; source down
+[Nest] 3628  - 2026/10/21 00:25:10    WARN [TeamOpportunityDecisionService] Team opportunity member read failed: manager; source down
+[Nest] 3628  - 2026/10/21 00:25:10    WARN [FeishuSalesMaterialGateway] Sales material source read failed and was withheld (FeishuApiError)
+[Nest] 3628  - 2026/10/21 00:25:12     LOG [StaleOpportunityTriggerService] Stale opportunity dry-run complete; trace=trace-stale-opportunity-dry-run; tenants=1; members=1; candidates=1
+[Nest] 3628  - 2026/10/21 00:25:12     LOG [StaleOpportunityTriggerService] Stale opportunity dry-run incomplete; trace=trace-stale-opportunity-dry-run; tenants=1; members=2; candidates=0
+[Nest] 3628  - 2026/10/21 00:25:12     LOG [StaleOpportunityTriggerService] Stale opportunity dry-run complete; trace=trace-stale-opportunity-dry-run; tenants=2; members=2; candidates=2
+[Nest] 3628  - 2026/10/21 00:25:12     LOG [StaleOpportunityTriggerService] Stale opportunity dry-run complete; trace=trace-stale-opportunity-dry-run; tenants=1; members=1; candidates=1
+[Nest] 3628  - 2026/10/21 00:25:12     LOG [StaleOpportunityTriggerService] Stale opportunity dry-run incomplete; trace=trace-stale-opportunity-dry-run; tenants=0; members=0; candidates=0
+[Nest] 3628  - 2026/10/21 00:25:12     LOG [StaleOpportunityTriggerService] Stale opportunity dry-run incomplete; trace=trace-stale-opportunity-dry-run; tenants=1; members=0; candidates=0
+[Nest] 3628  - 2026/10/21 00:25:12     LOG [StaleOpportunityTriggerService] Stale opportunity dry-run complete; trace=trace-stale-opportunity-dry-run; tenants=1; members=1; candidates=1
+[Nest] 3628  - 2026/10/21 00:25:12     LOG [StaleOpportunityTriggerService] Stale opportunity dry-run complete; trace=trace-stale-opportunity-dry-run; tenants=1; members=1; candidates=1
+[Nest] 3628  - 2026/10/21 00:25:12    WARN [TaskFulfillmentService] Task fulfillment read failed: Feishu unavailable
+[Nest] 3628  - 2026/10/21 00:25:12    WARN [TaskFulfillmentService] Task promise read failed: history unavailable
+[Nest] 3628  - 2026/10/21 00:25:12    WARN [TaskFulfillmentService] Task status event read failed: event history unavailable
+[Nest] 3628  - 2026/10/21 00:25:12    WARN [TaskFulfillmentService] Task detail read failed for unreadable-new: replacement task unavailable
+[Nest] 3628  - 2026/10/21 00:25:13   DEBUG [TaskEventIngestionService] Task event recorded: tenant=82785fb8603d event=ce36863f51b6 task=47cc544a5992
+[Nest] 3628  - 2026/10/21 00:25:13   DEBUG [TaskEventIngestionService] Task event duplicate: tenant=82785fb8603d event=ce36863f51b6 task=47cc544a5992
+[Nest] 3628  - 2026/10/21 00:25:13   DEBUG [TaskEventIngestionService] Task event recorded: tenant=82785fb8603d event=ce36863f51b6 task=47cc544a5992
+[Nest] 3628  - 2026/10/21 00:25:13   DEBUG [TaskEventIngestionService] Task event recorded: tenant=25b68c727051 event=ce36863f51b6 task=47cc544a5992
+[Nest] 3628  - 2026/10/21 00:25:13   DEBUG [TaskEventIngestionService] Task event duplicate: tenant=82785fb8603d event=ce36863f51b6 task=47cc544a5992
+[Nest] 3628  - 2026/10/21 00:25:13    WARN [TaskEventIngestionService] Task event ignored for unavailable tenant: tenant=f2d23b8bfcef event=ce36863f51b6
+[Nest] 3628  - 2026/10/21 00:25:13    WARN [TaskEventIngestionService] Task event ignored for unavailable tenant: tenant=569900c31b78 event=b4e3d14e7519
+[Nest] 3628  - 2026/10/21 00:25:14   ERROR [AgentWorkflowService] Cancelled card patch failed for action 221ac2d3-7bdd-4bdd-8594-1fcff3383c6f: Injected card patch failure
+Error: Injected card patch failure
+    at FakeMessenger.updateCard (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:420:13)
+    at AgentWorkflowService.persistCancelledCard (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:2837:28)
+    at Timeout._onTimeout (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:2819:17)
+    at listOnTimeout (node:internal/timers:605:17)
+    at processTimers (node:internal/timers:541:7)
+[Nest] 3628  - 2026/10/21 00:25:15    WARN [AgentWorkflowService] Edit card patch failed and was rolled back for action 9b6eafbc-c541-4942-8a2d-a7b700cb8b6b: Injected callback card patch failure
+[Nest] 3628  - 2026/10/21 00:25:15   ERROR [AgentActionExecutorService] Action f7aede31-84e1-41ce-a95e-6fb9bb3fc337 failed: Injected followup failure
+Error: Injected followup failure
+    at FakeRecords.createFollowup (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:488:13)
+    at AgentActionExecutorService.executeRemainingSteps (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:396:28)
+    at AgentActionExecutorService.withTimeout (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:791:14)
+    at AgentActionExecutorService.executeAction (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:157:16)
+[Nest] 3628  - 2026/10/21 00:25:15   ERROR [AgentActionExecutorService] Action 69d46ea2-620a-4274-a7b9-b9d9355ba1c9 failed: Injected customer failure
+Error: Injected customer failure
+    at FakeRecords.upsertCustomer (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:468:13)
+    at AgentActionExecutorService.executeRemainingSteps (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:332:28)
+    at AgentActionExecutorService.executeAction (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:158:14)
+[Nest] 3628  - 2026/10/21 00:25:15   ERROR [AgentActionExecutorService] Action 0ae4930f-421b-4307-87a7-ed82950329c3 failed: Injected customer failure
+Error: Injected customer failure
+    at FakeRecords.upsertCustomer (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:468:13)
+    at AgentActionExecutorService.executeRemainingSteps (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:332:28)
+    at AgentActionExecutorService.executeAction (A:/基于飞书的销售agent/server/modules/agent-core/agent-action-executor.service.ts:158:14)
+[Nest] 3628  - 2026/10/21 00:25:15   ERROR [AgentWorkflowService] Message prep-switch-classifier-failed failed: Injected conversation failure
+Error: Injected conversation failure
+    at FakeConversationAssistant.respond (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:218:13)
+    at AgentWorkflowService.processMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:431:44)
+    at AgentWorkflowService.handleMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:225:7)
+    at A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:3739:5
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:15   ERROR [AgentWorkflowService] Preparation delivery requires verification: 5861e2fc-65ee-4eaa-b30c-952064e67d51
+Error: Injected uncertain delivery
+    at FakeMessenger.<anonymous> (A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:3797:70)
+    at FakeMessenger.sendText (file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/spy/dist/index.js:332:34)
+    at AgentWorkflowService.processPreparationTurn (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:1137:54)
+    at AgentWorkflowService.processMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:780:9)
+    at AgentWorkflowService.handleMessage (A:/基于飞书的销售agent/server/modules/agent-core/agent-workflow.service.ts:225:7)
+    at async Promise.all (index 0)
+    at A:/基于飞书的销售agent/tests/unit/agent-workflow.spec.ts:3801:3
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20
+[Nest] 3628  - 2026/10/21 00:25:17   ERROR [StaleOpportunityReminderScheduleObservationService] Readiness inspection failed for trace schedule-observation-trace: readiness unavailable
+Error: readiness unavailable
+    at Object.<anonymous> (A:/基于飞书的销售agent/tests/unit/stale-opportunity-reminder-schedule-observation.spec.ts:156:39)
+    at Object.Mock [as inspect] (file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/spy/dist/index.js:332:34)
+    at StaleOpportunityReminderScheduleObservationService.observe (A:/基于飞书的销售agent/server/modules/insight/stale-opportunity-reminder-schedule-observation.service.ts:86:40)
+    at A:/基于飞书的销售agent/tests/unit/stale-opportunity-reminder-schedule-observation.spec.ts:251:44
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:302:11
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:26
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:2326:20
+    at new Promise (<anonymous>)
+    at runWithCancel (file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:2323:10)
+    at file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/runner/dist/chunk-artifact.js:2305:20
+[Nest] 3628  - 2026/10/21 00:25:17   ERROR [StaleOpportunityReminderScheduleObservationService] Schedule observation audit failed for trace schedule-observation-trace: audit unavailable
+Error: audit unavailable
+    at Object.<anonymous> (A:/基于飞书的销售agent/tests/unit/stale-opportunity-reminder-schedule-observation.spec.ts:160:35)
+    at Object.Mock [as appendAudit] (file:///A:/%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/@vitest/spy/dist/index.js:332:34)
+    at StaleOpportunityReminderScheduleObservationService.appendAudit (A:/基于飞书的销售agent/server/modules/insight/stale-opportunity-reminder-schedule-observation.service.ts:255:24)
+    at StaleOpportunityReminderScheduleObservationService.observe (A:/基于飞书的销售agent/server/modules/insight/stale-opportunity-reminder-schedule-observation.service.ts:97:47)
+    at A:/基于飞书的销售agent/tests/unit/stale-opportunity-reminder-schedule-observation.spec.ts:272:22
+[Nest] 3628  - 2026/10/21 00:25:20   ERROR [Mem0MemoryAdapter] Mem0 long-term memory initialization failed: Mem0 configuration is incomplete: MEM0_VECTOR_STORE_URL, MEM0_LLM_API_KEY or LLM_API_KEY, MEM0_LLM_MODEL or LLM_MODEL, MEM0_EMBEDDER_API_KEY or LLM_API_KEY, MEM0_EMBEDDER_MODEL
+
+ Test Files  133 passed (133)
+      Tests  1209 passed (1209)
+   Start at  00:25:02
+   Duration  22.76s (transform 21.12s, setup 0ms, import 177.92s, tests 31.97s, environment 20.93s)
+
