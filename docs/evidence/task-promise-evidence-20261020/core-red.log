@@ -1,0 +1,41 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 A:/基于飞书的销售agent
+
+ ❯ tests/unit/task-history-evidence.spec.ts (0 test)
+ ❯ tests/unit/task-promise-evidence.spec.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/task-history-evidence.spec.ts [ tests/unit/task-history-evidence.spec.ts ]
+Error: Cannot find package '@server/modules/insight/task-history-evidence' imported from A:/基于飞书的销售agent/tests/unit/task-history-evidence.spec.ts
+ ❯ tests/unit/task-history-evidence.spec.ts:3:1
+      1| import { describe, expect, it } from 'vitest';
+      2| import type { TaskHistorySourceResult } from '@server/modules/agent-co…
+      3| import { hasCompleteTaskHistory } from '@server/modules/insight/task-h…
+       | ^
+      4|
+      5| const scope = {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/unit/task-promise-evidence.spec.ts [ tests/unit/task-promise-evidence.spec.ts ]
+Error: Cannot find package '@server/modules/insight/task-promise-evidence.service' imported from A:/基于飞书的销售agent/tests/unit/task-promise-evidence.spec.ts
+ ❯ tests/unit/task-promise-evidence.spec.ts:3:1
+      1| import { randomUUID } from 'node:crypto';
+      2| import { describe, expect, it, vi } from 'vitest';
+      3| import { TaskPromiseEvidenceService } from '@server/modules/insight/ta…
+       | ^
+      4| import type { TaskPromiseEvidenceInput, TaskPromiseEvidenceRepository …
+      5|   '@server/modules/insight/task-promise-evidence.ports';
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  no tests
+   Start at  23:15:07
+   Duration  490ms (transform 69ms, setup 0ms, import 0ms, tests 0ms, environment 0ms)
+

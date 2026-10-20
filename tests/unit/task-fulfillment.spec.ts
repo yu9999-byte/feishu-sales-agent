@@ -685,13 +685,16 @@ describe('TaskFulfillmentService', (): void => {
     );
   });
 
-  it('uses full task history only when the trusted source declares complete coverage', async (): Promise<void> => {
+  it('uses full task history only with a continuous and exhausted scope proof', async (): Promise<void> => {
     const store: MemoryControlStore = new MemoryControlStore([integration]);
     await saveSucceeded(store, 'trusted-history-action', {
       taskGuid: 'trusted-history-guid',
     });
     const sourceResult: TaskHistorySourceResult = {
       coverage: 'full',
+      continuity: { sourceId: 'trusted', tenantId: integration.tenantId, actorOpenId: 'ou_sales_a',
+        taskGuids: ['trusted-history-guid'], from: new Date(NOW.getTime() - 180 * 86_400_000).toISOString(),
+        through: NOW.toISOString(), gaps: [], hasMore: false },
       items: [{
         eventId: 'trusted-history-event',
         guid: 'trusted-history-guid',
@@ -726,6 +729,12 @@ describe('TaskFulfillmentService', (): void => {
       completionState: 'completed',
       taskGuid: 'trusted-history-guid',
     });
+    sourceResult.continuity = undefined;
+    const unproven = await new TaskFulfillmentService(tasks, store).analyze({
+      integration, actorOpenId: 'ou_sales_a', referenceDate: '2026-09-30', timezone: 'Asia/Shanghai', now: NOW,
+    });
+    expect(unproven.coverage.taskHistory).toBe('unavailable');
+    expect(unproven.promises[0].completionState).toBe('unknown');
   });
 
   it('rejects partial trusted task history instead of upgrading its coverage', async (): Promise<void> => {

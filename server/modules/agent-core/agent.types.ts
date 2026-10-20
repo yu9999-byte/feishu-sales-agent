@@ -473,6 +473,16 @@ export type TaskHistorySourceCoverage =
 
 export interface TaskHistorySourceResult extends TaskStatusEventResult {
   coverage: TaskHistorySourceCoverage;
+  continuity?: {
+    sourceId: string;
+    tenantId: string;
+    actorOpenId: string;
+    taskGuids: string[];
+    from: string;
+    through: string;
+    gaps: Array<{ from: string; through: string }>;
+    hasMore: boolean;
+  };
 }
 
 export type TaskStatusChange = TaskFulfillmentChange;

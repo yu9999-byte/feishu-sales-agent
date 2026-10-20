@@ -28,6 +28,8 @@ import type {
   TaskStatusSnapshot,
   TenantIntegration,
 } from '@server/modules/agent-core/agent.types';
+import { hasCompleteTaskHistory } from './task-history-evidence';
+import { followupPromiseNextAction } from './followup-promise';
 
 interface TaskFulfillmentInput {
   integration: TenantIntegration;
@@ -53,6 +55,7 @@ interface TaskFulfillmentTasksReader {
     taskGuids: string[],
     since: Date,
     limit: number,
+    until?: Date,
   ): Promise<TaskHistorySourceResult>;
   getTaskByGuid?(
     integration: TenantIntegration,
@@ -104,7 +107,6 @@ const DATE_PATTERN: RegExp = /^\d{4}-\d{2}-\d{2}$/u;
 const PROMISE_HISTORY_DAYS = 180 as const;
 const PROMISE_HISTORY_LIMIT: number = 500;
 const TASK_EVENT_HISTORY_LIMIT: number = 1000;
-const NO_NEXT_STEP_PATTERN: RegExp = /^(暂无|没有|无)下一步/u;
 const PARTIAL_TASK_STATUSES: ReadonlySet<string> = new Set([
   'inprogress',
   'doing',
@@ -711,6 +713,7 @@ class TaskFulfillmentService {
           taskGuids,
           since,
           TASK_EVENT_HISTORY_LIMIT,
+          now,
         );
       } catch (error: unknown) {
         this.logger.warn(
@@ -725,7 +728,9 @@ class TaskFulfillmentService {
           coverage: 'unavailable',
         };
       }
-      if (sourceResult.coverage !== 'full' || sourceResult.warning) {
+      if (!hasCompleteTaskHistory(sourceResult, {
+        tenantId: input.integration.tenantId, actorOpenId: input.actorOpenId, taskGuids, since, until: now,
+      })) {
         if (sourceResult.warning) {
           warnings.push(`任务状态历史${sourceWarning(sourceResult.warning)}`);
         } else {
@@ -895,13 +900,10 @@ class TaskFulfillmentService {
     changeByGuid: Map<string, TaskFulfillmentChange>,
     replacements: TaskReplacementResult,
   ): TaskPromiseFulfillmentItem | null {
-    if ((action.payload.actionKind ?? 'followup') !== 'followup') return null;
     const candidate: FollowupTaskCandidate | undefined =
       this.selectedCandidate(action);
-    const nextAction: string = (
-      candidate?.title ?? action.payload.draft.nextAction ?? ''
-    ).trim();
-    if (!nextAction || NO_NEXT_STEP_PATTERN.test(nextAction)) return null;
+    const nextAction: string | null = followupPromiseNextAction(action.payload);
+    if (nextAction === null) return null;
 
     const taskGuid: string | null = action.result.taskGuid?.trim() || null;
     const originalTask: TaskFulfillmentItem | undefined = taskGuid === null

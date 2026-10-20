@@ -1,0 +1,34 @@
+{
+  "desktop": {
+    "dialog": [
+      {
+        "height": 780.7750244140625,
+        "scrollHeight": 779,
+        "width": 576
+      }
+    ],
+    "height": 900,
+    "overflow": false,
+    "submitDisabled": true,
+    "width": 1280
+  },
+  "mobile": {
+    "dialog": [
+      {
+        "bottom": 801.8000373840332,
+        "clientWidth": 342,
+        "height": 759.6000366210938,
+        "left": 16,
+        "right": 374.3999938964844,
+        "scrollHeight": 779,
+        "scrollWidth": 342,
+        "top": 42.20000076293945,
+        "width": 358.3999938964844
+      }
+    ],
+    "height": 844,
+    "overflow": false,
+    "submitDisabled": false,
+    "width": 390
+  }
+}

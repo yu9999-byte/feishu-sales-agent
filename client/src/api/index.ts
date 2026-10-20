@@ -36,6 +36,9 @@ import type {
   StaleOpportunityGovernanceResponse,
   StaleOpportunityReadinessResponse,
   TaskFulfillmentResponse,
+  TaskPromiseEvidenceEvent,
+  TaskPromiseEvidenceResponse,
+  RecordTaskPromiseEvidenceRequest,
   TodayActionResponse,
   TodayActionDraftRequest,
   TodayActionDraftResponse,
@@ -532,6 +535,27 @@ const recordPlaybookDraftReview = async (
   } catch (error: unknown) { throw normalizeError(error); }
 };
 
+const getTaskPromiseEvidence = async (actionId: string, beforeRevision?: number): Promise<TaskPromiseEvidenceResponse> => {
+  try {
+    const response = await axiosForBackend<TaskPromiseEvidenceResponse>({
+      url: `/api/platform/task-promises/${encodeURIComponent(actionId)}/evidence`, method: 'GET',
+      params: beforeRevision === undefined ? undefined : { beforeRevision }, withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
+
+const recordTaskPromiseEvidence = async (actionId: string, input: RecordTaskPromiseEvidenceRequest):
+Promise<TaskPromiseEvidenceEvent> => {
+  try {
+    const response = await axiosForBackend<TaskPromiseEvidenceEvent>({
+      url: `/api/platform/task-promises/${encodeURIComponent(actionId)}/evidence`, method: 'POST',
+      data: input, withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
+
 const getPlaybookCandidates = async (): Promise<PlaybookOptimizationCandidateListResponse> => {
   try {
     const response = await axiosForBackend<PlaybookOptimizationCandidateListResponse>({
@@ -699,6 +723,8 @@ export {
   savePlaybookDraft,
   getProactiveNotificationReconciliations,
   getTaskFulfillment,
+  getTaskPromiseEvidence,
+  recordTaskPromiseEvidence,
   getTodayActions,
   operateTodayAction,
   createTodayFollowupDraft,

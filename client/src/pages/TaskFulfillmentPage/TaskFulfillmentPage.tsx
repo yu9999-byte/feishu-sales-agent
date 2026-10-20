@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import {
   AlertCircle,
   AlertTriangle,
@@ -24,6 +25,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getTaskFulfillment, type ProductApiError } from '../../api';
+import type { ProductLayoutContext } from '../../components/Layout';
+import { TaskPromiseEvidence } from './TaskPromiseEvidence';
 
 const statusLabel: Record<TaskFulfillmentStatus, string> = {
   ready: '数据完整',
@@ -73,6 +76,7 @@ const formatDateTime = (value: string): string => {
 };
 
 const TaskFulfillmentPage: React.FC = () => {
+  const { session } = useOutletContext<ProductLayoutContext>();
   const [report, setReport] = useState<TaskFulfillmentResponse | null>(null);
   const [error, setError] = useState<ProductApiError | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -239,7 +243,9 @@ const TaskFulfillmentPage: React.FC = () => {
         ) : (
           <div data-ai-section-type="card-list" className="grid gap-3 md:grid-cols-2">
             {report.promises.map((promise: TaskPromiseFulfillmentItem): React.ReactNode => (
-              <PromiseItem key={promise.pendingActionId} item={promise} />
+              <PromiseItem key={promise.pendingActionId} item={promise}
+                canWrite={session.permissions.includes('followup:create-own')}
+                onAccessFailure={(failure: ProductApiError): void => { setReport(null); setError(failure); }} />
             ))}
           </div>
         )}
@@ -439,7 +445,8 @@ const CompletedTaskItem: React.FC<{ item: TaskFulfillmentCompletedItem }> = ({
   </article>
 );
 
-const PromiseItem: React.FC<{ item: TaskPromiseFulfillmentItem }> = ({ item }) => (
+const PromiseItem: React.FC<{ item: TaskPromiseFulfillmentItem; canWrite: boolean;
+  onAccessFailure: (failure: ProductApiError) => void }> = ({ item, canWrite, onAccessFailure }) => (
   <article className="min-w-0 rounded-lg border border-border bg-card p-5">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
@@ -461,6 +468,8 @@ const PromiseItem: React.FC<{ item: TaskPromiseFulfillmentItem }> = ({ item }) =
     <p className="mt-2 text-xs text-muted-foreground">
       确定性履约判断：{completionStateLabel[item.completionState]}
     </p>
+    {!item.taskGuid && <TaskPromiseEvidence actionId={item.pendingActionId} nextAction={item.nextAction}
+      canWrite={canWrite} onAccessFailure={onAccessFailure} />}
     {item.change && (
       <p className="mt-2 text-xs leading-5 text-muted-foreground">
         状态证据：{item.change.previousStatus ?? '首次观察'} → {item.change.currentStatus}

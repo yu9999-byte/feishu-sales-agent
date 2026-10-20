@@ -1164,6 +1164,33 @@ export interface TaskPromiseFulfillmentItem {
   change?: TaskFulfillmentChange;
 }
 
+export type TaskPromiseEvidenceState = 'reported_fulfilled' | 'reported_partial' | 'retracted';
+
+export interface RecordTaskPromiseEvidenceRequest {
+  requestId: string;
+  expectedRevision: number;
+  state: TaskPromiseEvidenceState;
+  note: string;
+  evidenceUrl: string | null;
+}
+
+export interface TaskPromiseEvidenceEvent {
+  actionId: string;
+  revision: number;
+  state: TaskPromiseEvidenceState;
+  note: string;
+  evidenceUrl: string | null;
+  actorMemberId: string;
+  createdAt: string;
+}
+
+export interface TaskPromiseEvidenceResponse {
+  revision: number;
+  current: TaskPromiseEvidenceEvent | null;
+  history: TaskPromiseEvidenceEvent[];
+  nextBeforeRevision: number | null;
+}
+
 export interface TaskFulfillmentCoverage {
   openTasks: true;
   completedTasks: 'search_scope' | 'partial' | 'unavailable';
