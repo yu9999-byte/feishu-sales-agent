@@ -1,5 +1,7 @@
 # 技术架构
 
+PLAYBOOK-DRAFT（2026-10-20）：独立控制库迁移 032；候选行锁 + expectedVersion CAS + requestId 幂等，锁内冻结来源；可信会话和 playbook:review 限制全部草稿接口。版本内容不接入 RAG。见 [SDD 51](specs/51-playbook-authoring-sdd.md)。
+
 PREP-TEST-TYPES（2026-10-20，已完成）：测试配置显式覆盖继承的 spec exclude，采用匹配 Vitest/Vite 的 ESM/bundler 解析及 JSX，关闭仅生产构建需要的 composite/incremental，复用现有路径别名。覆盖回归先红复现 124 个 spec 遗漏，修正夹具与缺失导入后，136 个测试源文件全部入选且类型通过；全量 1052 单元及本轮 25 文件 ESLint 通过。未用 any、类型忽略或排除测试消除诊断，生产配置及契约未改。证据见 [验证归档](evidence/preparation-content-20261020/verification.md)。
 
 PREP-WEB-ENTRY（2026-10-20，已实现）：独立 Vite 的 GET/HEAD HTML 导航选择 agent.html 并保留查询参数；16 项真实 HTTP 回归通过，内置浏览器深链刷新到达身份提示。测试服务器关闭 watcher/预转换，避免全量并行时无关预热导致超时。API/runtime/模块/静态请求与平台模板不变。

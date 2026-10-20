@@ -242,6 +242,10 @@ tenant_id -> data_source_config -> base_token -> customer/opportunity/followup t
 
 决定：状态接口先复用结果当前权限核验，仅返回 status；历史无账本返回 not_recorded。查询不清理过期 dispatching、不领取发送、不暴露投递内部字段。原因：查看状态不应产生恢复或发送副作用，历史缺少数据也不能推断成功/失败。人工核查和恢复单独设计，unknown 禁止直接重置。
 
+# 2026-10-20 Playbook 版本草稿
+
+已接受候选允许审核人主动编写独立版本草稿。候选行事务锁保护首次竞争及连续版本，requestId 按规范化内容和作者幂等重放；来源在服务端冻结。没有正式发布或 RAG 接入，自动观测继续不保存原始问答正文。见 SDD 51。
+
 # 2026-10-19 准备投递人工确认
 
 unknown 仅可由当前有权查看结果的本人，凭人工核验的飞书消息 ID、发送时间与说明确认成 sent；采用 reconciliationVersion 整数 CAS，并与独立审计原子提交。只读状态公开该版本用于并发保护。该切片不支持确认未发送或重发授权，unknown 不能 claim；系统不核验消息 ID 真伪，也不发送外部消息。

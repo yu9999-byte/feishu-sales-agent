@@ -1,5 +1,7 @@
 # 需求追踪矩阵
 
+PLAYBOOK-DRAFT：已接受候选的创建/编辑/历史、租户隔离、可信作者、CAS、幂等重试及失败恢复已实现，自动化和合成组件验证通过；真实登录 UAT 待补。执行与测试见 [SDD/TDD 51](51-playbook-authoring-sdd.md)；发布/采用/样本不计入完成。
+
 2026-10-20 待办执行：用户要求规划并完成剩余事项，执行入口见 [本轮计划](../remaining-capabilities-execution-2026-10-20.md)。RUNTIME-HEALTH 先补存活/就绪分离、有界且脱敏的控制库/迁移检查与启动等待，见 [SDD 50](50-agent-runtime-health-sdd.md)。真实飞书额度、外部依赖和登录 UAT 继续独立标记，不将自动化通过等同全部待办完成。
 
 PREP-TEST-TYPES（2026-10-20，已完成）：覆盖回归先红复现 124 个 spec 被继承 exclude 排除；修复解析/覆盖及实际夹具后，136 个测试源文件全部入选、遗漏为 0。`type:check:test`、全量单元 124 文件/1052 项、本轮 22 个测试/夹具与 3 个配置 ESLint 通过。历史空覆盖成功不计作测试类型证据，生产契约未降低。见 [证据归档](../evidence/preparation-content-20261020/verification.md) 及 SDD 49。
@@ -356,7 +358,7 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | `KNO-001..009` 销售资料检索与推荐 | C / P1-PROGRESS | Real source verified / read-only retrieval verified / Web implemented / UI pending | 当前租户显式配置 3 份 Docx 白名单；应用只有 `view`，唯一 active 销售 `open_id` 与三份直接所有者 ACL 精确匹配。生产 Gateway `ready`，检查/可信结果 `3/3`、无 warning，返回真实标题、链接、摘录、`revision:3` 和 `accessVerified=true`。Docx 继续要求租户可读链接或销售直接协作者，互联网公开链接、群、部门、应用等不推导为本人权限。真实接入删除导致 `1063001` 的非法 SDK `fields` 参数并调整 ACL 检查顺序。Gateway `13/13`、资料与沟通准备 `50/50`、跨层 `89/89`、Agent `570/570`、Postgres `20/20` 及类型、Lint、双构建、两次迁移和 `3199` 启动冒烟通过 | 按用户要求真实 UI 仍 pending；v1 只推荐，不发送、不修改资料、不写业务数据。后续来源仍须逐条白名单、只读授权并通过销售本人 ACL |
 | `SIA-001..006` 销售知识问答 / RAG Agent v1 | D | Real source verified / bot integrated / Automated Green / UI pending | 唯一“销售agent”私聊的高置信度 `sales_qa` 已在普通会话、跟进澄清态和跟进补充态接入必需问答端口；active 成员、`playbook:read`、租户白名单和销售本人 ACL 缺一不可。回答最多 3 条真实摘录并带标题、段落、版本、适用边界和链接；无证据不采用模型回答。真实三问均 `answered`，首条分别命中产品能力、拜访准备、数据权限文档且均为 `revision:3`。知识问答与工作流 `76/76`、模块装配 `2/2`、真实探针 `3/3`、Agent `580/580`、Postgres `20/20` 及完整质量门、`3198` 启动冒烟通过 | 按用户要求真实 UI 保持 pending；v1 只读问答，不发送客户、不建任务、不写客户/商机/跟进/记忆/文档。知识候选、审核发布和操作型问答由 Playbook 后续切片承接 |
 | `REV-002..006` 团队 Review 和经营分析 | E | Automated Green / Web implemented / UI pending | `GET /api/platform/team-review` 已覆盖主管递归范围、高管租户范围、成员日报聚合、逾期/无跟进关注项、来源降级和无效成员 fail-closed；`/reviews/team` 已展示团队指标、关注成员、管理建议和逐人状态；团队/平台权限/导航 16 项定向回归、全量 Agent `264/264`、Postgres `11/11`、三套 TypeScript、全库 ESLint、Stylelint 和 Agent/Web 构建通过 | 尚未在真实主管/高管登录态核对团队范围、真实内容和视觉呈现；管理动作执行、调度和幂等仍未实现 |
-| `BPA-001..006` 最佳实践与 Playbook | F | Draft | 待样本/版本/审核测试 | 待管理员审核验收 |
+| `BPA-001..006` 最佳实践与 Playbook | F | 部分实现 | 候选/审核已有；SDD 51 版本草稿实现，服务/权限 30、组件 12、PostgreSQL/HTTP 15 项通过 | 真实身份 UAT 待补；采用记录、管理员发布门与赢丢单样本发现待实现，未实际发布 |
 | `OPS-001..002` 正式运行保障 | G | Draft | 待故障/恢复/备份测试 | 待两个真实租户验收 |
 
 ## P0 回归基线

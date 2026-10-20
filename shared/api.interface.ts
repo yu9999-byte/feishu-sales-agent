@@ -942,6 +942,40 @@ export interface PlaybookOptimizationReviewResponse {
   reviewId: string;
 }
 
+export interface PlaybookDraftContent {
+  title: string;
+  body: string;
+  applicability: string;
+  changeNote: string;
+}
+
+export interface SavePlaybookDraftRequest extends PlaybookDraftContent {
+  expectedVersion: number;
+  requestId: string;
+}
+
+export interface PlaybookDraftVersion extends PlaybookDraftContent {
+  candidateId: string;
+  version: number;
+  authorMemberId: string;
+  createdAt: string;
+  sources: PlaybookOptimizationSourceRef[];
+}
+
+export interface PlaybookDraftHistoryItem {
+  version: number;
+  title: string;
+  changeNote: string;
+  authorMemberId: string;
+  createdAt: string;
+}
+
+export interface PlaybookDraftResponse {
+  latest: PlaybookDraftVersion | null;
+  history: PlaybookDraftHistoryItem[];
+  nextBeforeVersion: number | null;
+}
+
 export type CustomerCommunicationDraftChannel = 'feishu' | 'email';
 
 export interface CustomerCommunicationDraft {

@@ -19,6 +19,9 @@ import type {
   PlaybookOptimizationCandidateListResponse,
   PlaybookOptimizationReviewRequest,
   PlaybookOptimizationReviewResponse,
+  PlaybookDraftResponse,
+  PlaybookDraftVersion,
+  SavePlaybookDraftRequest,
   ProactiveNotificationReconciliationListResponse,
   ProactiveNotificationReconciliationRequest,
   ProactiveNotificationReconciliationResponse,
@@ -464,6 +467,43 @@ const getPlatformSection = async (
   }
 };
 
+const getPlaybookDraft = async (
+  candidateId: string, beforeVersion?: number,
+): Promise<PlaybookDraftResponse> => {
+  try {
+    const response = await axiosForBackend<PlaybookDraftResponse>({
+      url: `/api/platform/playbook-candidates/${encodeURIComponent(candidateId)}/draft`,
+      method: 'GET', params: beforeVersion === undefined ? undefined : { beforeVersion },
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
+
+const getPlaybookDraftVersion = async (
+  candidateId: string, version: number,
+): Promise<PlaybookDraftVersion> => {
+  try {
+    const response = await axiosForBackend<PlaybookDraftVersion>({
+      url: `/api/platform/playbook-candidates/${encodeURIComponent(candidateId)}/draft/versions/${version}`,
+      method: 'GET', withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
+
+const savePlaybookDraft = async (
+  candidateId: string, input: SavePlaybookDraftRequest,
+): Promise<PlaybookDraftVersion> => {
+  try {
+    const response = await axiosForBackend<PlaybookDraftVersion>({
+      url: `/api/platform/playbook-candidates/${encodeURIComponent(candidateId)}/draft/versions`,
+      method: 'POST', data: input, withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
+
 const getPlaybookCandidates = async (): Promise<PlaybookOptimizationCandidateListResponse> => {
   try {
     const response = await axiosForBackend<PlaybookOptimizationCandidateListResponse>({
@@ -624,6 +664,9 @@ export {
   getDailySalesReport,
   getOpportunityDecisions,
   getPlaybookCandidates,
+  getPlaybookDraft,
+  getPlaybookDraftVersion,
+  savePlaybookDraft,
   getProactiveNotificationReconciliations,
   getTaskFulfillment,
   getTodayActions,

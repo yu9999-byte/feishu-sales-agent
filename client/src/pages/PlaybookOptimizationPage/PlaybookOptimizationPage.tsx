@@ -22,6 +22,7 @@ import type {
   PlaybookOptimizationReviewDecision,
 } from '@shared/api.interface';
 import type { ProductLayoutContext } from '@/components/Layout';
+import { PlaybookDraftWorkspace } from './PlaybookDraftWorkspace';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -116,6 +117,7 @@ const PlaybookOptimizationPage: React.FC = () => {
   const [note, setNote] = useState<string>('');
   const [reviewError, setReviewError] = useState<ProductApiError | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
+  const [authoring, setAuthoring] = useState<PlaybookOptimizationCandidate | null>(null);
 
   const refresh = useCallback((): void => {
     if (!canReview) return;
@@ -269,6 +271,7 @@ const PlaybookOptimizationPage: React.FC = () => {
                   key={item.id}
                   candidate={item}
                   onReview={openReview}
+                  onAuthor={setAuthoring}
                 />
               ))}
             </section>
@@ -276,6 +279,14 @@ const PlaybookOptimizationPage: React.FC = () => {
         </>
       )}
 
+      {canReview && authoring && <PlaybookDraftWorkspace
+        key={`${session.tenant.id}:${session.member.id}:${authoring.id}`}
+        candidate={authoring}
+        onClose={(): void => setAuthoring(null)}
+        onAccessFailure={(failure): void => {
+          setAuthoring(null); setData(null); setDialog(null); setNote(''); setError(failure);
+        }}
+      />}
       <Dialog open={dialog !== null} onOpenChange={(open: boolean): void => {
         if (!open) closeReview();
       }}>
@@ -346,11 +357,12 @@ const SummaryCard: React.FC<{
 
 const CandidateCard: React.FC<{
   candidate: PlaybookOptimizationCandidate;
+  onAuthor: (candidate: PlaybookOptimizationCandidate) => void;
   onReview: (
     candidate: PlaybookOptimizationCandidate,
     decision: PlaybookOptimizationReviewDecision,
   ) => void;
-}> = ({ candidate, onReview }) => (
+}> = ({ candidate, onReview, onAuthor }) => (
   <Card>
     <CardHeader className="gap-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
       <div>
@@ -392,6 +404,9 @@ const CandidateCard: React.FC<{
           </ul>
         </div>
       )}
+      {candidate.status === 'accepted_for_authoring' && <div className="border-t pt-4">
+        <Button onClick={(): void => onAuthor(candidate)}><FilePenLine aria-hidden="true" />编写草稿</Button>
+      </div>}
       {candidate.status === 'pending_review' && (
         <div className="flex flex-wrap gap-2 border-t border-border pt-4">
           <Button onClick={(): void => onReview(candidate, 'accept_for_authoring')}>

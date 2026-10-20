@@ -51,6 +51,9 @@
 | `40-document-ingestion-sdd.md` | Docx/Wiki 文档录入、按场景长期用户授权与同聊天草案 | Implemented / automated green / real OAuth/source/UI pending |
 | `41-followup-opportunity-association-sdd.md` | 跟进必须关联客户、商机可选，以及确认卡和写入契约 | Approved / Implementing |
 | `42-followup-opportunity-association-tdd.md` | 三种商机关联路径、Base 空关联和 UI 回归测试 | Red scenarios defined |
+| `49-customer-preparation-chat-sdd.md` | 原聊天准备会话、持久结果、草稿保存、版本冲突与投递核查 | 本地实现与自动化完成；真实登录/消息验收待补 |
+| `50-agent-runtime-health-sdd.md` | 存活/就绪、只读迁移探测、健康 CLI 与启动检查 | 本地故障恢复验证通过；正式运行保障待验收 |
+| `51-playbook-authoring-sdd.md` | 已接受候选的版本草稿、可信作者、来源冻结、CAS、幂等和历史 | Implemented；自动化/合成组件验证通过，真实登录 UAT 待补 |
 
 ## 2. 规格状态
 

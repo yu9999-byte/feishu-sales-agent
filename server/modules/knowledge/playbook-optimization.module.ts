@@ -5,6 +5,10 @@ import { ControlDatabaseModule } from
 import { PlatformShellModule } from
   '@server/modules/platform-shell/platform-shell.module';
 import { WebAuthModule } from '@server/modules/web-auth/web-auth.module';
+import { PlaybookAuthoringController } from './playbook-authoring.controller';
+import { PlaybookAuthoringService } from './playbook-authoring.service';
+import { PLAYBOOK_AUTHORING_REPOSITORY } from './playbook-authoring.ports';
+import { PostgresPlaybookAuthoringRepository } from './postgres-playbook-authoring.repository';
 import { PlaybookOptimizationController } from
   './playbook-optimization.controller';
 import {
@@ -18,8 +22,11 @@ import { PostgresPlaybookOptimizationRepository } from
 
 @Module({
   imports: [ControlDatabaseModule, PlatformShellModule, WebAuthModule],
-  controllers: [PlaybookOptimizationController],
+  controllers: [PlaybookOptimizationController, PlaybookAuthoringController],
   providers: [
+    PlaybookAuthoringService,
+    PostgresPlaybookAuthoringRepository,
+    { provide: PLAYBOOK_AUTHORING_REPOSITORY, useExisting: PostgresPlaybookAuthoringRepository },
     PlaybookOptimizationService,
     PostgresPlaybookOptimizationRepository,
     {

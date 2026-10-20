@@ -42,6 +42,7 @@ describe('Agent migration runner', (): void => {
       '029_preparation_draft_edits.sql',
       '030_preparation_result_deliveries.sql',
       '031_preparation_delivery_reconciliation.sql',
+      '032_playbook_draft_versions.sql',
     ]);
     expect(result.stdout).not.toContain('004_agent_p0_demo_tenant');
   });

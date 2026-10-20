@@ -4,6 +4,7 @@ import type {
   ConfirmPreparationDeliveryResponse,
   CustomerPreparationDeliveryStatus,
   TodayActionOperationRequest,
+  SavePlaybookDraftRequest,
   UpdateFollowupDraftRequest,
 } from '../../shared/api.interface';
 
@@ -17,7 +18,8 @@ vi.mock('axios', () => ({ default: {
 } }));
 import { operateTodayAction, confirmTodayTaskDraft, updateFollowupDraft,
   createTodayFollowupDraft, createTodayTaskDraft,
-  getCustomerPreparationDelivery, confirmCustomerPreparationDelivery } from '../../client/src/api';
+  getCustomerPreparationDelivery, confirmCustomerPreparationDelivery,
+  getPlaybookDraft, getPlaybookDraftVersion, savePlaybookDraft } from '../../client/src/api';
 
 beforeEach((): void => {
   transport.send.mockResolvedValue({ data: { accepted: true } });
@@ -95,4 +97,24 @@ it('confirms only the supplied preparation delivery evidence with session creden
   expect(transport.send).toHaveBeenLastCalledWith({ method: 'POST',
     url: '/api/platform/customer-communications/results/result%2F1/delivery/confirm',
     data: input, withCredentials: true });
+});
+
+it('reads draft history and version details with encoded identity and session credentials', async (): Promise<void> => {
+  await getPlaybookDraft('candidate/1', 21);
+  expect(transport.send).toHaveBeenLastCalledWith({ method: 'GET',
+    url: '/api/platform/playbook-candidates/candidate%2F1/draft',
+    params: { beforeVersion: 21 }, withCredentials: true });
+  await getPlaybookDraftVersion('candidate/1', 20);
+  expect(transport.send).toHaveBeenLastCalledWith({ method: 'GET',
+    url: '/api/platform/playbook-candidates/candidate%2F1/draft/versions/20', withCredentials: true });
+});
+
+it('preserves draft compare-and-swap and idempotent request body', async (): Promise<void> => {
+  const input: SavePlaybookDraftRequest = { title: '技术评审', body: '明确双方接口与技术验收标准。',
+    applicability: '技术评审阶段', changeNote: '补充验收范围', expectedVersion: 3, requestId: 'request-1' };
+  await savePlaybookDraft('candidate/1', input);
+  expect(transport.send).toHaveBeenLastCalledWith({ method: 'POST',
+    url: '/api/platform/playbook-candidates/candidate%2F1/draft/versions',
+    data: input, withCredentials: true });
+  expect(transport.shortcut).not.toHaveBeenCalled();
 });
