@@ -1,14 +1,14 @@
 # 当前工程说明
 
-## 当前状态：2026-10-20 Playbook 版本草稿本地闭环完成
+## 当前状态：2026-10-20 Playbook 草稿与发布前审核本地实现完成
 
-已接受候选可由具有 `playbook:review` 的审核人编写标题、适用范围、正文与版本说明，逐版保存并回看历史。独立迁移 032、可信租户/作者、候选行锁、版本 CAS、请求幂等和来源冻结已实现；冲突明确选择、失败保留本地内容、响应不确定重试原请求、身份失效清理及迟到响应隔离已覆盖。草稿不进入 RAG，也不实际发布。
+已接受候选的可信草稿编写、不可变版本、来源冻结、CAS/幂等、冲突恢复和历史，以及最新版本提交、管理员批准/退回、旧版失效、只追加审核事件和双 CAS 均已实现。审核通过只表示本地发布前审核完成；没有正式发布、RAG 索引或采用统计。
 
-验证：127 文件/1118 单元通过；隔离集成 74 项通过、3 个真实探针跳过，其中草稿 PostgreSQL/HTTP 15 项、实际组件交互 12 项。三套类型、全库 ESLint/Stylelint、Agent 195 文件/Web 3052 模块构建及健康 CLI 5 项通过。当前 29 项迁移首次应用、再次全跳过，重新连接可回读；未执行 PostgreSQL 进程重启恢复测试。
+本轮审核验证：定向审核 6 个测试文件/91 项通过；全量单元 129 个文件/1155 项通过；隔离 PostgreSQL/HTTP 审核集成 16/16 通过。`type:check`、`type:check:test`、全库 ESLint/Stylelint、Agent/Web 双构建通过，Web 构建仍有既有大 chunk 提示。隔离集群实际跳过迁移 003–032 并应用 033，删除约束检查通过；验证后已停止，不使用 55432 业务数据库。
 
-1280px/390px 的实际组件合成验证完成，包含保存、冲突后保留本地继续保存及历史详情；无横向溢出或脚本错误。真实 `/playbooks` 路由仍显示飞书身份提示，不计作真实 UAT。本轮隔离数据库已停止；原有后端的 55432 连接故障仍存在，原有 Agent/Vite 均未重启。真实消息和业务写入新增为零。
+真实 `/playbooks` 路由仍只显示飞书身份提示，不能完成角色 UAT；本轮没有对审核面板做 1280px/390px 合成浏览器截图检查，相关 UI 仍 pending。测试结果不补造 TDD Red 记录：原始失败输出未收录在本轮归档。没有新增真实消息或业务写入，也没有执行正式发布。
 
-证据见 [Playbook 草稿验证](evidence/playbook-authoring-20261020/verification.md)，规格见 [SDD 51](specs/51-playbook-authoring-sdd.md)，整体待办见[执行计划](remaining-capabilities-execution-2026-10-20.md)。本阶段按项目发布器质量门保存代码检查点，成功提交以 `github/main` 的发布器结果为准。采用记录、管理员发布门、赢丢单发现及其他外部依赖仍待完成，以下均为历史阶段记录。
+证据见[Playbook 审核验证](evidence/playbook-review-20261020/verification.md)和[草稿验证](evidence/playbook-authoring-20261020/verification.md)，规格见 [SDD 51](specs/51-playbook-authoring-sdd.md)、[SDD 52](specs/52-playbook-review-sdd.md)，整体待办见[执行计划](remaining-capabilities-execution-2026-10-20.md)。真实身份/视觉 UAT、可信采用记录、正式发布策略和赢丢单样本门槛仍待完成；以下均为历史阶段记录。
 
 ## 当前状态：2026-10-20 准备交互与运行健康本地闭环完成
 

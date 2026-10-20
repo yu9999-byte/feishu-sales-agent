@@ -35,7 +35,7 @@ afterEach(async (): Promise<void> => {
 });
 const render = async (value = candidate): Promise<void> => {
   await act(async (): Promise<void> => root.render(React.createElement(PlaybookDraftWorkspace, {
-    key: value.id, candidate: value, onClose, onAccessFailure,
+    key: value.id, candidate: value, canApprove: false, onClose, onAccessFailure,
   })));
 };
 const button = (label: string): HTMLButtonElement => {

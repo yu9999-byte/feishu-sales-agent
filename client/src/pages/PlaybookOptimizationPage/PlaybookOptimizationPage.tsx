@@ -109,6 +109,7 @@ interface ReviewDialogState {
 const PlaybookOptimizationPage: React.FC = () => {
   const { session } = useOutletContext<ProductLayoutContext>();
   const canReview: boolean = session.permissions.includes('playbook:review');
+  const canPublish: boolean = session.permissions.includes('playbook:publish');
   const [data, setData] =
     useState<PlaybookOptimizationCandidateListResponse | null>(null);
   const [error, setError] = useState<ProductApiError | null>(null);
@@ -282,6 +283,7 @@ const PlaybookOptimizationPage: React.FC = () => {
       {canReview && authoring && <PlaybookDraftWorkspace
         key={`${session.tenant.id}:${session.member.id}:${authoring.id}`}
         candidate={authoring}
+        canApprove={canPublish}
         onClose={(): void => setAuthoring(null)}
         onAccessFailure={(failure): void => {
           setAuthoring(null); setData(null); setDialog(null); setNote(''); setError(failure);

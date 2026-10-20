@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   getPlaybookDraft, getPlaybookDraftVersion, savePlaybookDraft, type ProductApiError,
 } from '../../api';
+import { PlaybookDraftReviewPanel } from './PlaybookDraftReviewPanel';
 
 const draftSchema = z.object({
   title: z.string().trim().min(2, '标题至少 2 字').max(120, '标题最多 120 字'),
@@ -30,9 +31,10 @@ const contentOf = (value: PlaybookDraftVersion): PlaybookDraftContent => ({
 
 const PlaybookDraftWorkspace: React.FC<{
   candidate: PlaybookOptimizationCandidate;
+  canApprove: boolean;
   onClose: () => void;
   onAccessFailure: (failure: ProductApiError) => void;
-}> = ({ candidate, onClose, onAccessFailure }) => {
+}> = ({ candidate, canApprove, onClose, onAccessFailure }) => {
   const [data, setData] = useState<PlaybookDraftResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<boolean>(true);
@@ -187,6 +189,7 @@ const PlaybookDraftWorkspace: React.FC<{
           <TabsList aria-label="草稿视图">
             <TabsTrigger value="edit">编辑</TabsTrigger>
             <TabsTrigger value="history"><History aria-hidden="true" className="mr-2 size-4" />版本历史</TabsTrigger>
+            <TabsTrigger value="review">发布前审核</TabsTrigger>
           </TabsList>
           <TabsContent value="edit">
             <Form {...form}>
@@ -231,6 +234,16 @@ const PlaybookDraftWorkspace: React.FC<{
               </ol>}
             {data.nextBeforeVersion !== null && <Button variant="outline" disabled={busy} onClick={(): void => { void history(); }}>更早版本</Button>}
             {selected && <VersionDetail value={selected} />}
+          </TabsContent>
+          <TabsContent value="review">
+            {data.latest ? <PlaybookDraftReviewPanel
+              key={`${candidate.id}:${data.latest.version}`}
+              candidateId={candidate.id}
+              version={data.latest.version}
+              canApprove={canApprove}
+              disabled={frozen || form.formState.isDirty}
+              onAccessFailure={onAccessFailure}
+            /> : <p className="py-6 text-sm text-muted-foreground">先保存一个草稿版本，再提交审核。</p>}
           </TabsContent>
         </Tabs>}
       </>}

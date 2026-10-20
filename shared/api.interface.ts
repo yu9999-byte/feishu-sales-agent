@@ -976,6 +976,36 @@ export interface PlaybookDraftResponse {
   nextBeforeVersion: number | null;
 }
 
+export type PlaybookDraftReviewAction = 'submit' | 'approve' | 'request_changes';
+export type PlaybookDraftReviewStatus =
+  | 'not_submitted' | 'pending_review' | 'approved' | 'changes_requested' | 'superseded';
+
+export interface RecordPlaybookDraftReviewRequest {
+  requestId: string;
+  expectedVersion: number;
+  expectedReviewSequence: number;
+  action: PlaybookDraftReviewAction;
+  note: string;
+}
+
+export interface PlaybookDraftReviewEvent {
+  candidateId: string;
+  sequence: number;
+  version: number;
+  action: PlaybookDraftReviewAction;
+  note: string;
+  actorMemberId: string;
+  createdAt: string;
+}
+
+export interface PlaybookDraftReviewResponse {
+  latestDraftVersion: number | null;
+  status: PlaybookDraftReviewStatus;
+  current: PlaybookDraftReviewEvent | null;
+  history: PlaybookDraftReviewEvent[];
+  nextBeforeSequence: number | null;
+}
+
 export type CustomerCommunicationDraftChannel = 'feishu' | 'email';
 
 export interface CustomerCommunicationDraft {

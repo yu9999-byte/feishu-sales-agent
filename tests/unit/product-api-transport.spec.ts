@@ -5,6 +5,7 @@ import type {
   CustomerPreparationDeliveryStatus,
   TodayActionOperationRequest,
   SavePlaybookDraftRequest,
+  RecordPlaybookDraftReviewRequest,
   UpdateFollowupDraftRequest,
 } from '../../shared/api.interface';
 
@@ -20,6 +21,7 @@ import { operateTodayAction, confirmTodayTaskDraft, updateFollowupDraft,
   createTodayFollowupDraft, createTodayTaskDraft,
   getCustomerPreparationDelivery, confirmCustomerPreparationDelivery,
   getPlaybookDraft, getPlaybookDraftVersion, savePlaybookDraft } from '../../client/src/api';
+import { getPlaybookDraftReview, recordPlaybookDraftReview } from '../../client/src/api';
 
 beforeEach((): void => {
   transport.send.mockResolvedValue({ data: { accepted: true } });
@@ -115,6 +117,22 @@ it('preserves draft compare-and-swap and idempotent request body', async (): Pro
   await savePlaybookDraft('candidate/1', input);
   expect(transport.send).toHaveBeenLastCalledWith({ method: 'POST',
     url: '/api/platform/playbook-candidates/candidate%2F1/draft/versions',
+    data: input, withCredentials: true });
+  expect(transport.shortcut).not.toHaveBeenCalled();
+});
+
+it('reads paged review history and records the exact idempotent review request', async (): Promise<void> => {
+  await getPlaybookDraftReview('candidate/1', 21);
+  expect(transport.send).toHaveBeenLastCalledWith({ method: 'GET',
+    url: '/api/platform/playbook-candidates/candidate%2F1/draft/review',
+    params: { beforeSequence: 21 }, withCredentials: true });
+  const input: RecordPlaybookDraftReviewRequest = {
+    requestId: 'request-1', expectedVersion: 3, expectedReviewSequence: 2,
+    action: 'approve', note: '已核对范围和证据',
+  };
+  await recordPlaybookDraftReview('candidate/1', input);
+  expect(transport.send).toHaveBeenLastCalledWith({ method: 'POST',
+    url: '/api/platform/playbook-candidates/candidate%2F1/draft/review',
     data: input, withCredentials: true });
   expect(transport.shortcut).not.toHaveBeenCalled();
 });

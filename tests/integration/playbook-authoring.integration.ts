@@ -4,11 +4,14 @@ import type { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import postgres, { type Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { SavePlaybookDraftRequest } from '@shared/api.interface';
+import type { RecordPlaybookDraftReviewRequest, SavePlaybookDraftRequest } from '@shared/api.interface';
 import { PlaybookAuthoringController } from '@server/modules/knowledge/playbook-authoring.controller';
 import { PlaybookAuthoringService } from '@server/modules/knowledge/playbook-authoring.service';
-import { PLAYBOOK_AUTHORING_REPOSITORY } from '@server/modules/knowledge/playbook-authoring.ports';
+import { PlaybookDraftReviewController } from '@server/modules/knowledge/playbook-draft-review.controller';
+import { PlaybookDraftReviewService } from '@server/modules/knowledge/playbook-draft-review.service';
+import { PLAYBOOK_AUTHORING_REPOSITORY, PLAYBOOK_DRAFT_REVIEW_REPOSITORY } from '@server/modules/knowledge/playbook-authoring.ports';
 import { PostgresPlaybookAuthoringRepository } from '@server/modules/knowledge/postgres-playbook-authoring.repository';
+import { PostgresPlaybookDraftReviewRepository } from '@server/modules/knowledge/postgres-playbook-draft-review.repository';
 import { PlatformShellService } from '@server/modules/platform-shell/platform-shell.service';
 import { PlatformAccessDeniedError } from '@server/modules/platform-shell/platform-session.service';
 import { FeishuWebAuthService, FeishuWebAuthError } from '@server/modules/web-auth/feishu-web-auth.service';
@@ -22,10 +25,14 @@ describe.skipIf(!databaseUrl)('Playbook drafts with PostgreSQL and HTTP', (): vo
   const memberId: string = randomUUID();
   const otherMember: string = randomUUID();
   const secondAuthor: string = randomUUID();
+  const adminMember: string = randomUUID();
   const repository = new PostgresPlaybookAuthoringRepository(sql);
+  const reviewRepository = new PostgresPlaybookDraftReviewRepository(sql);
   const service = new PlaybookAuthoringService(repository);
+  const reviewService = new PlaybookDraftReviewService(reviewRepository);
   let candidateId: string;
   let pendingId: string;
+  let reviewCandidateId: string;
   let app: INestApplication;
   let baseUrl: string;
   const draft = (expectedVersion = 0): SavePlaybookDraftRequest => ({
@@ -54,6 +61,21 @@ describe.skipIf(!databaseUrl)('Playbook drafts with PostgreSQL and HTTP', (): vo
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     },
   );
+  const reviewHttp = (id: string, token = 'a', body?: unknown, beforeSequence?: number): Promise<Response> => fetch(
+    `${baseUrl}/api/platform/playbook-candidates/${id}/draft/review${beforeSequence === undefined ? '' : `?beforeSequence=${beforeSequence}`}`, {
+      method: body === undefined ? 'GET' : 'POST',
+      headers: { 'content-type': 'application/json', ...(token ? { cookie: `sales-agent-session=${token}` } : {}) },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    },
+  );
+  const saveReviewDraft = async (expectedVersion: number): Promise<void> => {
+    const input: SavePlaybookDraftRequest = draft(expectedVersion);
+    await service.save({ ...input, tenantId, candidateId: reviewCandidateId, authorMemberId: memberId });
+  };
+  const reviewRequest = (expectedVersion: number, expectedReviewSequence: number,
+    action: RecordPlaybookDraftReviewRequest['action'], note: string): RecordPlaybookDraftReviewRequest => ({
+    requestId: randomUUID(), expectedVersion, expectedReviewSequence, action, note,
+  });
 
   beforeAll(async (): Promise<void> => {
     await sql`INSERT INTO agent_tenants (id, feishu_tenant_key, name, status) VALUES
@@ -62,24 +84,31 @@ describe.skipIf(!databaseUrl)('Playbook drafts with PostgreSQL and HTTP', (): vo
     await sql`INSERT INTO tenant_members (tenant_id, id, feishu_open_id, display_name, status) VALUES
       (${tenantId}::uuid, ${memberId}::uuid, ${memberId}, '作者 A', 'active'),
       (${tenantId}::uuid, ${secondAuthor}::uuid, ${secondAuthor}, '作者 B', 'active'),
+      (${tenantId}::uuid, ${adminMember}::uuid, ${adminMember}, '审核管理员', 'active'),
       (${otherTenant}::uuid, ${otherMember}::uuid, ${otherMember}, '另一租户', 'active')`;
     candidateId = await createCandidate(); pendingId = await createCandidate('pending_review');
+    reviewCandidateId = await createCandidate();
+    await saveReviewDraft(0);
     class AuthoringTestModule {}
     app = await NestFactory.create({
-      module: AuthoringTestModule, controllers: [PlaybookAuthoringController],
+      module: AuthoringTestModule, controllers: [PlaybookAuthoringController, PlaybookDraftReviewController],
       providers: [PlaybookAuthoringService,
         { provide: PLAYBOOK_AUTHORING_REPOSITORY, useValue: repository },
+        PlaybookDraftReviewService,
+        { provide: PLAYBOOK_DRAFT_REVIEW_REPOSITORY, useValue: reviewRepository },
         { provide: FeishuWebAuthService, useValue: {
           authenticateSession: async (token: string) => {
             if (token === 'expired') throw new FeishuWebAuthError('UNAUTHENTICATED', 'expired');
             return { tenantId: token === 'b' ? otherTenant : tenantId,
-              member: { id: token === 'b' ? otherMember : memberId }, tokenHash: token };
+              member: { id: token === 'b' ? otherMember : token === 'admin' ? adminMember : memberId }, tokenHash: token };
           },
         } },
         { provide: PlatformShellService, useValue: {
-          assertPermission: async (session: { tokenHash: string }, permission: string): Promise<void> => {
-            expect(permission).toBe('playbook:review');
-            if (session.tokenHash === 'denied') throw new PlatformAccessDeniedError();
+          assertPermission: async (session: { tokenHash: string }, _permission: string): Promise<void> => {
+            if (session.tokenHash === 'denied' ||
+              (_permission === 'playbook:publish' && session.tokenHash !== 'admin')) {
+              throw new PlatformAccessDeniedError();
+            }
           },
         } },
       ],
@@ -211,6 +240,71 @@ describe.skipIf(!databaseUrl)('Playbook drafts with PostgreSQL and HTTP', (): vo
     expect((await http('/versions', 'a', { ...draft(24), body: 'short' })).status).toBe(422);
     const result = await http('/versions/1');
     expect(result.status).toBe(200); expect((await result.json()).version).toBe(1);
+  });
+
+  it('enforces review permissions, tenant scope, CAS, immutable history, and idempotent replay', async (): Promise<void> => {
+    const initial = await reviewHttp(reviewCandidateId);
+    expect(initial.status).toBe(200);
+    expect(initial.headers.get('cache-control')).toBe('no-store');
+    expect(await initial.json()).toMatchObject({ latestDraftVersion: 1, status: 'not_submitted', history: [] });
+    expect((await reviewHttp(reviewCandidateId, '')).status).toBe(401);
+    expect((await reviewHttp(reviewCandidateId, 'denied')).status).toBe(403);
+    expect((await reviewHttp(reviewCandidateId, 'b')).status).toBe(404);
+
+    const first: RecordPlaybookDraftReviewRequest = reviewRequest(1, 0, 'submit', '已核对适用范围和来源证据');
+    const concurrent: RecordPlaybookDraftReviewRequest = reviewRequest(1, 0, 'submit', '并发审核也应由 CAS 阻止');
+    const results = await Promise.all([
+      reviewHttp(reviewCandidateId, 'a', first), reviewHttp(reviewCandidateId, 'a', concurrent),
+    ]);
+    expect(results.map((result) => result.status).sort()).toEqual([201, 409]);
+    const acceptedInput: RecordPlaybookDraftReviewRequest = results[0].status === 201 ? first : concurrent;
+    const acceptedResponse: Response = results[0].status === 201 ? results[0] : results[1];
+    const acceptedEvent = await acceptedResponse.json();
+    expect(acceptedEvent).toMatchObject({ candidateId: reviewCandidateId, version: 1, sequence: 1,
+      action: 'submit', actorMemberId: memberId, note: acceptedInput.note });
+    expect(acceptedResponse.headers.get('cache-control')).toBe('no-store');
+    expect(await (await reviewHttp(reviewCandidateId, 'a', acceptedInput)).json()).toEqual(acceptedEvent);
+    expect((await reviewHttp(reviewCandidateId, 'a', { ...acceptedInput, note: '重用请求编号但改变说明' })).status).toBe(409);
+
+    const approve: RecordPlaybookDraftReviewRequest = reviewRequest(1, 1, 'approve', '审核通过');
+    expect((await reviewHttp(reviewCandidateId, 'a', approve)).status).toBe(403);
+    const approved = await reviewHttp(reviewCandidateId, 'admin', approve);
+    expect(approved.status).toBe(201);
+    expect(approved.headers.get('cache-control')).toBe('no-store');
+    expect(await approved.json()).toMatchObject({ sequence: 2, action: 'approve', actorMemberId: adminMember });
+    expect((await reviewHttp(reviewCandidateId, 'admin', reviewRequest(1, 2, 'approve', '重复批准'))).status).toBe(409);
+
+    await saveReviewDraft(1);
+    expect(await reviewService.list(tenantId, reviewCandidateId)).toMatchObject({
+      latestDraftVersion: 2, status: 'superseded', current: { version: 1, action: 'approve' },
+    });
+    expect((await reviewHttp(reviewCandidateId, 'admin', reviewRequest(1, 2, 'approve', '不能批准旧版本'))).status).toBe(409);
+    const submitV2: RecordPlaybookDraftReviewRequest = reviewRequest(2, 2, 'submit', '第二版已复核');
+    expect((await reviewHttp(reviewCandidateId, 'a', submitV2)).status).toBe(201);
+    const returned = await reviewHttp(reviewCandidateId, 'admin', reviewRequest(2, 3, 'request_changes', '补充验收责任和边界'));
+    expect(returned.status).toBe(201);
+    expect(await returned.json()).toMatchObject({ sequence: 4, action: 'request_changes', actorMemberId: adminMember });
+
+    await saveReviewDraft(2);
+    let sequence = 4;
+    for (let version = 3; version <= 13; version += 1) {
+      if (version > 3) await saveReviewDraft(version - 1);
+      const submitted = await reviewHttp(reviewCandidateId, 'a', reviewRequest(version, sequence, 'submit', `第 ${version} 版提交`));
+      expect(submitted.status).toBe(201);
+      sequence += 1;
+      const decided = await reviewHttp(reviewCandidateId, 'admin', reviewRequest(version, sequence, 'approve', `第 ${version} 版通过`));
+      expect(decided.status).toBe(201);
+      sequence += 1;
+    }
+    const firstPage = await reviewHttp(reviewCandidateId);
+    const page = await firstPage.json();
+    expect(page).toMatchObject({ latestDraftVersion: 13, status: 'approved', nextBeforeSequence: 7 });
+    expect(page.history).toHaveLength(20);
+    const olderPage = await reviewHttp(reviewCandidateId, 'a', undefined, page.nextBeforeSequence);
+    expect((await olderPage.json()).history.map((event: { sequence: number }) => event.sequence)).toEqual([6, 5, 4, 3, 2, 1]);
+    await expect(sql`DELETE FROM playbook_draft_versions
+      WHERE tenant_id = ${tenantId}::uuid AND candidate_id = ${reviewCandidateId}::uuid AND version = 1`)
+      .rejects.toMatchObject({ code: '23503' });
   });
 
   it('retains author audit until candidate or tenant cleanup and cascades draft history', async (): Promise<void> => {
