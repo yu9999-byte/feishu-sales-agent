@@ -6,9 +6,11 @@
 
 本轮审核验证：定向审核 6 个测试文件/91 项通过；全量单元 129 个文件/1155 项通过；隔离 PostgreSQL/HTTP 审核集成 16/16 通过。`type:check`、`type:check:test`、全库 ESLint/Stylelint、Agent/Web 双构建通过，Web 构建仍有既有大 chunk 提示。隔离集群实际跳过迁移 003–032 并应用 033，删除约束检查通过；验证后已停止，不使用 55432 业务数据库。
 
-真实 `/playbooks` 路由仍只显示飞书身份提示，不能完成角色 UAT；本轮没有对审核面板做 1280px/390px 合成浏览器截图检查，相关 UI 仍 pending。测试结果不补造 TDD Red 记录：原始失败输出未收录在本轮归档。没有新增真实消息或业务写入，也没有执行正式发布。
+审核面板补验已完成：修复审核快照缺少冻结来源展示的问题，新增 2 项回归先失败，修复后面板/工作区 23 项通过；客户端/测试类型、全库 Lint 与 Web 构建通过。1280px/390px 真实审核面板合成截图与布局测量已归档，长来源正常换行，说明为空禁用裁决、有效时启用，按钮无重叠。临时入口、夹具和服务已清理，未执行审核 POST。
 
-证据见[Playbook 审核验证](evidence/playbook-review-20261020/verification.md)和[草稿验证](evidence/playbook-authoring-20261020/verification.md)，规格见 [SDD 51](specs/51-playbook-authoring-sdd.md)、[SDD 52](specs/52-playbook-review-sdd.md)，整体待办见[执行计划](remaining-capabilities-execution-2026-10-20.md)。真实身份/视觉 UAT、可信采用记录、正式发布策略和赢丢单样本门槛仍待完成；以下均为历史阶段记录。
+已找到并原样归档 17:26:12 的审核原始 Red 日志（服务/面板不存在、迁移缺 033），与源文件哈希一致；此前“未收录”状态已解决。真实 `/playbooks` 路由仍只显示飞书身份提示，管理员/普通审核人、真实路由及工作区弹窗 UAT 仍 pending。没有新增真实消息或业务写入，也没有执行正式发布。
+
+证据见[Playbook 审核验证](evidence/playbook-review-20261020/verification.md)和[草稿验证](evidence/playbook-authoring-20261020/verification.md)，规格见 [SDD 51](specs/51-playbook-authoring-sdd.md)、[SDD 52](specs/52-playbook-review-sdd.md)，整体待办见[执行计划](remaining-capabilities-execution-2026-10-20.md)。真实身份及完整工作台 UAT、可信采用记录、正式发布策略和赢丢单样本门槛仍待完成；以下均为历史阶段记录。
 
 ## 当前状态：2026-10-20 准备交互与运行健康本地闭环完成
 

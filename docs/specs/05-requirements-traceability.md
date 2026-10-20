@@ -1,6 +1,6 @@
 # 需求追踪矩阵
 
-`BPA-007` / PLAYBOOK-REVIEW：最新版本提交、管理员批准/退回、旧版失效、不可变记录、双 CAS 和幂等恢复已完成本地实现；全量单元、隔离 PostgreSQL/HTTP、类型、Lint 和双构建通过。真实身份 UAT 与审核工作台桌面/窄屏视觉检查仍待完成；审核通过不等于发布。见 [SDD/TDD 52](52-playbook-review-sdd.md) 和[验证记录](../evidence/playbook-review-20261020/verification.md)。
+`BPA-007` / PLAYBOOK-REVIEW：最新版本提交、管理员批准/退回、旧版失效、不可变记录、双 CAS 和幂等恢复已完成本地实现；全量单元、隔离 PostgreSQL/HTTP、类型、Lint 和双构建通过。审核快照已补冻结来源，新增 2 项先红后绿、面板/工作区 23 项回归通过；1280px/390px 独立审核面板合成截图及布局检查完成，原始审核 Red 日志已归档。真实身份、真实路由及工作区弹窗 UAT 仍待完成；审核通过不等于发布。见 [SDD/TDD 52](52-playbook-review-sdd.md) 和[验证记录](../evidence/playbook-review-20261020/verification.md)。
 
 PLAYBOOK-DRAFT：已接受候选的创建/编辑/历史、租户隔离、可信作者、CAS、幂等重试及失败恢复已实现，自动化和合成组件验证通过；真实登录 UAT 待补。执行与测试见 [SDD/TDD 51](51-playbook-authoring-sdd.md)；发布/采用/样本不计入完成。
 

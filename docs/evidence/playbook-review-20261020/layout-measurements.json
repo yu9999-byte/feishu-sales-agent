@@ -1,0 +1,108 @@
+{
+  "checkedAt": "2026-10-20T14:57:38.684Z",
+  "scope": "Real review panel in a temporary local synthetic fixture; no authenticated UAT or POST actions",
+  "desktop": {
+    "bodyWidth": 1265,
+    "controls": [
+      {
+        "bottom": 201.5875015258789,
+        "disabled": false,
+        "height": 37.60000228881836,
+        "label": "刷新",
+        "right": 992.3999862670898,
+        "width": 85.5999984741211,
+        "x": 906.7999877929688,
+        "y": 163.98749923706055
+      },
+      {
+        "bottom": 630.337516784668,
+        "disabled": false,
+        "height": 64,
+        "label": "已复核适用范围、正文和来源版本，审核意见仅用于本地合成验收。",
+        "right": 992.3999938964844,
+        "width": 720,
+        "x": 272.3999938964844,
+        "y": 566.337516784668
+      },
+      {
+        "bottom": 707.9250373840332,
+        "disabled": false,
+        "height": 37.60000228881836,
+        "label": "批准此版本",
+        "right": 399.9999923706054,
+        "width": 127.5999984741211,
+        "x": 272.3999938964844,
+        "y": 670.3250350952148
+      },
+      {
+        "bottom": 707.9250373840332,
+        "disabled": false,
+        "height": 37.60000228881836,
+        "label": "退回修改",
+        "right": 521.5999984741211,
+        "width": 113.5999984741211,
+        "x": 408,
+        "y": 670.3250350952148
+      }
+    ],
+    "documentWidth": 1265,
+    "overflow": [],
+    "sourceText": "doc-technical-review-03 · v7\ntechnical-review-evidence-with-a-long-unbroken-source-reference-for-responsive-layout-verification-20261020 · 未知版本",
+    "viewport": {
+      "height": 900,
+      "width": 1280
+    }
+  },
+  "mobile": {
+    "bodyWidth": 390,
+    "controls": [
+      {
+        "bottom": 201.58750534057617,
+        "disabled": false,
+        "height": 37.60000228881836,
+        "label": "刷新",
+        "right": 374.400016784668,
+        "width": 85.5999984741211,
+        "x": 288.8000183105469,
+        "y": 163.9875030517578
+      },
+      {
+        "bottom": 739.9250106811523,
+        "disabled": false,
+        "height": 65.5999984741211,
+        "label": "已复核适用范围、正文和来源版本，审核意见仅用于本地合成验收。",
+        "right": 374.3999938964844,
+        "width": 358.3999938964844,
+        "x": 16,
+        "y": 674.3250122070312
+      },
+      {
+        "bottom": 817.512508392334,
+        "disabled": false,
+        "height": 37.60000228881836,
+        "label": "批准此版本",
+        "right": 143.5999984741211,
+        "width": 127.5999984741211,
+        "x": 16,
+        "y": 779.9125061035156
+      },
+      {
+        "bottom": 817.512508392334,
+        "disabled": false,
+        "height": 37.60000228881836,
+        "label": "退回修改",
+        "right": 265.2000045776367,
+        "width": 113.5999984741211,
+        "x": 151.60000610351562,
+        "y": 779.9125061035156
+      }
+    ],
+    "documentWidth": 390,
+    "overflow": [],
+    "sourceText": "doc-technical-review-03 · v7\ntechnical-review-evidence-with-a-long-unbroken-source-reference-for-responsive-layout-verification-20261020 · 未知版本",
+    "viewport": {
+      "height": 844,
+      "width": 390
+    }
+  }
+}

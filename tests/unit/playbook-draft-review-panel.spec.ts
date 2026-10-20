@@ -62,6 +62,23 @@ it('shows the exact saved snapshot and submits only a completed note', async ():
   expect(document.body.textContent).not.toContain('批准此版本');
 });
 
+it('shows the frozen source references inside the reviewed version snapshot', async (): Promise<void> => {
+  vi.mocked(api.getPlaybookDraftVersion).mockResolvedValue({ ...version, sources: [
+    { sourceId: 'saved-source', sourceVersion: 'revision:7' },
+    { sourceId: 'unversioned-source', sourceVersion: null },
+  ] });
+  await render();
+  const snapshot: Element | null = document.querySelector('article[aria-label="审核快照 v1"]');
+  expect(snapshot?.textContent).toContain('来源版本');
+  expect(snapshot?.textContent).toContain('saved-source · revision:7');
+  expect(snapshot?.textContent).toContain('unversioned-source · 未知版本');
+});
+
+it('explicitly shows missing source records in the reviewed snapshot', async (): Promise<void> => {
+  await render();
+  expect(document.querySelector('article')?.textContent).toContain('无来源记录');
+});
+
 it('exposes decisions only to administrators for the current submitted version', async (): Promise<void> => {
   vi.mocked(api.getPlaybookDraftReview).mockResolvedValue(submitted);
   vi.mocked(api.recordPlaybookDraftReview).mockResolvedValue(submitted.current!);

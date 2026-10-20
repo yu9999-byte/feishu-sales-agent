@@ -250,6 +250,12 @@ const PlaybookDraftReviewPanel: React.FC<PlaybookDraftReviewPanelProps> = ({
           <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{snapshot.applicability}</p>
           <p className="max-h-72 overflow-auto whitespace-pre-wrap break-words text-sm leading-6">{snapshot.body}</p>
           <p className="break-words text-xs text-muted-foreground">版本说明：{snapshot.changeNote}</p>
+          <dl className="text-xs text-muted-foreground">
+            <dt className="font-medium">来源版本</dt>
+            <dd className="whitespace-pre-wrap [overflow-wrap:anywhere]">{snapshot.sources.length === 0
+              ? '无来源记录' : snapshot.sources.map((source) =>
+                `${source.sourceId} · ${source.sourceVersion ?? '未知版本'}`).join('\n')}</dd>
+          </dl>
         </article>}
         {review.latestDraftVersion === null && <p className="py-4 text-sm text-muted-foreground">先保存一个草稿版本，再提交审核。</p>}
         {review.latestDraftVersion !== null && <div className="space-y-3">

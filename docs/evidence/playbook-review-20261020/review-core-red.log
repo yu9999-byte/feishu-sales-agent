@@ -1,0 +1,78 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v4.1.11 A:/基于飞书的销售agent
+
+ ❯ tests/unit/playbook-draft-review.spec.ts (0 test)
+ ❯ tests/unit/migration-runner.spec.ts (1 test | 1 failed) 98ms
+     × lists only versioned application migrations in dependency order 96ms
+ ❯ tests/unit/playbook-draft-review-panel.spec.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/playbook-draft-review-panel.spec.ts [ tests/unit/playbook-draft-review-panel.spec.ts ]
+Error: Failed to resolve import "../../client/src/pages/PlaybookOptimizationPage/PlaybookDraftReviewPanel" from "tests/unit/playbook-draft-review-panel.spec.ts". Does the file exist?
+  Plugin: vite:import-analysis
+  File: A:/基于飞书的销售agent/tests/unit/playbook-draft-review-panel.spec.ts:5:0
+  6  |  const __vi_import_0__ = await import("react");
+  7  |  const __vi_import_1__ = await import("react-dom/client");
+  8  |  const __vi_import_2__ = await import("../../client/src/pages/PlaybookOptimizationPage/PlaybookDraftReviewPanel");
+     |                                       ^
+  9  |  const __vi_import_3__ = await import("../../client/src/api");
+  10 |  // @vitest-environment jsdom
+ ❯ TransformPluginContext._formatLog ../%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/vite/dist/node/chunks/node.js:31147:39
+ ❯ TransformPluginContext.error ../%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/vite/dist/node/chunks/node.js:31144:14
+ ❯ normalizeUrl ../%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/vite/dist/node/chunks/node.js:28083:18
+ ❯ ../%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/vite/dist/node/chunks/node.js:28153:30
+ ❯ TransformPluginContext.transform ../%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/vite/dist/node/chunks/node.js:28119:4
+ ❯ EnvironmentPluginContainer.transform ../%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/vite/dist/node/chunks/node.js:30932:14
+ ❯ loadAndTransform ../%E5%9F%BA%E4%BA%8E%E9%A3%9E%E4%B9%A6%E7%9A%84%E9%94%80%E5%94%AEagent/node_modules/vite/dist/node/chunks/node.js:20671:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  tests/unit/playbook-draft-review.spec.ts [ tests/unit/playbook-draft-review.spec.ts ]
+Error: Cannot find package '@server/modules/knowledge/playbook-draft-review.service' imported from A:/基于飞书的销售agent/tests/unit/playbook-draft-review.spec.ts
+ ❯ tests/unit/playbook-draft-review.spec.ts:2:1
+      1| import { describe, expect, it, vi } from 'vitest';
+      2| import { PlaybookDraftReviewService } from '@server/modules/knowledge/…
+       | ^
+      3|
+      4| const tenantId = '10000000-0000-4000-8000-000000000001';
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/migration-runner.spec.ts > Agent migration runner > lists only versioned application migrations in dependency order
+AssertionError: expected [ '003_agent_control.sql', …(28) ] to deeply equal [ '003_agent_control.sql', …(29) ]
+
+- Expected
++ Received
+
+@@ -26,7 +26,6 @@
+    "028_preparation_results.sql",
+    "029_preparation_draft_edits.sql",
+    "030_preparation_result_deliveries.sql",
+    "031_preparation_delivery_reconciliation.sql",
+    "032_playbook_draft_versions.sql",
+-   "033_playbook_draft_reviews.sql",
+  ]
+
+ ❯ tests/unit/migration-runner.spec.ts:16:50
+     14|     expect(result.status).toBe(0);
+     15|     expect(result.stderr).toBe('');
+     16|     expect(result.stdout.trim().split(/\r?\n/u)).toEqual([
+       |                                                  ^
+     17|       '003_agent_control.sql',
+     18|       '005_platform_foundation.sql',
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  1 failed (1)
+   Start at  17:26:12
+   Duration  1.18s (transform 45ms, setup 0ms, import 38ms, tests 98ms, environment 962ms)
+
