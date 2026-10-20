@@ -109,4 +109,5 @@ class PostgresPlaybookAuthoringRepository implements PlaybookAuthoringRepository
   }
 }
 
-export { PostgresPlaybookAuthoringRepository };
+export { PostgresPlaybookAuthoringRepository, mapVersion };
+export type { DraftRow };

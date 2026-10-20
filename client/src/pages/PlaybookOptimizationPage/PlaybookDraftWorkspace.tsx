@@ -18,6 +18,7 @@ import {
   getPlaybookDraft, getPlaybookDraftVersion, savePlaybookDraft, type ProductApiError,
 } from '../../api';
 import { PlaybookDraftReviewPanel } from './PlaybookDraftReviewPanel';
+import { PlaybookPublicationPanel } from './PlaybookPublicationPanel';
 
 const draftSchema = z.object({
   title: z.string().trim().min(2, '标题至少 2 字').max(120, '标题最多 120 字'),
@@ -45,6 +46,7 @@ const PlaybookDraftWorkspace: React.FC<{
   const [selected, setSelected] = useState<PlaybookDraftVersion | null>(null);
   const [saved, setSaved] = useState<number | null>(null);
   const [closing, setClosing] = useState<boolean>(false);
+  const [publicationLocked, setPublicationLocked] = useState<boolean>(false);
   const alive = useRef<boolean>(true);
   const locked = useRef<boolean>(false);
   const form = useForm<PlaybookDraftContent>({
@@ -144,7 +146,7 @@ const PlaybookDraftWorkspace: React.FC<{
     finally { if (alive.current) { locked.current = false; setBusy(false); } }
   };
   const requestClose = (): void => {
-    if (busy) return;
+    if (busy || publicationLocked) return;
     if (form.formState.isDirty || pending) setClosing(true);
     else onClose();
   };
@@ -154,7 +156,7 @@ const PlaybookDraftWorkspace: React.FC<{
     <DialogContent showCloseButton={false} className="max-h-[90dvh] max-w-4xl overflow-y-auto">
       <DialogHeader>
         <DialogTitle className="break-words pr-4">{candidate.topicPreview} · 草稿</DialogTitle>
-        <DialogDescription>未发布{data?.latest ? ` · 当前 v${data.latest.version}` : ' · 尚无保存版本'}</DialogDescription>
+        <DialogDescription>{data?.latest ? `当前草稿 v${data.latest.version}` : '尚无保存版本'}</DialogDescription>
       </DialogHeader>
       {error && <Alert variant="destructive" role="alert">
         <AlertTitle>{pending ? '保存结果待确认' : '操作未完成'}</AlertTitle>
@@ -186,10 +188,11 @@ const PlaybookDraftWorkspace: React.FC<{
         {data === null ? <Button variant="outline" disabled={busy} onClick={(): void => { void read(false); }}>
           <RefreshCw aria-hidden="true" />{busy ? '正在读取草稿' : '重新读取草稿'}
         </Button> : <Tabs defaultValue="edit">
-          <TabsList aria-label="草稿视图">
-            <TabsTrigger value="edit">编辑</TabsTrigger>
-            <TabsTrigger value="history"><History aria-hidden="true" className="mr-2 size-4" />版本历史</TabsTrigger>
-            <TabsTrigger value="review">发布前审核</TabsTrigger>
+          <TabsList aria-label="草稿视图" className="grid h-auto w-full grid-cols-2 gap-1 [&>button]:min-h-11 sm:grid-cols-4">
+            <TabsTrigger value="edit" disabled={publicationLocked}>编辑</TabsTrigger>
+            <TabsTrigger value="history" disabled={publicationLocked}><History aria-hidden="true" className="mr-2 size-4" />版本历史</TabsTrigger>
+            <TabsTrigger value="review" disabled={publicationLocked}>发布前审核</TabsTrigger>
+            <TabsTrigger value="publication">发布与撤回</TabsTrigger>
           </TabsList>
           <TabsContent value="edit">
             <Form {...form}>
@@ -245,9 +248,14 @@ const PlaybookDraftWorkspace: React.FC<{
               onAccessFailure={onAccessFailure}
             /> : <p className="py-6 text-sm text-muted-foreground">先保存一个草稿版本，再提交审核。</p>}
           </TabsContent>
+          <TabsContent value="publication">
+            <PlaybookPublicationPanel candidateId={candidate.id} canPublish={canApprove}
+              disabled={frozen || form.formState.isDirty} onAccessFailure={onAccessFailure}
+              onOperationState={setPublicationLocked} />
+          </TabsContent>
         </Tabs>}
       </>}
-      <div className="flex justify-end border-t pt-3"><Button variant="outline" onClick={requestClose} disabled={busy}>关闭</Button></div>
+      <div className="flex justify-end border-t pt-3"><Button variant="outline" onClick={requestClose} disabled={busy || publicationLocked}>关闭</Button></div>
     </DialogContent>
   </Dialog>;
 };

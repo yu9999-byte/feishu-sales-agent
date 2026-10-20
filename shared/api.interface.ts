@@ -1006,6 +1006,55 @@ export interface PlaybookDraftReviewResponse {
   nextBeforeSequence: number | null;
 }
 
+interface PlaybookPublicationRequestBase {
+  requestId: string;
+  expectedVersion: number;
+  expectedPublicationSequence: number;
+  note: string;
+}
+
+export type RecordPlaybookPublicationRequest = PlaybookPublicationRequestBase & (
+  | { action: 'publish'; expectedReviewSequence: number }
+  | { action: 'withdraw'; expectedReviewSequence: null }
+);
+
+export interface PlaybookPublicationEvent {
+  candidateId: string;
+  sequence: number;
+  version: number;
+  approvedReviewSequence: number;
+  action: 'publish' | 'withdraw';
+  note: string;
+  actorMemberId: string;
+  createdAt: string;
+}
+
+export interface PublishedPlaybook {
+  candidateId: string;
+  version: number;
+  publicationSequence: number;
+  title: string;
+  body: string;
+  applicability: string;
+  sources: PlaybookOptimizationSourceRef[];
+  publishedAt: string;
+}
+
+export interface PublishedPlaybookListResponse {
+  items: Omit<PublishedPlaybook, 'body' | 'sources'>[];
+  nextAfterCandidateId: string | null;
+}
+
+export interface PlaybookPublicationResponse {
+  latestDraft: PlaybookDraftVersion | null;
+  reviewSequence: number;
+  approvedVersion: number | null;
+  current: PlaybookPublicationEvent | null;
+  active: PublishedPlaybook | null;
+  history: PlaybookPublicationEvent[];
+  nextBeforeSequence: number | null;
+}
+
 export type CustomerCommunicationDraftChannel = 'feishu' | 'email';
 
 export interface CustomerCommunicationDraft {

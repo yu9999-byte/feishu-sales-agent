@@ -1,0 +1,96 @@
+{
+  "desktop": {
+    "buttons": [
+      {
+        "disabled": false,
+        "height": 44,
+        "label": "刷新发布状态"
+      },
+      {
+        "disabled": true,
+        "height": 44,
+        "label": "发布此版本"
+      },
+      {
+        "disabled": true,
+        "height": 44,
+        "label": "撤回当前版本"
+      }
+    ],
+    "overflow": [],
+    "pageWidth": 1280,
+    "tabs": [
+      {
+        "height": 44,
+        "label": "编辑",
+        "width": 203.3000030517578
+      },
+      {
+        "height": 44,
+        "label": "版本历史",
+        "width": 203.3000030517578
+      },
+      {
+        "height": 44,
+        "label": "发布前审核",
+        "width": 203.3000030517578
+      },
+      {
+        "height": 44,
+        "label": "发布与撤回",
+        "width": 203.3000030517578
+      }
+    ],
+    "viewport": {
+      "height": 900,
+      "width": 1280
+    }
+  },
+  "mobile": {
+    "buttons": [
+      {
+        "disabled": false,
+        "height": 44,
+        "label": "刷新发布状态"
+      },
+      {
+        "disabled": true,
+        "height": 44,
+        "label": "发布此版本"
+      },
+      {
+        "disabled": true,
+        "height": 44,
+        "label": "撤回当前版本"
+      }
+    ],
+    "overflow": [],
+    "pageWidth": 390,
+    "tabs": [
+      {
+        "height": 44,
+        "label": "编辑",
+        "width": 141.8000030517578
+      },
+      {
+        "height": 44,
+        "label": "版本历史",
+        "width": 141.8000030517578
+      },
+      {
+        "height": 44,
+        "label": "发布前审核",
+        "width": 141.8000030517578
+      },
+      {
+        "height": 44,
+        "label": "发布与撤回",
+        "width": 141.8000030517578
+      }
+    ],
+    "viewport": {
+      "height": 844,
+      "width": 390
+    }
+  }
+}

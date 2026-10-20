@@ -1,6 +1,6 @@
 # 销策 Agent SDD 索引
 
-状态：`Implemented / Playbook review automated green; real identity UAT pending 2026-10-20`
+状态：`Implemented / Playbook publication automated green; real identity UAT pending 2026-10-21`
 
 本目录是 Goal v3 的规格权威来源。代码、测试、飞书配置和 UI 验收都必须能追溯到这里的
 需求编号；参考文档只提供业务输入，不能直接替代本项目规格。
@@ -55,6 +55,7 @@
 | `50-agent-runtime-health-sdd.md` | 存活/就绪、只读迁移探测、健康 CLI 与启动检查 | 本地故障恢复验证通过；正式运行保障待验收 |
 | `51-playbook-authoring-sdd.md` | 已接受候选的版本草稿、可信作者、来源冻结、CAS、幂等和历史 | Implemented；自动化/合成组件验证通过，真实登录 UAT 待补 |
 | `52-playbook-review-sdd.md` | 最新草稿提交、管理员审核、旧版失效、不可变记录与重试 | Implemented；单元/隔离集成与质量门通过；真实身份和桌面/窄屏视觉 UAT 待补 |
+| `54-playbook-publication-sdd.md` | 版本发布/撤回、当前资料目录、并发和幂等恢复 | Implemented；隔离测试和完整工作台合成验证通过；真实身份/租户发布待验 |
 
 ## 2. 规格状态
 

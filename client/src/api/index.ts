@@ -23,6 +23,11 @@ import type {
   PlaybookDraftReviewEvent,
   PlaybookDraftReviewResponse,
   PlaybookDraftVersion,
+  PlaybookPublicationEvent,
+  PlaybookPublicationResponse,
+  PublishedPlaybook,
+  PublishedPlaybookListResponse,
+  RecordPlaybookPublicationRequest,
   RecordPlaybookDraftReviewRequest,
   SavePlaybookDraftRequest,
   ProactiveNotificationReconciliationListResponse,
@@ -486,6 +491,43 @@ const getPlaybookDraft = async (
   } catch (error: unknown) { throw normalizeError(error); }
 };
 
+const getPlaybookPublication = async (candidateId: string, beforeSequence?: number): Promise<PlaybookPublicationResponse> => {
+  try {
+    const response = await axiosForBackend<PlaybookPublicationResponse>({
+      url: `/api/platform/playbook-candidates/${encodeURIComponent(candidateId)}/publication`,
+      method: 'GET', params: beforeSequence === undefined ? undefined : { beforeSequence }, withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
+const recordPlaybookPublication = async (candidateId: string, input: RecordPlaybookPublicationRequest):
+Promise<PlaybookPublicationEvent> => {
+  try {
+    const response = await axiosForBackend<PlaybookPublicationEvent>({
+      url: `/api/platform/playbook-candidates/${encodeURIComponent(candidateId)}/publication`,
+      method: 'POST', data: input, withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
+const getPublishedPlaybooks = async (afterCandidateId?: string): Promise<PublishedPlaybookListResponse> => {
+  try {
+    const response = await axiosForBackend<PublishedPlaybookListResponse>({
+      url: '/api/platform/playbooks', method: 'GET',
+      params: afterCandidateId === undefined ? undefined : { afterCandidateId }, withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
+const getPublishedPlaybook = async (candidateId: string): Promise<PublishedPlaybook> => {
+  try {
+    const response = await axiosForBackend<PublishedPlaybook>({
+      url: `/api/platform/playbooks/${encodeURIComponent(candidateId)}`, method: 'GET', withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
+
 const getPlaybookDraftVersion = async (
   candidateId: string, version: number,
 ): Promise<PlaybookDraftVersion> => {
@@ -717,6 +759,10 @@ export {
   getOpportunityDecisions,
   getPlaybookCandidates,
   getPlaybookDraft,
+  getPlaybookPublication,
+  recordPlaybookPublication,
+  getPublishedPlaybooks,
+  getPublishedPlaybook,
   getPlaybookDraftVersion,
   getPlaybookDraftReview,
   recordPlaybookDraftReview,

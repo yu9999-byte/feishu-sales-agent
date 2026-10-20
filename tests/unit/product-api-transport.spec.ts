@@ -6,6 +6,7 @@ import type {
   TodayActionOperationRequest,
   SavePlaybookDraftRequest,
   RecordPlaybookDraftReviewRequest,
+  RecordPlaybookPublicationRequest,
   UpdateFollowupDraftRequest,
 } from '../../shared/api.interface';
 
@@ -22,6 +23,8 @@ import { operateTodayAction, confirmTodayTaskDraft, updateFollowupDraft,
   getCustomerPreparationDelivery, confirmCustomerPreparationDelivery,
   getPlaybookDraft, getPlaybookDraftVersion, savePlaybookDraft } from '../../client/src/api';
 import { getPlaybookDraftReview, recordPlaybookDraftReview } from '../../client/src/api';
+import { getPlaybookPublication, recordPlaybookPublication, getPublishedPlaybook,
+  getPublishedPlaybooks } from '../../client/src/api';
 
 beforeEach((): void => {
   transport.send.mockResolvedValue({ data: { accepted: true } });
@@ -135,4 +138,26 @@ it('reads paged review history and records the exact idempotent review request',
     url: '/api/platform/playbook-candidates/candidate%2F1/draft/review',
     data: input, withCredentials: true });
   expect(transport.shortcut).not.toHaveBeenCalled();
+});
+
+it('preserves publication expectations and withdrawal null review when using the backend transport', async (): Promise<void> => {
+  await getPlaybookPublication('candidate/1', 21);
+  expect(transport.send).toHaveBeenLastCalledWith({ method: 'GET',
+    url: '/api/platform/playbook-candidates/candidate%2F1/publication',
+    params: { beforeSequence: 21 }, withCredentials: true });
+  const input: RecordPlaybookPublicationRequest = { requestId: 'request-1', expectedVersion: 1,
+    expectedPublicationSequence: 2, expectedReviewSequence: null, action: 'withdraw', note: '撤回此版本' };
+  await recordPlaybookPublication('candidate/1', input);
+  expect(transport.send).toHaveBeenLastCalledWith({ method: 'POST',
+    url: '/api/platform/playbook-candidates/candidate%2F1/publication', data: input, withCredentials: true });
+  expect(transport.shortcut).not.toHaveBeenCalled();
+});
+
+it('reads the published catalog and current content using session credentials', async (): Promise<void> => {
+  await getPublishedPlaybooks('candidate-20');
+  expect(transport.send).toHaveBeenLastCalledWith({ method: 'GET', url: '/api/platform/playbooks',
+    params: { afterCandidateId: 'candidate-20' }, withCredentials: true });
+  await getPublishedPlaybook('candidate/1');
+  expect(transport.send).toHaveBeenLastCalledWith({ method: 'GET',
+    url: '/api/platform/playbooks/candidate%2F1', withCredentials: true });
 });

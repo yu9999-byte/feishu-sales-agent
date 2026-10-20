@@ -1,5 +1,7 @@
 # Playbook 发布前审核 SDD / TDD
 
+后续增量：独立发布与撤回账本见 [SDD 54](54-playbook-publication-sdd.md)。审核状态本身仍不表示发布状态。
+
 状态：Implemented / 自动化与隔离集成通过 / 真实身份 UAT pending（2026-10-20）。需求 BPA-003/004/007。范围是本地发布前审核，不是正式发布。
 
 ## 结果与边界

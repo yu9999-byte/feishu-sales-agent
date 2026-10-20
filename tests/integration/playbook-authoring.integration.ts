@@ -9,6 +9,10 @@ import { PlaybookAuthoringController } from '@server/modules/knowledge/playbook-
 import { PlaybookAuthoringService } from '@server/modules/knowledge/playbook-authoring.service';
 import { PlaybookDraftReviewController } from '@server/modules/knowledge/playbook-draft-review.controller';
 import { PlaybookDraftReviewService } from '@server/modules/knowledge/playbook-draft-review.service';
+import { PlaybookPublicationController } from '@server/modules/knowledge/playbook-publication.controller';
+import { PlaybookPublicationService } from '@server/modules/knowledge/playbook-publication.service';
+import { PLAYBOOK_PUBLICATION_REPOSITORY } from '@server/modules/knowledge/playbook-publication.ports';
+import { PostgresPlaybookPublicationRepository } from '@server/modules/knowledge/postgres-playbook-publication.repository';
 import { PLAYBOOK_AUTHORING_REPOSITORY, PLAYBOOK_DRAFT_REVIEW_REPOSITORY } from '@server/modules/knowledge/playbook-authoring.ports';
 import { PostgresPlaybookAuthoringRepository } from '@server/modules/knowledge/postgres-playbook-authoring.repository';
 import { PostgresPlaybookDraftReviewRepository } from '@server/modules/knowledge/postgres-playbook-draft-review.repository';
@@ -91,8 +95,11 @@ describe.skipIf(!databaseUrl)('Playbook drafts with PostgreSQL and HTTP', (): vo
     await saveReviewDraft(0);
     class AuthoringTestModule {}
     app = await NestFactory.create({
-      module: AuthoringTestModule, controllers: [PlaybookAuthoringController, PlaybookDraftReviewController],
+      module: AuthoringTestModule, controllers: [PlaybookAuthoringController, PlaybookDraftReviewController,
+        PlaybookPublicationController],
       providers: [PlaybookAuthoringService,
+        PlaybookPublicationService,
+        { provide: PLAYBOOK_PUBLICATION_REPOSITORY, useValue: new PostgresPlaybookPublicationRepository(sql) },
         { provide: PLAYBOOK_AUTHORING_REPOSITORY, useValue: repository },
         PlaybookDraftReviewService,
         { provide: PLAYBOOK_DRAFT_REVIEW_REPOSITORY, useValue: reviewRepository },
@@ -125,6 +132,24 @@ describe.skipIf(!databaseUrl)('Playbook drafts with PostgreSQL and HTTP', (): vo
   it('returns an empty draft, but not a cross-tenant candidate', async (): Promise<void> => {
     expect(await service.list(tenantId, candidateId)).toEqual({ latest: null, history: [], nextBeforeVersion: null });
     await expect(service.list(otherTenant, candidateId)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('publishes an approved exact version and exposes only active published content', async (): Promise<void> => {
+    const id: string = await createCandidate();
+    await save(draft(), id);
+    await reviewHttp(id, 'a', reviewRequest(1, 0, 'submit', '检查完成'));
+    await reviewHttp(id, 'admin', reviewRequest(1, 1, 'approve', '批准发布内容'));
+    const response: Response = await fetch(`${baseUrl}/api/platform/playbook-candidates/${id}/publication`, {
+      method: 'POST', headers: { 'content-type': 'application/json', cookie: 'sales-agent-session=admin' },
+      body: JSON.stringify({ requestId: randomUUID(), expectedVersion: 1, expectedReviewSequence: 2,
+        expectedPublicationSequence: 0, action: 'publish', note: '发布正式版本' }),
+    });
+    expect(response.status).toBe(201);
+    const published: Response = await fetch(`${baseUrl}/api/platform/playbooks/${id}`, {
+      headers: { cookie: 'sales-agent-session=a' },
+    });
+    expect(published.status).toBe(200);
+    expect(await published.json()).toMatchObject({ candidateId: id, version: 1, body: draft().body });
   });
 
   it('serializes competing first versions and produces exactly one version', async (): Promise<void> => {

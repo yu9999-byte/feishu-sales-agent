@@ -23,6 +23,7 @@ import type {
 } from '@shared/api.interface';
 import type { ProductLayoutContext } from '@/components/Layout';
 import { PlaybookDraftWorkspace } from './PlaybookDraftWorkspace';
+import { PublishedPlaybookCatalog } from './PublishedPlaybookCatalog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -210,6 +211,8 @@ const PlaybookOptimizationPage: React.FC = () => {
           </Button>
         )}
       </header>
+
+      <PublishedPlaybookCatalog key={`${session.tenant.id}:${session.member.id}`} />
 
       <Alert>
         <ShieldCheck aria-hidden="true" />
