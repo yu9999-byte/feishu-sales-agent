@@ -1,12 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, History, RefreshCw, Send, Undo2, X } from 'lucide-react';
 import type {
-  PlaybookPublicationResponse, RecordPlaybookPublicationRequest, PublishedPlaybook,
+  PlaybookAdoptionEvidenceKind, PlaybookAdoptionResponse, PlaybookPublicationResponse,
+  RecordPlaybookAdoptionRequest, RecordPlaybookPublicationRequest, PublishedPlaybook,
 } from '@shared/api.interface';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Textarea } from '@/components/ui/textarea';
-import { getPlaybookPublication, recordPlaybookPublication, type ProductApiError } from '../../api';
+import { Input } from '@/components/ui/input';
+import { getPlaybookAdoption, getPlaybookPublication, recordPlaybookAdoption,
+  recordPlaybookPublication, type ProductApiError } from '../../api';
 
 const PlaybookPublicationPanel: React.FC<{
   candidateId: string; canPublish: boolean; disabled: boolean;
@@ -181,4 +184,99 @@ const PublishedPlaybookContent: React.FC<{ value: PublishedPlaybook }> = ({ valu
   <p className="whitespace-pre-wrap text-xs text-muted-foreground">来源版本：{value.sources.length ? value.sources.map((source) =>
     `${source.sourceId} · ${source.sourceVersion ?? '未知版本'}`).join('\n') : '无来源记录'}</p>
 </article>;
-export { PlaybookPublicationPanel, PublishedPlaybookContent };
+
+const adoptionStatus: Record<string, string> = {
+  not_adopted: '尚未记录采用', adopted: '已验证采用', retracted: '采用已撤回',
+};
+
+const PlaybookAdoptionPanel: React.FC<{
+  candidateId: string; canAdopt: boolean; onAccessFailure: (failure: ProductApiError) => void;
+}> = ({ candidateId, canAdopt, onAccessFailure }) => {
+  const [data, setData] = useState<PlaybookAdoptionResponse | null>(null);
+  const [kind, setKind] = useState<PlaybookAdoptionEvidenceKind>('followup');
+  const [recordId, setRecordId] = useState<string>('');
+  const [actionId, setActionId] = useState<string>('');
+  const [evidenceNote, setEvidenceNote] = useState<string>('');
+  const [note, setNote] = useState<string>('');
+  const [busy, setBusy] = useState<boolean>(true);
+  const [error, setError] = useState<ProductApiError | null>(null);
+  const [pending, setPending] = useState<RecordPlaybookAdoptionRequest | null>(null);
+  const [confirmRetract, setConfirmRetract] = useState<boolean>(false);
+  const [revoked, setRevoked] = useState<boolean>(false);
+  const locked = useRef<boolean>(false);
+
+  const load = async (): Promise<void> => {
+    if (locked.current || revoked) return;
+    locked.current = true; setBusy(true); setError(null);
+    try { setData(await getPlaybookAdoption(candidateId)); setRevoked(false); }
+    catch (failure: unknown) {
+      const value = failure as ProductApiError; setData(null); setError(value);
+      if ([401, 403, 404].includes(value.status)) {
+        setRecordId(''); setActionId(''); setEvidenceNote(''); setNote(''); setPending(null); setRevoked(true); onAccessFailure(value);
+      }
+    } finally { locked.current = false; setBusy(false); }
+  };
+  useEffect((): (() => void) => { void load(); return (): void => { locked.current = false; }; }, [candidateId]);
+
+  const write = async (input: RecordPlaybookAdoptionRequest): Promise<void> => {
+    if (locked.current || revoked) return;
+    locked.current = true; setBusy(true); setError(null); setPending(input); setConfirmRetract(false);
+    try { const event = await recordPlaybookAdoption(candidateId, input); setPending(null);
+      setData((current) => current ? { ...current, adoptionSequence: event.sequence,
+        status: event.action === 'record' ? 'adopted' : 'retracted', current: event,
+        history: [event, ...current.history.filter((item) => item.sequence !== event.sequence)],
+        verifiedAdoptionCount: current.verifiedAdoptionCount + (event.action === 'record' ? 1 : 0),
+        retractionCount: current.retractionCount + (event.action === 'retract' ? 1 : 0) } : current); }
+    catch (failure: unknown) {
+      const value = failure as ProductApiError; setError(value);
+      if ([400, 401, 403, 404].includes(value.status)) setPending(null);
+      if ([401, 403, 404].includes(value.status)) { setRecordId(''); setActionId(''); setEvidenceNote(''); setNote(''); setPending(null); setData(null); setRevoked(true); onAccessFailure(value); }
+      if (value.status === 409) {
+        setPending(null);
+        locked.current = false;
+        setBusy(false);
+        await load();
+      }
+    } finally { locked.current = false; setBusy(false); }
+  };
+  const validNote: boolean = note.trim().length >= 2 && note.trim().length <= 500;
+  const validEvidence: boolean = recordId.trim().length > 0 && actionId.trim().length > 0 && evidenceNote.trim().length >= 2;
+  const submit = (): void => {
+    if (!data?.publication || !validNote || !validEvidence || busy || pending || !canAdopt) return;
+    void write({ requestId: crypto.randomUUID(), expectedAdoptionSequence: data.adoptionSequence,
+      publicationVersion: data.publication.version, publicationSequence: data.publication.publicationSequence,
+      action: 'record', evidence: { kind, recordId: recordId.trim(), actionId: actionId.trim(), note: evidenceNote.trim() }, note: note.trim() });
+  };
+  const retract = (): void => {
+    if (!data?.publication || !validNote || busy || pending || !canAdopt || !confirmRetract) return;
+    void write({ requestId: crypto.randomUUID(), expectedAdoptionSequence: data.adoptionSequence,
+      publicationVersion: data.publication.version, publicationSequence: data.publication.publicationSequence,
+      action: 'retract', evidence: null, note: note.trim() });
+  };
+  if (revoked) return <p role="status">采用记录访问权限已失效，已清除证据输入。</p>;
+  return <section aria-label="Playbook 采用记录" className="space-y-3 border-t pt-4" aria-busy={busy}>
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <h4 className="font-medium">可信采用记录</h4>
+      <Button variant="outline" disabled={busy || pending !== null} onClick={(): void => { void load(); }}><RefreshCw aria-hidden="true" />刷新采用状态</Button>
+    </div>
+    {error && <Alert variant="destructive" role="alert"><AlertTitle>{pending ? '采用结果待确认' : '采用状态未更新'}</AlertTitle><AlertDescription>{error.message}</AlertDescription></Alert>}
+    {pending && <Button variant="outline" disabled={busy} onClick={(): void => { void write(pending); }}><RefreshCw aria-hidden="true" />重试原采用请求</Button>}
+    {data && <>
+      <p className="text-sm text-muted-foreground">{adoptionStatus[data.status]} · 已验证采用 {data.verifiedAdoptionCount} 次 · 撤回 {data.retractionCount} 次</p>
+      {data.current && <p className="text-xs text-muted-foreground">最近操作：{data.current.note} · {new Date(data.current.createdAt).toLocaleString('zh-CN')}</p>}
+      {canAdopt && data.publication && <div className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="space-y-1 text-sm"><span>证据类型</span><select className="h-10 w-full rounded-md border bg-background px-3" value={kind} disabled={busy || pending !== null} onChange={(event): void => setKind(event.target.value as PlaybookAdoptionEvidenceKind)}><option value="followup">跟进记录</option><option value="opportunity">商机记录</option><option value="task">任务</option></select></label>
+          <label className="space-y-1 text-sm"><span>真实记录 ID</span><Input value={recordId} disabled={busy || pending !== null} onChange={(event): void => setRecordId(event.target.value)} maxLength={255} /></label>
+          <label className="space-y-1 text-sm"><span>action ID</span><Input value={actionId} disabled={busy || pending !== null} onChange={(event): void => setActionId(event.target.value)} maxLength={36} /></label>
+        </div>
+        <label className="block space-y-1 text-sm"><span>业务证据说明</span><Textarea value={evidenceNote} disabled={busy || pending !== null} maxLength={500} onChange={(event): void => setEvidenceNote(event.target.value)} /></label>
+        <label className="block space-y-1 text-sm"><span>采用说明</span><Textarea value={note} disabled={busy || pending !== null} maxLength={500} onChange={(event): void => { setNote(event.target.value); setConfirmRetract(false); }} /></label>
+        {confirmRetract && <Alert><AlertTitle>撤回当前采用记录？</AlertTitle><AlertDescription className="flex flex-wrap gap-2 pt-2"><Button variant="destructive" disabled={busy || !validNote} onClick={retract}><Check aria-hidden="true" />确认撤回采用</Button><Button variant="outline" onClick={(): void => setConfirmRetract(false)}>取消</Button></AlertDescription></Alert>}
+        {!confirmRetract && <div className="flex flex-wrap gap-2"><Button disabled={busy || pending !== null || !validNote || !validEvidence} onClick={submit}><Check aria-hidden="true" />记录已采用</Button>{data.status === 'adopted' && <Button variant="outline" disabled={busy || pending !== null || !validNote} onClick={(): void => setConfirmRetract(true)}><Undo2 aria-hidden="true" />撤回采用</Button>}</div>}
+      </div>}
+      {data.history.length > 0 && <ol className="divide-y text-sm">{data.history.map((event) => <li key={event.sequence} className="py-2">{event.action === 'record' ? '采用' : '撤回'} · {event.note} · {new Date(event.createdAt).toLocaleString('zh-CN')}</li>)}</ol>}
+    </>}
+  </section>;
+};
+export { PlaybookAdoptionPanel, PlaybookPublicationPanel, PublishedPlaybookContent };

@@ -32,6 +32,7 @@ const PERMISSION_ORDER: PlatformPermission[] = [
   'playbook:read',
   'playbook:review',
   'playbook:publish',
+  'playbook:adopt',
   'admin:manage-members',
   'admin:manage-policies',
   'audit:read',
@@ -50,6 +51,7 @@ const ROLE_POLICIES: Record<PlatformRole, RolePolicy> = {
     'review:read-personal': 'self',
     'analytics:read': 'self',
     'playbook:read': 'tenant',
+    'playbook:adopt': 'self',
   },
   manager: {
     'workspace:view': 'team',
@@ -65,6 +67,7 @@ const ROLE_POLICIES: Record<PlatformRole, RolePolicy> = {
     'analytics:read': 'team',
     'playbook:read': 'tenant',
     'playbook:review': 'tenant',
+    'playbook:adopt': 'self',
   },
   executive: {
     'workspace:view': 'tenant',
@@ -90,6 +93,7 @@ const ROLE_POLICIES: Record<PlatformRole, RolePolicy> = {
     'playbook:read': 'tenant',
     'playbook:review': 'tenant',
     'playbook:publish': 'tenant',
+    'playbook:adopt': 'tenant',
     'admin:manage-members': 'tenant',
     'admin:manage-policies': 'tenant',
     'audit:read': 'tenant',

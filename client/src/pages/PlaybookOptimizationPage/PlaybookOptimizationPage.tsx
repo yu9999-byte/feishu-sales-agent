@@ -111,6 +111,7 @@ const PlaybookOptimizationPage: React.FC = () => {
   const { session } = useOutletContext<ProductLayoutContext>();
   const canReview: boolean = session.permissions.includes('playbook:review');
   const canPublish: boolean = session.permissions.includes('playbook:publish');
+  const canAdopt: boolean = session.permissions.includes('playbook:adopt');
   const [data, setData] =
     useState<PlaybookOptimizationCandidateListResponse | null>(null);
   const [error, setError] = useState<ProductApiError | null>(null);
@@ -212,7 +213,8 @@ const PlaybookOptimizationPage: React.FC = () => {
         )}
       </header>
 
-      <PublishedPlaybookCatalog key={`${session.tenant.id}:${session.member.id}`} />
+      <PublishedPlaybookCatalog key={`${session.tenant.id}:${session.member.id}`} canAdopt={canAdopt}
+        onAccessFailure={(failure): void => { setError(failure); setData(null); }} />
 
       <Alert>
         <ShieldCheck aria-hidden="true" />

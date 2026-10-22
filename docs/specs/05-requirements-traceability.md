@@ -3,8 +3,16 @@
 `BPA-008` / PLAYBOOK-PUBLICATION：9c1 已实现最新批准版本发布、当前版撤回、
 追加审计、版本/审核/发布序号 CAS、幂等恢复、销售资料目录及当前正文读取。
 本地隔离 PostgreSQL/HTTP 与完整工作台/销售资料组件的桌面、窄屏合成验证通过；
-有效飞书身份和真实租户发布仍未执行。可信采用及赢丢单样本继续待办。
+有效飞书身份和真实租户发布仍未执行。可信采用已由 9c2 独立切片完成本地实现，
+赢丢单样本继续待办。
 见 [SDD 54](54-playbook-publication-sdd.md) 和[验证记录](../evidence/playbook-publication-20261021/verification.md)。
+
+`BPA-009` / PLAYBOOK-ADOPTION：9c2 已实现当前发布版本的可信采用/撤回记录。服务端
+精确校验本人成功 action 的租户、发起人、状态、记录 ID 和证据类型，追加事件保留
+发布序号与 CAS 历史；采用面板覆盖 409 保留输入、401/403/404 清理和 503 结果未知。
+采用服务 25/25、采用面板 6/6、发布面板回归 44/44 通过，详见 [SDD 55](55-playbook-adoption-sdd.md)
+和[验证记录](../evidence/playbook-adoption-20261023/verification.md)。真实身份/租户
+UAT 与真实业务回读待补；9c3 只能消费通过该门禁的样本。
 
 TASK-008/009：第 8 项的可信历史覆盖证明门禁与无任务承诺独立凭证账本已按 [SDD/TDD 53](53-task-history-promise-evidence-sdd.md) 完成本地实现、单元/组件、隔离 PostgreSQL/HTTP 和桌面/窄屏合成验证。本人声明与自动任务完成分别展示；真实完整历史来源和有效身份 UAT 仍待外部条件，未新增真实业务写入。证据见[验证归档](../evidence/task-promise-evidence-20261020/verification.md)。
 
@@ -370,8 +378,10 @@ ESLint 和 Agent 构建通过。控制库回读确认两张最新卡均停在 `p
 | `KNO-001..009` 销售资料检索与推荐 | C / P1-PROGRESS | Real source verified / read-only retrieval verified / Web implemented / UI pending | 当前租户显式配置 3 份 Docx 白名单；应用只有 `view`，唯一 active 销售 `open_id` 与三份直接所有者 ACL 精确匹配。生产 Gateway `ready`，检查/可信结果 `3/3`、无 warning，返回真实标题、链接、摘录、`revision:3` 和 `accessVerified=true`。Docx 继续要求租户可读链接或销售直接协作者，互联网公开链接、群、部门、应用等不推导为本人权限。真实接入删除导致 `1063001` 的非法 SDK `fields` 参数并调整 ACL 检查顺序。Gateway `13/13`、资料与沟通准备 `50/50`、跨层 `89/89`、Agent `570/570`、Postgres `20/20` 及类型、Lint、双构建、两次迁移和 `3199` 启动冒烟通过 | 按用户要求真实 UI 仍 pending；v1 只推荐，不发送、不修改资料、不写业务数据。后续来源仍须逐条白名单、只读授权并通过销售本人 ACL |
 | `SIA-001..006` 销售知识问答 / RAG Agent v1 | D | Real source verified / bot integrated / Automated Green / UI pending | 唯一“销售agent”私聊的高置信度 `sales_qa` 已在普通会话、跟进澄清态和跟进补充态接入必需问答端口；active 成员、`playbook:read`、租户白名单和销售本人 ACL 缺一不可。回答最多 3 条真实摘录并带标题、段落、版本、适用边界和链接；无证据不采用模型回答。真实三问均 `answered`，首条分别命中产品能力、拜访准备、数据权限文档且均为 `revision:3`。知识问答与工作流 `76/76`、模块装配 `2/2`、真实探针 `3/3`、Agent `580/580`、Postgres `20/20` 及完整质量门、`3198` 启动冒烟通过 | 按用户要求真实 UI 保持 pending；v1 只读问答，不发送客户、不建任务、不写客户/商机/跟进/记忆/文档。知识候选、审核发布和操作型问答由 Playbook 后续切片承接 |
 | `REV-002..006` 团队 Review 和经营分析 | E | Automated Green / Web implemented / UI pending | `GET /api/platform/team-review` 已覆盖主管递归范围、高管租户范围、成员日报聚合、逾期/无跟进关注项、来源降级和无效成员 fail-closed；`/reviews/team` 已展示团队指标、关注成员、管理建议和逐人状态；团队/平台权限/导航 16 项定向回归、全量 Agent `264/264`、Postgres `11/11`、三套 TypeScript、全库 ESLint、Stylelint 和 Agent/Web 构建通过 | 尚未在真实主管/高管登录态核对团队范围、真实内容和视觉呈现；管理动作执行、调度和幂等仍未实现 |
-| `BPA-001..006` 最佳实践与 Playbook | F | Automated Green / real UAT pending | 候选、不可变草稿、发布前审核和发布/撤回本地实现；见 SDD 51/52/54 与对应证据 | 真实身份 UAT 待补；可信采用和赢丢单样本发现仍待定义/实现，未向真实租户发布 |
+| `BPA-001..006` 最佳实践与 Playbook | F | Automated Green / real UAT pending | 候选、不可变草稿、发布前审核和发布/撤回本地实现；见 SDD 51/52/54 与对应证据 | 真实身份 UAT 待补；可信采用由 `BPA-009` 独立追踪，赢丢单样本发现仍待定义/实现，未向真实租户发布 |
 | `BPA-007` 发布前审核 | F | Implemented / Automated Green / UI pending | 提交、管理员批准/退回、版本失效、只追加审计、双 CAS、幂等和错误边界通过；全量单元 129 文件/1155 项，审核隔离 PostgreSQL/HTTP 16 项通过 | 真实身份 UAT 与 1280px/390px 审核工作台视觉检查待验；批准仅表示审核通过，不触发发布 |
+| `BPA-008` Playbook 发布与撤回 | F | Implemented / Automated Green / real UAT pending | 最新批准版本发布、当前版撤回、精确版本绑定、资料目录/正文只读、CAS/幂等和不确定响应恢复通过；见 SDD 54 与发布证据 | 真实身份与真实租户发布/撤回回读待补 |
+| `BPA-009` Playbook 可信采用 | F | Implemented / Automated Green / real UAT pending | 当前发布版本、采用/撤回动作和本人成功 action 证据精确关联；25/25 服务、6/6 面板、44/44 组合回归，见 SDD 55 与采用证据 | 真实身份/租户 UAT 和真实业务回读待补；9c3 赢丢单候选依赖可信采用样本 |
 | `OPS-001..002` 正式运行保障 | G | Draft | 待故障/恢复/备份测试 | 待两个真实租户验收 |
 
 ## P0 回归基线

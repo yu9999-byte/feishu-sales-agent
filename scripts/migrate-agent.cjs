@@ -39,6 +39,7 @@ const MIGRATION_FILES = [
   '033_playbook_draft_reviews.sql',
   '034_task_promise_evidence.sql',
   '035_playbook_publications.sql',
+  '036_playbook_adoptions.sql',
 ];
 
 const checksum = (content) => createHash('sha256')

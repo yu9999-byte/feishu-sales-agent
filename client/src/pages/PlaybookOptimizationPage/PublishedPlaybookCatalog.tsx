@@ -4,9 +4,9 @@ import type { PublishedPlaybook, PublishedPlaybookListResponse } from '@shared/a
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { getPublishedPlaybook, getPublishedPlaybooks, type ProductApiError } from '../../api';
-import { PublishedPlaybookContent } from './PlaybookPublicationPanel';
+import { PlaybookAdoptionPanel, PublishedPlaybookContent } from './PlaybookPublicationPanel';
 
-const PublishedPlaybookCatalog: React.FC = () => {
+const PublishedPlaybookCatalog: React.FC<{ canAdopt?: boolean; onAccessFailure?: (failure: ProductApiError) => void }> = ({ canAdopt = false, onAccessFailure = (): void => undefined }) => {
   const [data, setData] = useState<PublishedPlaybookListResponse | null>(null);
   const [selected, setSelected] = useState<PublishedPlaybook | null>(null);
   const [busy, setBusy] = useState<boolean>(false);
@@ -69,6 +69,7 @@ const PublishedPlaybookCatalog: React.FC = () => {
         <Button variant="outline" onClick={(): void => setSelected(null)}><X aria-hidden="true" />关闭正文</Button>
       </div>
       <PublishedPlaybookContent value={selected} />
+      {canAdopt && <PlaybookAdoptionPanel candidateId={selected.candidateId} canAdopt onAccessFailure={onAccessFailure} />}
     </div>}
   </section>;
 };

@@ -46,6 +46,7 @@ describe('Agent migration runner', (): void => {
       '033_playbook_draft_reviews.sql',
       '034_task_promise_evidence.sql',
       '035_playbook_publications.sql',
+      '036_playbook_adoptions.sql',
     ]);
     expect(result.stdout).not.toContain('004_agent_p0_demo_tenant');
   });

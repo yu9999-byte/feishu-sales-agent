@@ -17,6 +17,10 @@ import { PlaybookPublicationController } from './playbook-publication.controller
 import { PlaybookPublicationService } from './playbook-publication.service';
 import { PLAYBOOK_PUBLICATION_REPOSITORY } from './playbook-publication.ports';
 import { PostgresPlaybookPublicationRepository } from './postgres-playbook-publication.repository';
+import { PlaybookAdoptionController } from './playbook-adoption.controller';
+import { PlaybookAdoptionService } from './playbook-adoption.service';
+import { PLAYBOOK_ADOPTION_REPOSITORY } from './playbook-adoption.ports';
+import { PostgresPlaybookAdoptionRepository } from './postgres-playbook-adoption.repository';
 import { PlaybookOptimizationController } from
   './playbook-optimization.controller';
 import {
@@ -31,11 +35,14 @@ import { PostgresPlaybookOptimizationRepository } from
 @Module({
   imports: [ControlDatabaseModule, PlatformShellModule, WebAuthModule],
   controllers: [PlaybookOptimizationController, PlaybookAuthoringController, PlaybookDraftReviewController,
-    PlaybookPublicationController],
+    PlaybookPublicationController, PlaybookAdoptionController],
   providers: [
     PlaybookPublicationService,
     PostgresPlaybookPublicationRepository,
     { provide: PLAYBOOK_PUBLICATION_REPOSITORY, useExisting: PostgresPlaybookPublicationRepository },
+    PlaybookAdoptionService,
+    PostgresPlaybookAdoptionRepository,
+    { provide: PLAYBOOK_ADOPTION_REPOSITORY, useExisting: PostgresPlaybookAdoptionRepository },
     PlaybookAuthoringService,
     PostgresPlaybookAuthoringRepository,
     { provide: PLAYBOOK_AUTHORING_REPOSITORY, useExisting: PostgresPlaybookAuthoringRepository },

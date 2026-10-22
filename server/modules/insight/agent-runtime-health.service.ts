@@ -38,6 +38,7 @@ const REQUIRED_AGENT_MIGRATIONS: readonly string[] = [
   '033_playbook_draft_reviews.sql',
   '034_task_promise_evidence.sql',
   '035_playbook_publications.sql',
+  '036_playbook_adoptions.sql',
 ];
 
 @Injectable()

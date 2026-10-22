@@ -25,9 +25,12 @@ import type {
   PlaybookDraftVersion,
   PlaybookPublicationEvent,
   PlaybookPublicationResponse,
+  PlaybookAdoptionEvent,
+  PlaybookAdoptionResponse,
   PublishedPlaybook,
   PublishedPlaybookListResponse,
   RecordPlaybookPublicationRequest,
+  RecordPlaybookAdoptionRequest,
   RecordPlaybookDraftReviewRequest,
   SavePlaybookDraftRequest,
   ProactiveNotificationReconciliationListResponse,
@@ -510,6 +513,25 @@ Promise<PlaybookPublicationEvent> => {
     return response.data;
   } catch (error: unknown) { throw normalizeError(error); }
 };
+const getPlaybookAdoption = async (candidateId: string, beforeSequence?: number): Promise<PlaybookAdoptionResponse> => {
+  try {
+    const response = await axiosForBackend<PlaybookAdoptionResponse>({
+      url: `/api/platform/playbook-candidates/${encodeURIComponent(candidateId)}/adoption`,
+      method: 'GET', params: beforeSequence === undefined ? undefined : { beforeSequence }, withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
+const recordPlaybookAdoption = async (candidateId: string, input: RecordPlaybookAdoptionRequest):
+Promise<PlaybookAdoptionEvent> => {
+  try {
+    const response = await axiosForBackend<PlaybookAdoptionEvent>({
+      url: `/api/platform/playbook-candidates/${encodeURIComponent(candidateId)}/adoption`,
+      method: 'POST', data: input, withCredentials: true,
+    });
+    return response.data;
+  } catch (error: unknown) { throw normalizeError(error); }
+};
 const getPublishedPlaybooks = async (afterCandidateId?: string): Promise<PublishedPlaybookListResponse> => {
   try {
     const response = await axiosForBackend<PublishedPlaybookListResponse>({
@@ -761,6 +783,8 @@ export {
   getPlaybookDraft,
   getPlaybookPublication,
   recordPlaybookPublication,
+  getPlaybookAdoption,
+  recordPlaybookAdoption,
   getPublishedPlaybooks,
   getPublishedPlaybook,
   getPlaybookDraftVersion,

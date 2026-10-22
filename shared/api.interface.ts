@@ -362,6 +362,7 @@ export type PlatformPermission =
   | 'playbook:read'
   | 'playbook:review'
   | 'playbook:publish'
+  | 'playbook:adopt'
   | 'admin:manage-members'
   | 'admin:manage-policies'
   | 'audit:read';
@@ -1052,6 +1053,51 @@ export interface PlaybookPublicationResponse {
   current: PlaybookPublicationEvent | null;
   active: PublishedPlaybook | null;
   history: PlaybookPublicationEvent[];
+  nextBeforeSequence: number | null;
+}
+
+export type PlaybookAdoptionAction = 'record' | 'retract';
+export type PlaybookAdoptionEvidenceKind = 'followup' | 'opportunity' | 'task';
+
+export interface PlaybookAdoptionEvidence {
+  kind: PlaybookAdoptionEvidenceKind;
+  recordId: string;
+  actionId: string;
+  note: string;
+}
+
+export interface RecordPlaybookAdoptionRequest {
+  requestId: string;
+  expectedAdoptionSequence: number;
+  publicationVersion: number;
+  publicationSequence: number;
+  action: PlaybookAdoptionAction;
+  evidence: PlaybookAdoptionEvidence | null;
+  note: string;
+}
+
+export interface PlaybookAdoptionEvent {
+  candidateId: string;
+  sequence: number;
+  publicationVersion: number;
+  publicationSequence: number;
+  action: PlaybookAdoptionAction;
+  evidence: PlaybookAdoptionEvidence | null;
+  note: string;
+  actorMemberId: string;
+  createdAt: string;
+}
+
+export type PlaybookAdoptionStatus = 'not_adopted' | 'adopted' | 'retracted';
+
+export interface PlaybookAdoptionResponse {
+  publication: { version: number; publicationSequence: number } | null;
+  adoptionSequence: number;
+  status: PlaybookAdoptionStatus;
+  verifiedAdoptionCount: number;
+  retractionCount: number;
+  current: PlaybookAdoptionEvent | null;
+  history: PlaybookAdoptionEvent[];
   nextBeforeSequence: number | null;
 }
 
